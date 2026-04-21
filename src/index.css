@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,9 +7,10 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    font-family: 'Inter', system-ui, sans-serif;
   }
   body {
-    @apply bg-gray-50 text-gray-900 m-0;
+    @apply bg-slate-50 text-gray-900 m-0;
   }
   #root {
     @apply w-full text-left;
@@ -16,21 +19,21 @@
 
 @layer components {
   .btn-primary {
-    @apply w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl active:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full bg-sky-500 text-white font-bold py-3.5 px-4 rounded-2xl shadow-md shadow-sky-200 active:bg-sky-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-secondary {
-    @apply w-full bg-white text-blue-600 font-semibold py-3 px-4 rounded-xl border border-blue-600 active:bg-blue-50 transition-colors;
+    @apply w-full bg-white text-sky-500 font-semibold py-3.5 px-4 rounded-2xl border-2 border-sky-200 active:bg-sky-50 transition-colors;
   }
   .btn-danger {
-    @apply w-full bg-red-50 text-red-600 font-semibold py-3 px-4 rounded-xl border border-red-200 active:bg-red-100 transition-colors;
+    @apply w-full bg-red-50 text-red-600 font-semibold py-3.5 px-4 rounded-2xl border border-red-200 active:bg-red-100 transition-colors;
   }
   .input-field {
-    @apply w-full border border-gray-300 rounded-xl py-3 px-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white;
+    @apply w-full border-2 border-gray-200 rounded-2xl py-3.5 px-4 text-base focus:outline-none focus:border-sky-400 bg-white transition-colors;
   }
   .card {
     @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4;
   }
   .page-container {
-    @apply max-w-md mx-auto min-h-screen bg-gray-50 pb-24;
+    @apply max-w-md mx-auto min-h-screen bg-slate-50 pb-24;
   }
 }

@@ -9,7 +9,7 @@ const tabs = [
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 shadow-lg">
       <div className="max-w-md mx-auto flex">
         {tabs.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -17,13 +17,19 @@ export default function BottomNav() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors ${
-                isActive ? 'text-blue-600' : 'text-gray-400'
+              `flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors ${
+                isActive ? 'text-sky-500' : 'text-gray-400'
               }`
             }
           >
-            <Icon />
-            <span className="text-xs font-medium">{label}</span>
+            {({ isActive }) => (
+              <>
+                <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-sky-50' : ''}`}>
+                  <Icon />
+                </div>
+                <span className="text-xs font-semibold">{label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </div>

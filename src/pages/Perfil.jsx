@@ -25,36 +25,41 @@ export default function Perfil() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="bg-blue-600 text-white px-4 pt-12 pb-8 text-center">
-        <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3">
-          <span className="text-3xl font-bold text-white">
-            {(profile?.nome || 'T').charAt(0).toUpperCase()}
+      <div className="relative overflow-hidden px-4 pt-12 pb-10 text-center" style={{background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'}}>
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white opacity-5" />
+        <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-3 border-2 border-white/30">
+          <span className="text-3xl font-extrabold text-white">
+            {(profile?.nome || 'C').charAt(0).toUpperCase()}
           </span>
         </div>
-        <h1 className="text-xl font-bold">{profile?.nome || 'Técnico'}</h1>
-        {profile?.empresa && <p className="text-blue-200 text-sm">{profile.empresa}</p>}
+        <h1 className="text-xl font-extrabold text-white">{profile?.nome || 'Técnico'}</h1>
+        {profile?.empresa && <p className="text-sky-200 text-sm mt-0.5">{profile.empresa}</p>}
+        <div className="mt-3 inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3 py-1">
+          <span className="text-lg">❄️</span>
+          <span className="text-white text-xs font-semibold">ClimaPro</span>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="px-4 pt-5 space-y-4">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Dados do técnico</h2>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Dados do técnico</h2>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">Nome</label>
           <input type="text" className="input-field" value={form.nome} onChange={set('nome')} placeholder="Seu nome" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">WhatsApp</label>
           <input type="tel" className="input-field" value={form.telefone} onChange={set('telefone')} placeholder="(11) 99999-9999" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nome da empresa / MEI</label>
+          <label className="block text-sm font-semibold text-gray-600 mb-1.5">Nome da empresa / MEI</label>
           <input type="text" className="input-field" value={form.empresa} onChange={set('empresa')} placeholder="Ex: Gelo Fácil Refrigeração" />
         </div>
 
         {sucesso && (
-          <p className="text-sm text-green-700 bg-green-50 p-3 rounded-lg text-center">
+          <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-xl text-center font-medium">
             ✅ Perfil atualizado!
           </p>
         )}
@@ -66,7 +71,7 @@ export default function Perfil() {
         <button
           type="button"
           onClick={signOut}
-          className="w-full text-center text-red-500 font-medium py-3 mt-2"
+          className="w-full text-center text-red-400 font-semibold py-3 mt-1"
         >
           Sair da conta
         </button>

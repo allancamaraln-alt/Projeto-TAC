@@ -14,7 +14,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      const hoje = new Date().toISOString().split('T')[0]
       const inicioSemana = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
 
       const [{ data: todas }, { data: ultimas }] = await Promise.all([
@@ -44,68 +43,73 @@ export default function Dashboard() {
 
   return (
     <div className="page-container">
-      {/* Header */}
-      <div className="bg-blue-600 text-white px-4 pt-12 pb-6">
-        <p className="text-blue-200 text-sm">{saudacao()},</p>
-        <h1 className="text-xl font-bold">{profile?.nome || 'Técnico'} 👋</h1>
-        {profile?.empresa && <p className="text-blue-200 text-sm mt-0.5">{profile.empresa}</p>}
+      {/* Header com gradiente */}
+      <div className="relative overflow-hidden px-4 pt-12 pb-8" style={{background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'}}>
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white opacity-5" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-white opacity-5" />
+        <div className="relative">
+          <p className="text-sky-200 text-sm font-medium">{saudacao()},</p>
+          <h1 className="text-white text-2xl font-extrabold mt-0.5">{profile?.nome || 'Técnico'} 👋</h1>
+          {profile?.empresa && <p className="text-sky-200 text-sm mt-1">{profile.empresa}</p>}
+        </div>
       </div>
 
-      <div className="px-4 -mt-4">
-        {/* Nova OS button */}
-        <button
-          onClick={() => navigate('/ordens/nova')}
-          className="w-full bg-white rounded-2xl shadow-md border border-blue-100 p-4 flex items-center gap-3 mb-4 active:bg-blue-50 transition-colors"
-        >
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </div>
-          <div className="text-left">
-            <p className="font-bold text-gray-800">Nova Ordem de Serviço</p>
-            <p className="text-gray-500 text-sm">Criar orçamento ou OS</p>
-          </div>
-        </button>
+      <div className="px-4 -mt-5">
+        {/* Botões de ação principais */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <button
+            onClick={() => navigate('/ordens/nova')}
+            className="bg-white rounded-2xl shadow-md p-4 flex flex-col items-start gap-2 active:bg-sky-50 transition-colors border border-gray-100"
+          >
+            <div className="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-md shadow-sky-200">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-gray-800 text-sm">Nova OS</p>
+              <p className="text-gray-400 text-xs">Criar orçamento</p>
+            </div>
+          </button>
 
-        {/* Relatório */}
-        <button
-          onClick={() => navigate('/relatorio')}
-          className="w-full bg-white rounded-2xl shadow-md border border-green-100 p-4 flex items-center gap-3 mb-4 active:bg-green-50 transition-colors"
-        >
-          <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <div className="text-left">
-            <p className="font-bold text-gray-800">Relatório de Faturamento</p>
-            <p className="text-gray-500 text-sm">Ver receitas por período</p>
-          </div>
-        </button>
+          <button
+            onClick={() => navigate('/relatorio')}
+            className="bg-white rounded-2xl shadow-md p-4 flex flex-col items-start gap-2 active:bg-green-50 transition-colors border border-gray-100"
+          >
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-md shadow-emerald-200">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-gray-800 text-sm">Relatório</p>
+              <p className="text-gray-400 text-xs">Ver faturamento</p>
+            </div>
+          </button>
+        </div>
 
         {/* Stats — esta semana */}
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Esta semana</h2>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Esta semana</h2>
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {[1,2,3,4].map(i => <div key={i} className="card h-20 animate-pulse bg-gray-100" />)}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            {[1,2,3,4].map(i => <div key={i} className="h-24 animate-pulse bg-gray-100 rounded-2xl" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <StatCard label="Orçamentos" value={stats.orcamento} color="yellow" onClick={() => navigate('/ordens?status=orcamento')} />
-            <StatCard label="Aprovados" value={stats.aprovado} color="blue" onClick={() => navigate('/ordens?status=aprovado')} />
-            <StatCard label="Em andamento" value={stats.em_andamento} color="purple" onClick={() => navigate('/ordens?status=em_andamento')} />
-            <StatCard label="Concluídos" value={stats.concluido} color="green" onClick={() => navigate('/ordens?status=concluido')} />
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <StatCard label="Orçamentos" value={stats.orcamento} color="amber" onClick={() => navigate('/ordens?status=orcamento')} />
+            <StatCard label="Aprovados" value={stats.aprovado} color="sky" onClick={() => navigate('/ordens?status=aprovado')} />
+            <StatCard label="Em andamento" value={stats.em_andamento} color="violet" onClick={() => navigate('/ordens?status=em_andamento')} />
+            <StatCard label="Concluídos" value={stats.concluido} color="emerald" onClick={() => navigate('/ordens?status=concluido')} />
           </div>
         )}
 
         {/* Recentes */}
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Recentes</h2>
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Recentes</h2>
         {recentes.length === 0 && !loading && (
-          <div className="card text-center text-gray-400 py-8">
-            <p className="text-3xl mb-2">📋</p>
-            <p>Nenhuma OS ainda.</p>
-            <p className="text-sm">Crie sua primeira ordem de serviço!</p>
+          <div className="card text-center py-10">
+            <p className="text-4xl mb-3">📋</p>
+            <p className="font-semibold text-gray-500">Nenhuma OS ainda.</p>
+            <p className="text-sm text-gray-400 mt-1">Crie sua primeira ordem de serviço!</p>
           </div>
         )}
         <div className="space-y-3">
@@ -113,16 +117,16 @@ export default function Dashboard() {
             <button
               key={os.id}
               onClick={() => navigate(`/ordens/${os.id}`)}
-              className="card w-full text-left active:bg-gray-50 transition-colors"
+              className="card w-full text-left active:bg-slate-50 transition-colors"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="font-semibold text-gray-800">{os.clientes?.nome}</p>
-                  <p className="text-sm text-gray-500">{os.tipo_servico}</p>
+                  <p className="font-bold text-gray-800">{os.clientes?.nome}</p>
+                  <p className="text-sm text-gray-400 mt-0.5">{os.tipo_servico}</p>
                 </div>
                 <div className="text-right">
                   <StatusBadge status={os.status} />
-                  <p className="text-sm font-semibold text-gray-700 mt-1">
+                  <p className="text-sm font-bold text-gray-700 mt-1.5">
                     {formatBRL(os.valor)}
                   </p>
                 </div>
@@ -135,17 +139,19 @@ export default function Dashboard() {
   )
 }
 
+const colorMap = {
+  amber:   { bg: 'bg-amber-50',   text: 'text-amber-500',  border: 'border-amber-100' },
+  sky:     { bg: 'bg-sky-50',     text: 'text-sky-500',    border: 'border-sky-100' },
+  violet:  { bg: 'bg-violet-50',  text: 'text-violet-500', border: 'border-violet-100' },
+  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-500',border: 'border-emerald-100' },
+}
+
 function StatCard({ label, value, color, onClick }) {
-  const colors = {
-    yellow: 'bg-yellow-50 text-yellow-600',
-    blue: 'bg-blue-50 text-blue-600',
-    purple: 'bg-purple-50 text-purple-600',
-    green: 'bg-green-50 text-green-600',
-  }
+  const c = colorMap[color]
   return (
-    <button onClick={onClick} className={`rounded-2xl p-4 text-left ${colors[color]} active:opacity-80 transition-opacity`}>
-      <p className="text-3xl font-bold">{value}</p>
-      <p className="text-sm font-medium mt-0.5">{label}</p>
+    <button onClick={onClick} className={`${c.bg} border ${c.border} rounded-2xl p-4 text-left active:opacity-80 transition-opacity w-full`}>
+      <p className={`text-4xl font-extrabold ${c.text}`}>{value}</p>
+      <p className={`text-sm font-semibold mt-1 ${c.text} opacity-80`}>{label}</p>
     </button>
   )
 }

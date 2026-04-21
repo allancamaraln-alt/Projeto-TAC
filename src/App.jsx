@@ -19,10 +19,10 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center" style={{background: 'linear-gradient(135deg, #0284c7 0%, #075985 100%)'}}>
         <div className="text-center">
-          <div className="text-4xl mb-3">❄️</div>
-          <p className="text-gray-400">Carregando...</p>
+          <div className="text-5xl mb-3 animate-pulse">❄️</div>
+          <p className="text-sky-200 font-semibold">ClimaPro</p>
         </div>
       </div>
     )
