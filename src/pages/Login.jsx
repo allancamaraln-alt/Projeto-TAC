@@ -190,6 +190,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setSenhaVisivel(v => !v)}
+                  aria-label={senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                   tabIndex={-1}
                 >
