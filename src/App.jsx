@@ -91,6 +91,26 @@ function BiometricPrompt({ onDone }) {
   )
 }
 
+function OfflineBanner() {
+  const [offline, setOffline] = useState(!navigator.onLine)
+  useEffect(() => {
+    const on  = () => setOffline(false)
+    const off = () => setOffline(true)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
+  if (!offline) return null
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[300] bg-amber-500 text-white text-xs font-semibold text-center py-1.5 flex items-center justify-center gap-1.5">
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M12 12h.01M8.464 15.536a5 5 0 010-7.072M5.636 18.364a9 9 0 010-12.728" />
+      </svg>
+      Sem conexão — exibindo dados em cache
+    </div>
+  )
+}
+
 function AppContent() {
   const { user, loading } = useAuth()
   const biometric = useBiometric()
@@ -147,6 +167,7 @@ function AppContent() {
           <Route path="*"                       element={<Navigate to="/" />} />
         </Routes>
       </Suspense>
+      <OfflineBanner />
       <BottomNav />
       {showBioPrompt && <BiometricPrompt onDone={() => setShowBioPrompt(false)} />}
     </>
