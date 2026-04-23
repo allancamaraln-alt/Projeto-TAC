@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { extractPalette, applyPalette } from '../lib/palette'
 
 const AuthContext = createContext({})
 
@@ -18,7 +19,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
-      else { setProfile(null); setLoading(false) }
+      else { setProfile(null); setLoading(false); applyPalette(null) }
     })
 
     return () => subscription.unsubscribe()
@@ -32,6 +33,9 @@ export function AuthProvider({ children }) {
       .single()
     setProfile(data)
     setLoading(false)
+    if (data?.cover_url) {
+      extractPalette(data.cover_url).then(applyPalette)
+    }
   }
 
   async function signIn(email, password) {
@@ -50,6 +54,7 @@ export function AuthProvider({ children }) {
 
   async function signOut() {
     await supabase.auth.signOut()
+    applyPalette(null)
   }
 
   async function updateProfile(updates) {
@@ -57,7 +62,12 @@ export function AuthProvider({ children }) {
       .from('profiles')
       .update(updates)
       .eq('id', user.id)
-    if (!error) setProfile(prev => ({ ...prev, ...updates }))
+    if (!error) {
+      setProfile(prev => ({ ...prev, ...updates }))
+      if (updates.cover_url) {
+        extractPalette(updates.cover_url).then(applyPalette)
+      }
+    }
     return { error }
   }
 

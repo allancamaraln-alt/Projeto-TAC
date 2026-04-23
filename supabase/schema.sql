@@ -62,6 +62,7 @@ create table if not exists public.ordens_servico (
     check (status in ('orcamento', 'aprovado', 'em_andamento', 'concluido', 'cancelado')),
   valor numeric(10, 2) default 0,
   data_agendamento date,
+  hora_agendamento time,
   observacoes text default '',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -107,3 +108,30 @@ create policy "Técnico vê seus clientes"
 create policy "Técnico vê suas OS"
   on public.ordens_servico for all
   using (auth.uid() = tecnico_id);
+
+-- ============================================
+-- TABELA: lembretes_manutencao
+-- ============================================
+create table if not exists public.lembretes_manutencao (
+  id uuid default uuid_generate_v4() primary key,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  cliente_id uuid references public.clientes(id) on delete cascade not null,
+  ordem_id uuid references public.ordens_servico(id) on delete set null,
+  tipo_servico text default 'Manutenção',
+  data_prevista date not null,
+  intervalo_meses int not null default 6,
+  status text not null default 'pendente'
+    check (status in ('pendente', 'concluido', 'dispensado')),
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_lembretes_tecnico on public.lembretes_manutencao(tecnico_id);
+create index if not exists idx_lembretes_status on public.lembretes_manutencao(status);
+create index if not exists idx_lembretes_data on public.lembretes_manutencao(data_prevista);
+
+alter table public.lembretes_manutencao enable row level security;
+
+create policy "Técnico gerencia seus lembretes"
+  on public.lembretes_manutencao for all
+  using (auth.uid() = tecnico_id)
+  with check (auth.uid() = tecnico_id);

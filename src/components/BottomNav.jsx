@@ -9,7 +9,10 @@ const tabs = [
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 shadow-lg">
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-white z-50"
+      style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.07)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="max-w-md mx-auto flex">
         {tabs.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -17,17 +20,20 @@ export default function BottomNav() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors ${
-                isActive ? 'text-sky-500' : 'text-gray-400'
+              `flex-1 flex flex-col items-center py-2.5 gap-0.5 transition-colors relative ${
+                isActive ? 'ac-text' : 'text-gray-400'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-sky-50' : ''}`}>
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 ac-bg rounded-b-full" />
+                )}
+                <div className={`p-1.5 rounded-xl transition-all duration-200 ${isActive ? 'ac-bg-lt scale-110' : ''}`}>
                   <Icon />
                 </div>
-                <span className="text-xs font-semibold">{label}</span>
+                <span className={`text-xs transition-all ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
               </>
             )}
           </NavLink>

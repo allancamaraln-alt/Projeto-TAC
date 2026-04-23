@@ -69,7 +69,7 @@ export default function ClienteDetalhe() {
         <div className="card space-y-2">
           <a
             href={`tel:${cliente.telefone}`}
-            className="flex items-center gap-2 text-blue-600"
+            className="flex items-center gap-2 ac-text"
           >
             <span>📱</span>
             <span className="font-medium">{cliente.telefone}</span>
@@ -87,9 +87,9 @@ export default function ClienteDetalhe() {
 
         {/* Resumo */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-blue-50 rounded-2xl p-3 text-center">
-            <p className="text-2xl font-bold text-blue-600">{ordens.length}</p>
-            <p className="text-xs text-blue-500 mt-0.5">Total OS</p>
+          <div className="ac-bg-lt rounded-2xl p-3 text-center">
+            <p className="text-2xl font-bold ac-text">{ordens.length}</p>
+            <p className="text-xs ac-text opacity-80 mt-0.5">Total OS</p>
           </div>
           <div className="bg-green-50 rounded-2xl p-3 text-center">
             <p className="text-2xl font-bold text-green-600">

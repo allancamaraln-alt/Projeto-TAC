@@ -33,7 +33,7 @@ export default function Clientes() {
           <h1 className="text-xl font-bold text-gray-800">Clientes</h1>
           <button
             onClick={() => navigate('/clientes/novo')}
-            className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center shadow-md"
+            className="w-10 h-10 ac-bg rounded-full flex items-center justify-center ac-shadow"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -61,7 +61,7 @@ export default function Clientes() {
             <p className="text-4xl mb-3">👥</p>
             <p className="font-medium">{busca ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.'}</p>
             {!busca && (
-              <button onClick={() => navigate('/clientes/novo')} className="mt-4 text-blue-600 font-medium">
+              <button onClick={() => navigate('/clientes/novo')} className="mt-4 ac-text font-medium">
                 + Adicionar primeiro cliente
               </button>
             )}
@@ -76,8 +76,8 @@ export default function Clientes() {
               className="card w-full text-left active:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-600 font-bold text-lg">
+                <div className="w-11 h-11 rounded-full ac-bg-lt flex items-center justify-center flex-shrink-0">
+                  <span className="ac-text font-bold text-lg">
                     {cliente.nome.charAt(0).toUpperCase()}
                   </span>
                 </div>

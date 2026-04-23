@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useToast } from '../hooks/useToast'
 
 const TIPOS = [
   'Instalação', 'Manutenção preventiva', 'Manutenção corretiva',
@@ -12,6 +13,7 @@ export default function OrdemForm() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
+  const toast = useToast()
 
   const [clientes, setClientes] = useState([])
   const [buscaCliente, setBuscaCliente] = useState('')
@@ -23,6 +25,7 @@ export default function OrdemForm() {
     descricao: '',
     valor: '',
     data_agendamento: '',
+    hora_agendamento: '',
     observacoes: '',
     status: 'orcamento',
   })
@@ -62,11 +65,13 @@ export default function OrdemForm() {
       descricao: form.descricao,
       valor: parseFloat(form.valor) || 0,
       data_agendamento: form.data_agendamento || null,
+      hora_agendamento: form.hora_agendamento || null,
       observacoes: form.observacoes,
       status: form.status,
     })
 
     if (error) { setErro('Erro ao salvar. Tente novamente.'); setSaving(false); return }
+    toast('OS criada com sucesso!')
     navigate('/ordens')
   }
 
@@ -91,7 +96,7 @@ export default function OrdemForm() {
             <button
               type="button"
               onClick={() => navigate('/clientes/novo')}
-              className="text-xs text-blue-600 font-medium"
+              className="text-xs ac-text font-medium"
             >
               + Novo cliente
             </button>
@@ -114,7 +119,7 @@ export default function OrdemForm() {
                     <button
                       key={c.id}
                       type="button"
-                      className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0"
+                      className="w-full text-left px-4 py-3 ac-hover border-b border-gray-50 last:border-0"
                       onClick={() => {
                         setClienteSelecionado(c)
                         setBuscaCliente(c.nome)
@@ -168,15 +173,26 @@ export default function OrdemForm() {
           />
         </div>
 
-        {/* Data */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Data de agendamento</label>
-          <input
-            type="date"
-            className="input-field"
-            value={form.data_agendamento}
-            onChange={set('data_agendamento')}
-          />
+        {/* Data e Hora */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data de agendamento</label>
+            <input
+              type="date"
+              className="input-field"
+              value={form.data_agendamento}
+              onChange={set('data_agendamento')}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+            <input
+              type="time"
+              className="input-field"
+              value={form.hora_agendamento}
+              onChange={set('hora_agendamento')}
+            />
+          </div>
         </div>
 
         {/* Status */}

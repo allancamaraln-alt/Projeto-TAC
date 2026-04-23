@@ -8,3 +8,7 @@ export const formatBRL = (valor) =>
 /** 20/04/2026 */
 export const formatDate = (iso) =>
   iso ? new Date(iso.includes('T') ? iso : iso + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
+
+/** 08:30 */
+export const formatTime = (time) =>
+  time ? time.slice(0, 5) : ''

@@ -81,7 +81,7 @@ export default function Relatorio() {
               onClick={() => setPeriodo(p.value)}
               className={`flex-shrink-0 text-sm px-3 py-2 rounded-full font-medium transition-colors ${
                 periodo === p.value
-                  ? 'bg-blue-600 text-white'
+                  ? 'ac-bg ac-text-tx'
                   : 'bg-gray-100 text-gray-600'
               }`}
             >
@@ -110,8 +110,8 @@ export default function Relatorio() {
               <MetricCard
                 label="Ticket médio"
                 value={formatBRL(ticketMedio)}
-                bg="bg-blue-50"
-                text="text-blue-600"
+                bg="ac-bg-lt"
+                text="ac-text"
               />
               <MetricCard
                 label="Em aberto"

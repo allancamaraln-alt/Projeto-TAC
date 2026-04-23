@@ -28,7 +28,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{background: 'linear-gradient(160deg, #0284c7 0%, #0369a1 50%, #075985 100%)'}}>
+    <div className="min-h-screen flex flex-col" style={{background: 'linear-gradient(160deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)'}}>
       {/* Decoração de fundo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white opacity-5" />
@@ -42,7 +42,7 @@ export default function Login() {
           <span className="text-4xl">❄️</span>
         </div>
         <h1 className="text-white text-3xl font-extrabold tracking-tight">ClimaPro</h1>
-        <p className="text-sky-200 text-sm mt-1 font-medium">Ordens de Serviço para Técnicos</p>
+        <p className="ac-text-sf text-sm mt-1 font-medium">Ordens de Serviço para Técnicos</p>
       </div>
 
       {/* Card de login */}
@@ -104,7 +104,7 @@ export default function Login() {
 
         <button
           onClick={() => { setModo(m => m === 'login' ? 'cadastro' : 'login'); setErro('') }}
-          className="w-full text-center text-sky-500 font-semibold text-sm mt-5 py-2"
+          className="w-full text-center ac-text font-semibold text-sm mt-5 py-2"
         >
           {modo === 'login' ? 'Não tem conta? Cadastre-se grátis' : 'Já tem conta? Entrar'}
         </button>

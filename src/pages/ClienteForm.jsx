@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import ConfirmModal from '../components/ConfirmModal'
+import { useToast } from '../hooks/useToast'
 
 export default function ClienteForm() {
   const navigate = useNavigate()
@@ -9,10 +11,12 @@ export default function ClienteForm() {
   const { user } = useAuth()
   const isEdit = Boolean(id && id !== 'novo')
 
+  const toast = useToast()
   const [form, setForm] = useState({ nome: '', telefone: '', endereco: '' })
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const set = (campo) => (e) => setForm(f => ({ ...f, [campo]: e.target.value }))
 
@@ -41,11 +45,11 @@ export default function ClienteForm() {
     }
 
     if (error) { setErro('Erro ao salvar. Tente novamente.'); setSaving(false); return }
+    toast(isEdit ? 'Cliente atualizado!' : 'Cliente cadastrado!')
     navigate('/clientes')
   }
 
   async function handleDelete() {
-    if (!confirm('Excluir este cliente? As OS vinculadas também serão excluídas.')) return
     await supabase.from('clientes').delete().eq('id', id)
     navigate('/clientes')
   }
@@ -106,11 +110,21 @@ export default function ClienteForm() {
         </button>
 
         {isEdit && (
-          <button type="button" onClick={handleDelete} className="btn-danger">
+          <button type="button" onClick={() => setConfirmOpen(true)} className="btn-danger">
             Excluir cliente
           </button>
         )}
       </form>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title="Excluir cliente?"
+        message="As OS vinculadas também serão excluídas. Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        danger
+        onConfirm={handleDelete}
+        onClose={() => setConfirmOpen(false)}
+      />
     </div>
   )
 }

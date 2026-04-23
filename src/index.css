@@ -5,12 +5,20 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --ac:    2 132 199;   /* accent principal — sky-600 */
+    --ac-dk: 3 105 161;   /* accent escuro   — sky-700 */
+    --ac-lt: 186 230 253; /* accent claro    — sky-200 */
+    --ac-tx: 255 255 255; /* texto sobre accent (branco em fundos escuros) */
+    --ac-sf: 186 230 253; /* texto suave sobre accent */
+  }
   html {
     -webkit-tap-highlight-color: transparent;
     font-family: 'Inter', system-ui, sans-serif;
   }
   body {
     @apply bg-slate-50 text-gray-900 m-0;
+    overscroll-behavior-y: none;
   }
   #root {
     @apply w-full text-left;
@@ -18,22 +26,124 @@
 }
 
 @layer components {
+  /* ── Utilitários de acento (adaptam à cor do usuário) ── */
+  .ac-bg      { background-color: rgb(var(--ac)); }
+  .ac-bg-lt   { background-color: rgb(var(--ac-lt) / 0.15); }  /* tint muito suave, estilo sky-50 */
+  .ac-bg-md   { background-color: rgb(var(--ac-lt)); }          /* tint médio, estilo sky-200 */
+  .ac-text    { color: rgb(var(--ac)); }
+  .ac-text-tx { color: rgb(var(--ac-tx)); }
+  .ac-text-sf { color: rgb(var(--ac-sf)); }
+  .ac-text-lt { color: rgb(var(--ac-lt)); }
+  .ac-border    { border-color: rgb(var(--ac)); }
+  .ac-border-lt { border-color: rgb(var(--ac-lt) / 0.5); }
+  .ac-shadow  { box-shadow: 0 4px 6px -1px rgb(var(--ac) / 0.3), 0 2px 4px -2px rgb(var(--ac) / 0.2); }
+  .ac-active:active { background-color: rgb(var(--ac-lt) / 0.15); }
+  .ac-hover:hover   { background-color: rgb(var(--ac-lt) / 0.1); }
+
+  /* ── Componentes globais ── */
   .btn-primary {
-    @apply w-full bg-sky-500 text-white font-bold py-3.5 px-4 rounded-2xl shadow-md shadow-sky-200 active:bg-sky-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full font-bold py-3.5 px-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    color: rgb(var(--ac-tx));
+    background: linear-gradient(135deg, rgb(var(--ac-lt)) 0%, rgb(var(--ac)) 100%);
+    box-shadow: 0 4px 16px rgb(var(--ac) / 0.3);
   }
   .btn-secondary {
-    @apply w-full bg-white text-sky-500 font-semibold py-3.5 px-4 rounded-2xl border-2 border-sky-200 active:bg-sky-50 transition-colors;
+    @apply w-full bg-white font-semibold py-3.5 px-4 rounded-2xl border-2 active:scale-95 transition-all;
+    color: rgb(var(--ac));
+    border-color: rgb(var(--ac-lt));
+  }
+  .btn-secondary:active {
+    background-color: rgb(var(--ac-lt) / 0.12);
   }
   .btn-danger {
-    @apply w-full bg-red-50 text-red-600 font-semibold py-3.5 px-4 rounded-2xl border border-red-200 active:bg-red-100 transition-colors;
+    @apply w-full bg-red-50 text-red-600 font-semibold py-3.5 px-4 rounded-2xl border border-red-200 active:bg-red-100 active:scale-95 transition-all;
   }
   .input-field {
-    @apply w-full border-2 border-gray-200 rounded-2xl py-3.5 px-4 text-base focus:outline-none focus:border-sky-400 bg-white transition-colors;
+    @apply w-full border-2 border-gray-200 rounded-2xl py-3.5 px-4 text-base focus:outline-none bg-white transition-colors;
+  }
+  .input-field:focus {
+    border-color: rgb(var(--ac-lt));
   }
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4;
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4 transition-shadow;
   }
   .page-container {
     @apply max-w-md mx-auto min-h-screen bg-slate-50 pb-24;
   }
 }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.animate-fade-up    { animation: fadeUp    0.35s ease-out forwards; }
+.animate-fade-in    { animation: fadeIn    0.3s  ease-out forwards; }
+.animate-slide-down { animation: slideDown 0.25s ease-out forwards; }
+.animate-slide-up   { animation: slideUp   0.3s  cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* ═══════════════════════════════════════
+   DARK MODE
+   Sobrescreve utilidades Tailwind globalmente
+   quando <html> tem a classe "dark".
+═══════════════════════════════════════ */
+html.dark body {
+  background-color: rgb(15 23 42);
+  color: rgb(226 232 240);
+}
+
+/* — Backgrounds — */
+html.dark .bg-slate-50  { background-color: rgb(15 23 42)  !important; }
+html.dark .bg-white     { background-color: rgb(30 41 59)  !important; }
+html.dark .bg-gray-50   { background-color: rgb(30 41 59)  !important; }
+html.dark .bg-gray-100  { background-color: rgb(44 55 74)  !important; }
+
+/* — Text — */
+html.dark .text-gray-900 { color: rgb(241 245 249) !important; }
+html.dark .text-gray-800 { color: rgb(226 232 240) !important; }
+html.dark .text-gray-700 { color: rgb(203 213 225) !important; }
+html.dark .text-gray-600 { color: rgb(148 163 184) !important; }
+html.dark .text-gray-500 { color: rgb(100 116 139) !important; }
+html.dark .text-gray-400 { color: rgb(71  85  105) !important; }
+html.dark .text-gray-300 { color: rgb(51  65  85)  !important; }
+
+/* — Borders — */
+html.dark .border-gray-100 { border-color: rgb(44 55 74)  !important; }
+html.dark .border-gray-200 { border-color: rgb(51 65 85)  !important; }
+
+/* — Status badge tints (ajustados para fundos escuros) — */
+html.dark .bg-amber-50   { background-color: rgb(120 53 15 / 0.25)  !important; }
+html.dark .bg-violet-50  { background-color: rgb(91  33 182 / 0.25) !important; }
+html.dark .bg-emerald-50 { background-color: rgb(6  78 59  / 0.25)  !important; }
+html.dark .bg-green-50   { background-color: rgb(6  78 59  / 0.25)  !important; }
+html.dark .bg-red-50     { background-color: rgb(127 29 29 / 0.25)  !important; }
+html.dark .bg-yellow-50  { background-color: rgb(113 63 18 / 0.25)  !important; }
+html.dark .bg-purple-50  { background-color: rgb(88  28 135 / 0.25) !important; }
+html.dark .bg-blue-50    { background-color: rgb(30  58 138 / 0.25) !important; }
+
+/* — Inputs — */
+html.dark .input-field::placeholder { color: rgb(71 85 105); }
+html.dark select.input-field        { color-scheme: dark; }
+
+/* — Sombras — */
+html.dark .shadow-sm  { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.5)   !important; }
+html.dark .shadow-md  { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.6) !important; }
+html.dark .shadow-2xl { box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.7) !important; }
+
+/* — BottomNav separador — */
+html.dark nav.fixed { border-top: 1px solid rgb(44 55 74); }

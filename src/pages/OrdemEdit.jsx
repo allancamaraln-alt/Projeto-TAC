@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { formatOS } from '../lib/format'
+import { useToast } from '../hooks/useToast'
 
 const TIPOS = [
   'Instalação', 'Manutenção preventiva', 'Manutenção corretiva',
@@ -19,6 +20,7 @@ const STATUS_OPTIONS = [
 export default function OrdemEdit() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const toast = useToast()
   const [os, setOs] = useState(null)
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -39,6 +41,7 @@ export default function OrdemEdit() {
           descricao: data.descricao || '',
           valor: data.valor ?? '',
           data_agendamento: data.data_agendamento || '',
+          hora_agendamento: data.hora_agendamento || '',
           observacoes: data.observacoes || '',
           status: data.status,
         })
@@ -57,12 +60,14 @@ export default function OrdemEdit() {
         descricao: form.descricao,
         valor: parseFloat(form.valor) || 0,
         data_agendamento: form.data_agendamento || null,
+        hora_agendamento: form.hora_agendamento || null,
         observacoes: form.observacoes,
         status: form.status,
       })
       .eq('id', id)
 
     if (error) { setErro('Erro ao salvar. Tente novamente.'); setSaving(false); return }
+    toast('OS atualizada!')
     navigate(`/ordens/${id}`)
   }
 
@@ -99,7 +104,7 @@ export default function OrdemEdit() {
                 onClick={() => setForm(f => ({ ...f, status: s.value }))}
                 className={`py-2.5 px-3 rounded-xl text-sm font-medium border transition-colors ${
                   form.status === s.value
-                    ? 'bg-blue-600 text-white border-blue-600'
+                    ? 'ac-bg ac-text-tx ac-border'
                     : 'bg-white text-gray-600 border-gray-200'
                 }`}
               >
@@ -143,15 +148,26 @@ export default function OrdemEdit() {
           />
         </div>
 
-        {/* Data */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Data de agendamento</label>
-          <input
-            type="date"
-            className="input-field"
-            value={form.data_agendamento}
-            onChange={set('data_agendamento')}
-          />
+        {/* Data e Hora */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data de agendamento</label>
+            <input
+              type="date"
+              className="input-field"
+              value={form.data_agendamento}
+              onChange={set('data_agendamento')}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+            <input
+              type="time"
+              className="input-field"
+              value={form.hora_agendamento}
+              onChange={set('hora_agendamento')}
+            />
+          </div>
         </div>
 
         {/* Observações */}
