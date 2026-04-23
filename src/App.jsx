@@ -10,7 +10,7 @@ import Login from './pages/Login'
 
 // Inicializar Sentry
 Sentry.init({
-  dsn: "https://39e93ed64894fb89acb4b451fdb4a136e0451126997291648.ingest.us.sentry.io/4511270012846080",
+  dsn: "https://39e93ed64894fb89acb4b451fdb4a136@o4511269979291648.ingest.us.sentry.io/4511270012846080",
   tracesSampleRate: 1.0,
   environment: "production"
 })
