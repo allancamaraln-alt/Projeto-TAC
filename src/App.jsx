@@ -14,7 +14,6 @@ Sentry.init({
   tracesSampleRate: 1.0,
   environment: "production"
 })
-Sentry.captureMessage("ClimaPro: Sentry conectado com sucesso")
 
 const Dashboard    = lazy(() => import('./pages/Dashboard'))
 const Clientes     = lazy(() => import('./pages/Clientes'))
