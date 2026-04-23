@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react"
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
@@ -6,6 +7,18 @@ import { useBiometric } from './hooks/useBiometric'
 import BottomNav from './components/BottomNav'
 import { getTheme, applyTheme } from './lib/theme'
 import Login from './pages/Login'
+
+// Inicializar Sentry
+Sentry.init({
+  dsn: "https://39e93ed64894fb89acb4b451fdb4a136e0451126997291648.ingest.us.sentry.io/4511270012846080",
+  integrations: [
+    new Sentry.Replay()
+  ],
+  tracesSampleRate: 1.0,
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+  environment: "production"
+})
 
 const Dashboard    = lazy(() => import('./pages/Dashboard'))
 const Clientes     = lazy(() => import('./pages/Clientes'))
@@ -145,7 +158,7 @@ function AppContent() {
   )
 }
 
-export default function App() {
+export default Sentry.withErrorBoundary(function App() {
   useEffect(() => { applyTheme(getTheme()) }, [])
 
   return (
@@ -157,4 +170,4 @@ export default function App() {
       </AuthProvider>
     </BrowserRouter>
   )
-}
+}, { fallback: <div>Erro ao carregar a aplicação</div>, showDialog: false })

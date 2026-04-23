@@ -95,16 +95,19 @@ alter table public.clientes enable row level security;
 alter table public.ordens_servico enable row level security;
 
 -- Profiles
+drop policy if exists "Usuário vê apenas seu perfil" on public.profiles;
 create policy "Usuário vê apenas seu perfil"
   on public.profiles for all
   using (auth.uid() = id);
 
 -- Clientes
+drop policy if exists "Técnico vê seus clientes" on public.clientes;
 create policy "Técnico vê seus clientes"
   on public.clientes for all
   using (auth.uid() = tecnico_id);
 
 -- Ordens de serviço
+drop policy if exists "Técnico vê suas OS" on public.ordens_servico;
 create policy "Técnico vê suas OS"
   on public.ordens_servico for all
   using (auth.uid() = tecnico_id);
@@ -131,6 +134,7 @@ create index if not exists idx_lembretes_data on public.lembretes_manutencao(dat
 
 alter table public.lembretes_manutencao enable row level security;
 
+drop policy if exists "Técnico gerencia seus lembretes" on public.lembretes_manutencao;
 create policy "Técnico gerencia seus lembretes"
   on public.lembretes_manutencao for all
   using (auth.uid() = tecnico_id)
