@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import BottomNav from './components/BottomNav'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -66,6 +67,7 @@ export default function App() {
       <AuthProvider>
         <AppContent />
       </AuthProvider>
+      <SpeedInsights />
     </BrowserRouter>
   )
 }
