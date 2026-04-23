@@ -73,7 +73,7 @@ function BiometricPrompt({ onDone }) {
           {loading ? 'Ativando...' : 'Ativar agora'}
         </button>
         <button
-          onClick={onDone}
+          onClick={() => { localStorage.setItem('climapro_biometric_declined', '1'); onDone() }}
           className="w-full text-center text-gray-400 font-semibold text-sm mt-4 py-2"
         >
           Agora não
@@ -91,6 +91,8 @@ function AppContent() {
   useEffect(() => {
     if (user && sessionStorage.getItem('climapro_biometric_prompt')) {
       sessionStorage.removeItem('climapro_biometric_prompt')
+      const declined = localStorage.getItem('climapro_biometric_declined')
+      if (declined) return
       biometric.isAvailable().then(avail => {
         if (avail && !biometric.isEnabled()) setShowBioPrompt(true)
       })
