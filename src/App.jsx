@@ -11,12 +11,7 @@ import Login from './pages/Login'
 // Inicializar Sentry
 Sentry.init({
   dsn: "https://39e93ed64894fb89acb4b451fdb4a136e0451126997291648.ingest.us.sentry.io/4511270012846080",
-  integrations: [
-    new Sentry.Replay()
-  ],
   tracesSampleRate: 1.0,
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
   environment: "production"
 })
 
