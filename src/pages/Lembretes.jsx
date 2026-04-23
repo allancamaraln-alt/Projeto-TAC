@@ -23,22 +23,25 @@ export default function Lembretes() {
   const navigate = useNavigate()
   const [lembretes, setLembretes] = useState([])
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState('')
 
   useEffect(() => { carregar() }, [])
 
   async function carregar() {
-    const { data } = await supabase
+    setErro('')
+    const { data, error } = await supabase
       .from('lembretes_manutencao')
       .select('*, clientes(nome, telefone)')
       .eq('status', 'pendente')
       .order('data_prevista', { ascending: true })
-    setLembretes(data ?? [])
+    if (error) setErro('Não foi possível carregar os lembretes. Verifique sua conexão.')
+    else setLembretes(data ?? [])
     setLoading(false)
   }
 
   async function dispensar(id) {
-    await supabase.from('lembretes_manutencao').update({ status: 'dispensado' }).eq('id', id)
-    setLembretes(prev => prev.filter(l => l.id !== id))
+    const { error } = await supabase.from('lembretes_manutencao').update({ status: 'dispensado' }).eq('id', id)
+    if (!error) setLembretes(prev => prev.filter(l => l.id !== id))
   }
 
   function abrirWhatsApp(lembrete) {
@@ -78,7 +81,15 @@ export default function Lembretes() {
           </div>
         )}
 
-        {!loading && lembretes.length === 0 && (
+        {!loading && erro && (
+          <div className="card text-center py-10">
+            <p className="text-3xl mb-3">⚠️</p>
+            <p className="font-semibold text-gray-600">{erro}</p>
+            <button onClick={carregar} className="mt-4 ac-text font-medium text-sm">Tentar novamente</button>
+          </div>
+        )}
+
+        {!loading && !erro && lembretes.length === 0 && (
           <div className="card text-center py-12">
             <p className="text-4xl mb-3">🎉</p>
             <p className="font-semibold text-gray-600">Nenhum lembrete pendente!</p>

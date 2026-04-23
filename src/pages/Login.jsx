@@ -77,7 +77,12 @@ export default function Login() {
     if (modo === 'login') {
       const { error } = await signIn(form.email, form.password)
       if (error) {
-        setErro('Email ou senha incorretos.')
+        const msg = error.message || ''
+        if (msg.includes('fetch') || msg.includes('network') || msg.includes('NetworkError') || msg.includes('Failed')) {
+          setErro('Sem conexão com a internet. Verifique sua rede.')
+        } else {
+          setErro('Email ou senha incorretos.')
+        }
       } else {
         if (salvarSenha) localStorage.setItem(EMAIL_KEY, form.email)
         else localStorage.removeItem(EMAIL_KEY)

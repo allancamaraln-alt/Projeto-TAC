@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useToast } from '../hooks/useToast'
 
 const OPCOES = [
   { meses: 3,  label: '3 meses' },
@@ -17,6 +18,7 @@ function addMeses(meses) {
 
 export default function ModalLembrete({ os, onClose }) {
   const { profile } = useAuth()
+  const toast = useToast()
   const [meses, setMeses] = useState(6)
   const [salvando, setSalvando] = useState(false)
 
@@ -24,8 +26,9 @@ export default function ModalLembrete({ os, onClose }) {
   const dataLabel = dataPrevia.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 
   async function salvar() {
+    if (!profile?.id) { toast('Erro: perfil não carregado.', 'error'); return }
     setSalvando(true)
-    await supabase.from('lembretes_manutencao').insert({
+    const { error } = await supabase.from('lembretes_manutencao').insert({
       tecnico_id: profile.id,
       cliente_id: os.cliente_id,
       ordem_id: os.id,
@@ -34,6 +37,8 @@ export default function ModalLembrete({ os, onClose }) {
       intervalo_meses: meses,
     })
     setSalvando(false)
+    if (error) { toast('Erro ao salvar lembrete.', 'error'); return }
+    toast('Revisão preventiva programada!')
     onClose()
   }
 

@@ -37,11 +37,13 @@ export default function OrdemForm() {
   useEffect(() => {
     // Pré-selecionar cliente se veio da tela de clientes
     const clienteId = searchParams.get('cliente')
-    supabase.from('clientes').select('*').order('nome').then(({ data }) => {
-      setClientes(data ?? [])
-      if (clienteId) {
-        const c = data?.find(c => c.id === clienteId)
-        if (c) { setClienteSelecionado(c); setBuscaCliente(c.nome) }
+    supabase.from('clientes').select('*').order('nome').then(({ data, error }) => {
+      if (!error) {
+        setClientes(data ?? [])
+        if (clienteId) {
+          const c = data?.find(c => c.id === clienteId)
+          if (c) { setClienteSelecionado(c); setBuscaCliente(c.nome) }
+        }
       }
     })
   }, [])

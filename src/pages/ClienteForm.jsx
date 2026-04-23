@@ -24,8 +24,9 @@ export default function ClienteForm() {
     if (!isEdit) return
     setLoading(true)
     supabase.from('clientes').select('*').eq('id', id).single()
-      .then(({ data }) => {
-        if (data) setForm({ nome: data.nome, telefone: data.telefone, endereco: data.endereco || '' })
+      .then(({ data, error }) => {
+        if (error) setErro('Erro ao carregar cliente.')
+        else if (data) setForm({ nome: data.nome, telefone: data.telefone, endereco: data.endereco || '' })
         setLoading(false)
       })
   }, [id, isEdit])
@@ -50,7 +51,8 @@ export default function ClienteForm() {
   }
 
   async function handleDelete() {
-    await supabase.from('clientes').delete().eq('id', id)
+    const { error } = await supabase.from('clientes').delete().eq('id', id)
+    if (error) { setErro('Não foi possível excluir. Verifique se há OS vinculadas.'); return }
     navigate('/clientes')
   }
 
