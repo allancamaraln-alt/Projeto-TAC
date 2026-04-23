@@ -38,10 +38,12 @@ export default function OrdensList() {
     load()
   }, [filtroStatus])
 
+  const buscaLower = busca.toLowerCase()
   const filtradas = ordens.filter(os =>
-    os.clientes?.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+    os.clientes?.nome?.toLowerCase().includes(buscaLower) ||
     String(os.numero).includes(busca) ||
-    os.tipo_servico.toLowerCase().includes(busca.toLowerCase())
+    formatOS(os.numero).toLowerCase().includes(buscaLower) ||
+    os.tipo_servico.toLowerCase().includes(buscaLower)
   )
 
   return (
