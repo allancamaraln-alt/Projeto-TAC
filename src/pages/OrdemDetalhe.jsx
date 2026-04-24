@@ -161,6 +161,42 @@ export default function OrdemDetalhe() {
       </div>
 
       <div className="px-4 pt-4 space-y-4">
+
+        {/* Preview do cabeçalho do PDF */}
+        <div
+          className="relative rounded-2xl overflow-hidden h-20 flex items-center px-4 justify-between"
+          style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
+        >
+          {profile?.cover_url && (
+            <>
+              <div
+                className="absolute inset-0 bg-cover bg-center scale-110"
+                style={{ backgroundImage: `url(${profile.cover_url})`, filter: 'blur(6px)' }}
+              />
+              <div className="absolute inset-0 bg-black/35" />
+            </>
+          )}
+          <div className="relative z-10">
+            <p className="text-white font-extrabold text-base leading-tight">
+              {profile?.empresa || profile?.nome || 'ClimaPro'}
+            </p>
+            <p className="text-white/60 text-xs mt-0.5">
+              {profile?.cover_url ? 'Prévia do cabeçalho do PDF' : (
+                <button
+                  onClick={() => navigate('/perfil')}
+                  className="underline underline-offset-2 text-white/70"
+                >
+                  + Adicionar foto de capa ao PDF
+                </button>
+              )}
+            </p>
+          </div>
+          <div className="relative z-10 text-right">
+            <p className="text-white font-bold text-lg font-mono">{formatOS(os.numero)}</p>
+            <p className="text-white/60 text-xs">{formatDate(os.created_at)}</p>
+          </div>
+        </div>
+
         {/* Botão Enviar pelo WhatsApp */}
         <button
           onClick={enviarWhatsApp}
