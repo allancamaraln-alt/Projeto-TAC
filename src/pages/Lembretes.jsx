@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatBRL } from '../lib/format'
+import { useToast } from '../hooks/useToast'
 
 function diasParaData(dataIso) {
   const hoje = new Date()
@@ -18,9 +18,17 @@ function labelDias(dias) {
   return              { texto: `em ${dias} dias`,             cor: 'text-gray-500',   bg: 'bg-gray-50',   border: 'border-gray-100' }
 }
 
+const INTERVALOS = [
+  { meses: 3,  label: '3 meses' },
+  { meses: 6,  label: '6 meses' },
+  { meses: 9,  label: '9 meses' },
+  { meses: 12, label: '1 ano'   },
+]
+
 export default function Lembretes() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [lembretes, setLembretes] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
@@ -44,6 +52,14 @@ export default function Lembretes() {
     if (!error) setLembretes(prev => prev.filter(l => l.id !== id))
   }
 
+  async function salvarEdicao(id, campos) {
+    const { error } = await supabase.from('lembretes_manutencao').update(campos).eq('id', id)
+    if (error) { toast('Erro ao salvar.', 'error'); return false }
+    setLembretes(prev => prev.map(l => l.id === id ? { ...l, ...campos } : l))
+    toast('Lembrete atualizado!')
+    return true
+  }
+
   function abrirWhatsApp(lembrete) {
     const telefone = (lembrete.clientes?.telefone || '').replace(/\D/g, '')
     const ddi = telefone.startsWith('55') ? telefone : `55${telefone}`
@@ -62,7 +78,6 @@ export default function Lembretes() {
 
   return (
     <div className="page-container">
-      {/* Header */}
       <div className="bg-white px-4 pt-12 pb-4 border-b border-gray-100 flex items-center gap-3 sticky top-0 z-10">
         <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-full active:bg-gray-100">
           <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -102,7 +117,7 @@ export default function Lembretes() {
           <section>
             <h2 className="text-xs font-bold text-red-400 uppercase tracking-widest mb-3">Em atraso</h2>
             <div className="space-y-3">
-              {vencidos.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
+              {vencidos.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onEditar={salvarEdicao} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
             </div>
           </section>
         )}
@@ -111,7 +126,7 @@ export default function Lembretes() {
           <section>
             <h2 className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-3">Vencendo em breve</h2>
             <div className="space-y-3">
-              {proximos.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
+              {proximos.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onEditar={salvarEdicao} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
             </div>
           </section>
         )}
@@ -120,7 +135,7 @@ export default function Lembretes() {
           <section>
             <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3">Agendados</h2>
             <div className="space-y-3">
-              {agendados.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
+              {agendados.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onEditar={salvarEdicao} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
             </div>
           </section>
         )}
@@ -129,10 +144,34 @@ export default function Lembretes() {
   )
 }
 
-function CartaoLembrete({ lembrete, onWhatsApp, onDispensar, onCliente }) {
+function CartaoLembrete({ lembrete, onWhatsApp, onDispensar, onEditar, onCliente }) {
   const dias = diasParaData(lembrete.data_prevista)
   const { texto, cor, bg, border } = labelDias(dias)
   const dataFormatada = new Date(lembrete.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR')
+
+  const [editando, setEditando] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [tipoServico, setTipoServico] = useState(lembrete.tipo_servico)
+  const [dataPrevista, setDataPrevista] = useState(lembrete.data_prevista)
+  const [intervaloMeses, setIntervaloMeses] = useState(lembrete.intervalo_meses)
+
+  async function salvar() {
+    setSalvando(true)
+    const ok = await onEditar(lembrete.id, {
+      tipo_servico: tipoServico,
+      data_prevista: dataPrevista,
+      intervalo_meses: intervaloMeses,
+    })
+    setSalvando(false)
+    if (ok) setEditando(false)
+  }
+
+  function cancelar() {
+    setTipoServico(lembrete.tipo_servico)
+    setDataPrevista(lembrete.data_prevista)
+    setIntervaloMeses(lembrete.intervalo_meses)
+    setEditando(false)
+  }
 
   return (
     <div className={`${bg} border ${border} rounded-2xl p-4 space-y-3`}>
@@ -143,11 +182,78 @@ function CartaoLembrete({ lembrete, onWhatsApp, onDispensar, onCliente }) {
           </button>
           <p className="text-sm text-gray-500 mt-0.5">{lembrete.tipo_servico} · a cada {lembrete.intervalo_meses}m</p>
         </div>
-        <div className="text-right flex-shrink-0">
-          <p className={`text-sm font-bold ${cor}`}>{texto}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{dataFormatada}</p>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="text-right mr-1">
+            <p className={`text-sm font-bold ${cor}`}>{texto}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{dataFormatada}</p>
+          </div>
+          <button
+            onClick={() => setEditando(e => !e)}
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-gray-200 text-gray-400 active:scale-95 transition-all"
+            title="Editar"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3a2 2 0 01.586-1.414z" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {editando && (
+        <div className="bg-white rounded-xl p-3 space-y-3 border border-gray-100">
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1">Tipo de serviço</label>
+            <input
+              type="text"
+              value={tipoServico}
+              onChange={e => setTipoServico(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-sky-400"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1">Data prevista</label>
+            <input
+              type="date"
+              value={dataPrevista}
+              onChange={e => setDataPrevista(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-sky-400"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 block mb-1">Intervalo</label>
+            <div className="grid grid-cols-4 gap-2">
+              {INTERVALOS.map(({ meses, label }) => (
+                <button
+                  key={meses}
+                  onClick={() => setIntervaloMeses(meses)}
+                  className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                    intervaloMeses === meses
+                      ? 'bg-sky-500 text-white shadow-sm scale-105'
+                      : 'bg-gray-100 text-gray-600 active:scale-95'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={salvar}
+              disabled={salvando}
+              className="flex-1 bg-sky-500 text-white text-sm font-bold py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60"
+            >
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
+            <button
+              onClick={cancelar}
+              className="px-4 bg-gray-100 text-gray-600 text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button
