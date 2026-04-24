@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDate } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
+import { useAuth } from '../hooks/useAuth'
 
 const FILTROS = [
   { value: '', label: 'Todas' },
@@ -15,6 +16,7 @@ const FILTROS = [
 export default function OrdensList() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { profile } = useAuth()
   const [ordens, setOrdens] = useState([])
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
@@ -49,7 +51,18 @@ export default function OrdensList() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100 sticky top-0 z-10">
+      <div className="relative px-4 pt-12 pb-3 border-b border-gray-100 sticky top-0 z-10 overflow-hidden">
+        {profile?.cover_url && (
+          <>
+            <div
+              className="absolute inset-0 bg-cover bg-center scale-110"
+              style={{ backgroundImage: `url(${profile.cover_url})`, filter: 'blur(14px)' }}
+            />
+            <div className="absolute inset-0 bg-white/80" />
+          </>
+        )}
+        {!profile?.cover_url && <div className="absolute inset-0 bg-white" />}
+        <div className="relative">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-gray-800">Ordens de Serviço</h1>
           <button
@@ -86,6 +99,7 @@ export default function OrdensList() {
               {f.label}
             </button>
           ))}
+        </div>
         </div>
       </div>
 

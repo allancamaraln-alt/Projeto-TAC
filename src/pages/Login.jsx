@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { useBiometric } from '../hooks/useBiometric'
 
-const EMAIL_KEY = 'climapro_email'
+const EMAIL_KEY    = 'climapro_email'
+const PASSWORD_KEY = 'climapro_pwd'
 
 function IconOlhoAberto() {
   return (
@@ -21,45 +21,30 @@ function IconOlhoFechado() {
   )
 }
 
-function IconDigital() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-    </svg>
-  )
-}
 
 export default function Login() {
   const { signIn, signUp, resetPassword } = useAuth()
-  const biometric = useBiometric()
 
   const [modo, setModo] = useState('login')
-  const [form, setForm] = useState({ nome: '', email: '', password: '' })
+  const [form, setForm] = useState(() => ({
+    nome: '',
+    email:    localStorage.getItem(EMAIL_KEY)    || '',
+    password: localStorage.getItem(PASSWORD_KEY) || '',
+  }))
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
   const [senhaVisivel, setSenhaVisivel] = useState(false)
-  const [salvarSenha, setSalvarSenha] = useState(false)
-  const [bioEnabled, setBioEnabled] = useState(false)
-  const [bioLoading, setBioLoading] = useState(false)
+  const [salvarSenha, setSalvarSenha] = useState(() => !!localStorage.getItem(EMAIL_KEY))
 
-  useEffect(() => {
-    const savedEmail = localStorage.getItem(EMAIL_KEY)
-    if (savedEmail) {
-      setForm(f => ({ ...f, email: savedEmail }))
-      setSalvarSenha(true)
+  function toggleSalvarSenha(checked) {
+    setSalvarSenha(checked)
+    if (!checked) {
+      localStorage.removeItem(EMAIL_KEY)
+      localStorage.removeItem(PASSWORD_KEY)
     }
-    setBioEnabled(biometric.isEnabled())
-  }, [])
+  }
 
   const set = (campo) => (e) => setForm(f => ({ ...f, [campo]: e.target.value }))
-
-  async function handleBiometricLogin() {
-    setBioLoading(true)
-    setErro('')
-    const result = await biometric.authenticate()
-    if (result.error) setErro(result.error)
-    setBioLoading(false)
-  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -67,6 +52,11 @@ export default function Login() {
     setLoading(true)
 
     if (modo === 'recuperar') {
+      if (!form.email.includes('@')) {
+        setErro('Para recuperar a senha, informe seu email.')
+        setLoading(false)
+        return
+      }
       const { error } = await resetPassword(form.email)
       if (error) setErro('Não foi possível enviar o email. Verifique o endereço.')
       else setErro('✅ Email de recuperação enviado! Verifique sua caixa de entrada.')
@@ -78,15 +68,21 @@ export default function Login() {
       const { error } = await signIn(form.email, form.password)
       if (error) {
         const msg = error.message || ''
-        if (msg.includes('fetch') || msg.includes('network') || msg.includes('NetworkError') || msg.includes('Failed')) {
+        if (msg === 'phone_not_found') {
+          setErro('Telefone não encontrado. Verifique o número ou use seu email.')
+        } else if (msg.includes('fetch') || msg.includes('network') || msg.includes('NetworkError') || msg.includes('Failed')) {
           setErro('Sem conexão com a internet. Verifique sua rede.')
         } else {
-          setErro('Email ou senha incorretos.')
+          setErro('Email/telefone ou senha incorretos.')
         }
       } else {
-        if (salvarSenha) localStorage.setItem(EMAIL_KEY, form.email)
-        else localStorage.removeItem(EMAIL_KEY)
-        sessionStorage.setItem('climapro_biometric_prompt', '1')
+        if (salvarSenha) {
+          localStorage.setItem(EMAIL_KEY, form.email)
+          localStorage.setItem(PASSWORD_KEY, form.password)
+        } else {
+          localStorage.removeItem(EMAIL_KEY)
+          localStorage.removeItem(PASSWORD_KEY)
+        }
       }
     } else {
       if (!form.nome.trim()) { setErro('Digite seu nome.'); setLoading(false); return }
@@ -126,27 +122,6 @@ export default function Login() {
           {modo === 'recuperar' && 'Recuperar senha'}
         </h2>
 
-        {/* Botão biometria (apenas no modo login, se ativado) */}
-        {modo === 'login' && bioEnabled && (
-          <>
-            <button
-              onClick={handleBiometricLogin}
-              disabled={bioLoading}
-              className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-2xl bg-gray-50 border border-gray-200 text-gray-700 font-semibold text-sm mb-5 active:bg-gray-100 transition-colors"
-            >
-              {bioLoading
-                ? <span className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                : <IconDigital />}
-              {bioLoading ? 'Verificando...' : 'Entrar com Face ID / Digital'}
-            </button>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="flex-1 h-px bg-gray-100" />
-              <span className="text-xs text-gray-400 font-medium">ou com email e senha</span>
-              <div className="flex-1 h-px bg-gray-100" />
-            </div>
-          </>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {modo === 'cadastro' && (
             <div>
@@ -163,13 +138,17 @@ export default function Login() {
           )}
 
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-1.5">Email</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-1.5">
+              {modo === 'login' ? 'Email ou telefone' : 'Email'}
+            </label>
             <input
-              type="email"
+              type="text"
+              inputMode={modo === 'login' && form.email && !form.email.includes('@') ? 'tel' : 'email'}
               className="input-field"
-              placeholder="seu@email.com"
+              placeholder={modo === 'login' ? 'email@exemplo.com ou (11) 99999-9999' : 'seu@email.com'}
               value={form.email}
               onChange={set('email')}
+              autoCapitalize="none"
               required
             />
           </div>
@@ -204,7 +183,7 @@ export default function Login() {
                     <input
                       type="checkbox"
                       checked={salvarSenha}
-                      onChange={e => setSalvarSenha(e.target.checked)}
+                      onChange={e => toggleSalvarSenha(e.target.checked)}
                       className="w-4 h-4 rounded"
                       style={{ accentColor: 'rgb(var(--ac))' }}
                     />

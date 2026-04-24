@@ -4,6 +4,23 @@ import { extractPalette, applyPalette } from '../lib/palette'
 
 const AuthContext = createContext({})
 
+function normalizePhone(input) {
+  const d = input.replace(/\D/g, '')
+  if (d.length === 13 && d.startsWith('55')) return `(${d.slice(2, 4)}) ${d.slice(4, 9)}-${d.slice(9)}`
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return input.trim()
+}
+
+async function findEmailByPhone(phone) {
+  const candidates = [normalizePhone(phone), phone.replace(/\D/g, ''), phone.trim()]
+  for (const q of [...new Set(candidates)]) {
+    const { data } = await supabase.from('profiles').select('email').eq('telefone', q).maybeSingle()
+    if (data?.email) return data.email
+  }
+  return null
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -12,20 +29,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      if (session?.user) fetchProfile(session.user.id, session.user.email)
       else setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
+      if (session?.user) fetchProfile(session.user.id, session.user.email)
       else { setProfile(null); setLoading(false); applyPalette(null) }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  async function fetchProfile(userId) {
+  async function fetchProfile(userId, userEmail) {
     const { data } = await supabase
       .from('profiles')
       .select('*')
@@ -36,9 +53,22 @@ export function AuthProvider({ children }) {
     if (data?.cover_url) {
       extractPalette(data.cover_url).then(applyPalette)
     }
+    // Salva email no perfil para permitir login por telefone
+    if (userEmail && !data?.email) {
+      supabase.from('profiles').update({ email: userEmail }).eq('id', userId).then(() => {})
+    }
   }
 
-  async function signIn(email, password) {
+  async function signIn(identifier, password) {
+    const trimmed = identifier.trim()
+    let email = trimmed
+
+    if (!trimmed.includes('@')) {
+      const found = await findEmailByPhone(trimmed)
+      if (!found) return { error: { message: 'phone_not_found' } }
+      email = found
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
   }

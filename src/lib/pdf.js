@@ -37,34 +37,34 @@ const STATUS_LABEL = {
 // Section heading: left accent bar + label + right rule
 function sectionHeader(doc, label, y, margin, contentW, ACCENT) {
   doc.setFillColor(...ACCENT)
-  doc.rect(margin, y + 0.5, 3, 5, 'F')
+  doc.rect(margin, y + 0.5, 3, 7, 'F')
 
-  doc.setFontSize(7.5)
+  doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...SLATE5)
-  doc.text(label, margin + 5.5, y + 4.5)
+  doc.text(label, margin + 5.5, y + 6.5)
 
   const lw = doc.getTextWidth(label)
   doc.setDrawColor(...SLATE2)
   doc.setLineWidth(0.25)
-  doc.line(margin + 6.5 + lw, y + 3, margin + contentW, y + 3)
+  doc.line(margin + 6.5 + lw, y + 4, margin + contentW, y + 4)
 
-  return y + 12
+  return y + 16
 }
 
 // Label + value row
 function infoRow(doc, label, value, y, margin) {
-  doc.setFontSize(7.5)
+  doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...SLATE5)
   doc.text(label, margin, y)
 
-  doc.setFontSize(9.5)
+  doc.setFontSize(14)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...SLATE8)
   doc.text(String(value ?? '—'), margin + 34, y)
 
-  return y + 7
+  return y + 11
 }
 
 export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
@@ -109,7 +109,7 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   doc.setFont('helvetica', 'bold')
   doc.text(tecnico?.empresa || 'ClimaPro', margin, 19)
 
-  doc.setFontSize(8.5)
+  doc.setFontSize(12)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...HDR_SOFT)
   doc.text('Servicos de Ar-Condicionado e Refrigeracao', margin, 27)
@@ -120,27 +120,27 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   doc.setFont('helvetica', 'bold')
   doc.text(formatOS(ordem.numero), W - margin, 18, { align: 'right' })
 
-  doc.setFontSize(8)
+  doc.setFontSize(11)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...HDR_SOFT)
   doc.text(formatDate(ordem.created_at), W - margin, 26, { align: 'right' })
 
   // Status pill
   const statusLabel = STATUS_LABEL[ordem.status] || 'ORCAMENTO'
-  doc.setFontSize(7)
+  doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
-  const pillW = doc.getTextWidth(statusLabel) + 8
+  const pillW = doc.getTextWidth(statusLabel) + 10
   const pillX = W - margin - pillW
   const pillY = 30
   doc.setFillColor(...ACCENT_DK)
-  doc.roundedRect(pillX, pillY, pillW, 5.5, 1.5, 1.5, 'F')
+  doc.roundedRect(pillX, pillY, pillW, 6.5, 1.5, 1.5, 'F')
   doc.setTextColor(...HDR_TEXT)
-  doc.text(statusLabel, pillX + pillW / 2, pillY + 3.8, { align: 'center' })
+  doc.text(statusLabel, pillX + pillW / 2, pillY + 4.5, { align: 'center' })
 
   // ── DOCUMENT TITLE ─────────────────────────────────────────
   let y = HDR_H + 3.5 + 13
 
-  doc.setFontSize(15)
+  doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...SLATE8)
   doc.text('Proposta de Servico', margin, y)
@@ -153,26 +153,26 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   // ── CLIENTE ────────────────────────────────────────────────
   y = sectionHeader(doc, 'CLIENTE', y, margin, contentW, ACCENT)
 
-  doc.setFontSize(12)
+  doc.setFontSize(15)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...SLATE8)
   doc.text(cliente.nome, margin, y)
-  y += 8
+  y += 10
 
   if (cliente.telefone) {
     y = infoRow(doc, 'Telefone:', cliente.telefone, y, margin)
   }
   if (cliente.endereco) {
-    doc.setFontSize(7.5)
+    doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...SLATE5)
     doc.text('Endereco:', margin, y)
     const endLines = doc.splitTextToSize(cliente.endereco, contentW - 34)
-    doc.setFontSize(9.5)
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...SLATE8)
     doc.text(endLines, margin + 34, y)
-    y += Math.max(endLines.length * 5.5, 6) + 1
+    y += Math.max(endLines.length * 8.5, 10) + 1
   }
 
   y += 10
@@ -180,11 +180,11 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   // ── SERVICO ────────────────────────────────────────────────
   y = sectionHeader(doc, 'SERVICO', y, margin, contentW, ACCENT)
 
-  doc.setFontSize(12)
+  doc.setFontSize(15)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...SLATE8)
   doc.text(ordem.tipo_servico, margin, y)
-  y += 8
+  y += 10
 
   if (ordem.data_agendamento) {
     const agendTxt = ordem.hora_agendamento
@@ -194,17 +194,17 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   }
 
   if (ordem.descricao) {
-    doc.setFontSize(7.5)
+    doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...SLATE5)
     doc.text('Descricao:', margin, y)
-    y += 5.5
-    doc.setFontSize(9.5)
+    y += 8.5
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...SLATE8)
     const descLines = doc.splitTextToSize(ordem.descricao, contentW)
     doc.text(descLines, margin, y)
-    y += descLines.length * 5.5 + 2
+    y += descLines.length * 8.5 + 2
   }
 
   y += 10
@@ -212,17 +212,17 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   // ── OBSERVACOES ────────────────────────────────────────────
   if (ordem.observacoes) {
     y = sectionHeader(doc, 'OBSERVACOES', y, margin, contentW, ACCENT)
-    doc.setFontSize(9.5)
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...SLATE8)
     const obsLines = doc.splitTextToSize(ordem.observacoes, contentW)
     doc.text(obsLines, margin, y)
-    y += obsLines.length * 5.5 + 10
+    y += obsLines.length * 8.5 + 10
   }
 
   // ── VALOR BOX ──────────────────────────────────────────────
   const boxY = Math.max(y + 4, 200)
-  const boxH = 17
+  const boxH = 20
 
   // Light background
   doc.setFillColor(...ACCENT_LT)
@@ -234,16 +234,16 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   doc.rect(margin + 2, boxY, 3, boxH, 'F')
 
   // Label
-  doc.setFontSize(7.5)
+  doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...ACCENT_DK)
-  doc.text('TOTAL DO SERVIÇO', margin + 11, boxY + 10.5)
+  doc.text('TOTAL DO SERVIÇO', margin + 11, boxY + 12)
 
   // Value
-  doc.setFontSize(17)
+  doc.setFontSize(22)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...ACCENT_DK)
-  doc.text(formatBRL(ordem.valor), W - margin - 6, boxY + 11.5, { align: 'right' })
+  doc.text(formatBRL(ordem.valor), W - margin - 6, boxY + 13, { align: 'right' })
 
   // ── FOOTER ─────────────────────────────────────────────────
   const footerY = 276
@@ -251,22 +251,22 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   doc.setLineWidth(0.4)
   doc.line(margin, footerY, W - margin, footerY)
 
-  doc.setFontSize(9)
+  doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...SLATE8)
   doc.text(tecnico?.nome || 'Tecnico', margin, footerY + 7)
 
-  doc.setFontSize(8)
+  doc.setFontSize(11)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...SLATE5)
   if (tecnico?.empresa) doc.text(tecnico.empresa, margin, footerY + 13)
   if (tecnico?.telefone) doc.text(tecnico.telefone, W - margin, footerY + 7, { align: 'right' })
 
-  doc.setFontSize(7)
+  doc.setFontSize(10)
   doc.setTextColor(...SLATE2)
   doc.text(
     `Gerado em ${new Date().toLocaleDateString('pt-BR')} via ClimaPro`,
-    W / 2, footerY + 19,
+    W / 2, footerY + 20,
     { align: 'center' }
   )
 
