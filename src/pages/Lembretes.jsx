@@ -56,8 +56,9 @@ export default function Lembretes() {
     window.open(`https://wa.me/${ddi}?text=${msg}`, '_blank')
   }
 
-  const vencidos  = lembretes.filter(l => diasParaData(l.data_prevista) < 0)
-  const proximos  = lembretes.filter(l => diasParaData(l.data_prevista) >= 0)
+  const vencidos   = lembretes.filter(l => diasParaData(l.data_prevista) < 0)
+  const proximos   = lembretes.filter(l => { const d = diasParaData(l.data_prevista); return d >= 0 && d <= 30 })
+  const agendados  = lembretes.filter(l => diasParaData(l.data_prevista) > 30)
 
   return (
     <div className="page-container">
@@ -108,9 +109,18 @@ export default function Lembretes() {
 
         {proximos.length > 0 && (
           <section>
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Próximos</h2>
+            <h2 className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-3">Vencendo em breve</h2>
             <div className="space-y-3">
               {proximos.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
+            </div>
+          </section>
+        )}
+
+        {agendados.length > 0 && (
+          <section>
+            <h2 className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3">Agendados</h2>
+            <div className="space-y-3">
+              {agendados.map(l => <CartaoLembrete key={l.id} lembrete={l} onWhatsApp={abrirWhatsApp} onDispensar={dispensar} onCliente={() => navigate(`/clientes/${l.cliente_id}`)} />)}
             </div>
           </section>
         )}

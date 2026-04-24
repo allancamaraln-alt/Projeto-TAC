@@ -134,16 +134,14 @@ export default function Perfil() {
   return (
     <div className="page-container">
 
-      {/* Capa */}
+      {/* Capa / tema de cores */}
       <div className="relative h-44 overflow-hidden">
         {coverUrl
           ? <img src={coverUrl} alt="Capa" className="absolute inset-0 w-full h-full object-cover" />
           : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 60%, #0369a1 100%)' }} />
         }
-        {/* fade sutil só na parte de baixo */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
 
-        {/* Botão alterar capa */}
         <button
           type="button"
           onClick={() => coverInputRef.current?.click()}
@@ -154,10 +152,14 @@ export default function Perfil() {
             ? <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             : <CameraIcon className="w-3.5 h-3.5 text-white" />
           }
-          <span className="text-white text-xs font-medium">
-            {coverUrl ? 'Alterar capa' : 'Adicionar capa'}
-          </span>
+          <span className="text-white text-xs font-medium">Personalizar cores</span>
         </button>
+
+        <div className="absolute bottom-3 left-4 right-4 z-10">
+          <p className="text-white/80 text-xs drop-shadow">
+            As cores do app se adaptam a esta foto
+          </p>
+        </div>
       </div>
 
       {/* Avatar + info — avatar sobrepõe a capa */}

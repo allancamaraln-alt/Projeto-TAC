@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -14,15 +14,63 @@ const PROXIMOS_STATUS = {
   em_andamento: { label: '✔️ Marcar como Concluído', next: 'concluido' },
 }
 
+function resizeCover(file) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const W = 1200, H = 400
+      canvas.width = W; canvas.height = H
+      const ctx = canvas.getContext('2d')
+      const imgRatio = img.width / img.height
+      const targetRatio = W / H
+      let sx, sy, sw, sh
+      if (imgRatio > targetRatio) {
+        sh = img.height; sw = sh * targetRatio; sx = (img.width - sw) / 2; sy = 0
+      } else {
+        sw = img.width; sh = sw / targetRatio; sx = 0; sy = (img.height - sh) / 2
+      }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H)
+      URL.revokeObjectURL(url)
+      canvas.toBlob(resolve, 'image/jpeg', 0.82)
+    }
+    img.src = url
+  })
+}
+
 export default function OrdemDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { user, profile, updateProfile } = useAuth()
   const toast = useToast()
+  const coverInputRef = useRef()
   const [os, setOs] = useState(null)
   const [loading, setLoading] = useState(true)
   const [atualizando, setAtualizando] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+
+  async function handleCoverChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingCover(true)
+    try {
+      const blob = await resizeCover(file)
+      const path = `${user.id}_cover.jpg`
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: true })
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      await updateProfile({ cover_url: `${publicUrl}?v=${Date.now()}` })
+      toast('Foto de capa atualizada!')
+    } catch {
+      toast('Erro ao atualizar foto', 'error')
+    }
+    setUploadingCover(false)
+    e.target.value = ''
+  }
   const [mostrarLembrete, setMostrarLembrete] = useState(false)
   const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, danger: false })
 
@@ -164,38 +212,51 @@ export default function OrdemDetalhe() {
 
         {/* Preview do cabeçalho do PDF */}
         <div
-          className="relative rounded-2xl overflow-hidden h-20 flex items-center px-4 justify-between"
+          className="relative rounded-2xl overflow-hidden h-28 flex items-center px-4 justify-between"
           style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)' }}
         >
           {profile?.cover_url && (
             <>
-              <div
-                className="absolute inset-0 bg-cover bg-center scale-110"
-                style={{ backgroundImage: `url(${profile.cover_url})`, filter: 'blur(6px)' }}
+              <img
+                src={profile.cover_url}
+                alt="Capa"
+                className="absolute inset-0 w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-black/35" />
+              <div className="absolute inset-0 bg-black/40" />
             </>
           )}
+
+          {/* Botão alterar capa */}
+          <button
+            type="button"
+            onClick={() => coverInputRef.current?.click()}
+            disabled={uploadingCover}
+            className="absolute top-2.5 right-3 z-20 flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-2.5 py-1 active:bg-black/50 transition-colors"
+          >
+            {uploadingCover
+              ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            }
+            <span className="text-white text-xs font-medium">
+              {profile?.cover_url ? 'Alterar capa' : 'Adicionar capa'}
+            </span>
+          </button>
+
           <div className="relative z-10">
-            <p className="text-white font-extrabold text-base leading-tight">
+            <p className="text-white font-extrabold text-base leading-tight drop-shadow">
               {profile?.empresa || profile?.nome || 'ClimaPro'}
             </p>
-            <p className="text-white/60 text-xs mt-0.5">
-              {profile?.cover_url ? 'Prévia do cabeçalho do PDF' : (
-                <button
-                  onClick={() => navigate('/perfil')}
-                  className="underline underline-offset-2 text-white/70"
-                >
-                  + Adicionar foto de capa ao PDF
-                </button>
-              )}
-            </p>
+            <p className="text-white/70 text-xs mt-0.5 drop-shadow">Prévia do cabeçalho do PDF</p>
           </div>
           <div className="relative z-10 text-right">
-            <p className="text-white font-bold text-lg font-mono">{formatOS(os.numero)}</p>
-            <p className="text-white/60 text-xs">{formatDate(os.created_at)}</p>
+            <p className="text-white font-bold text-lg font-mono drop-shadow">{formatOS(os.numero)}</p>
+            <p className="text-white/70 text-xs drop-shadow">{formatDate(os.created_at)}</p>
           </div>
         </div>
+        <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
 
         {/* Botão Enviar pelo WhatsApp */}
         <button
