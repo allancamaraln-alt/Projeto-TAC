@@ -15,7 +15,7 @@ export default function Privacidade() {
       </div>
 
       <div className="px-4 pt-6 pb-24 space-y-6 max-w-2xl mx-auto">
-        <p className="text-xs text-gray-400">Última atualização: abril de 2025</p>
+        <p className="text-xs text-gray-400">Última atualização: abril de 2026</p>
 
         <section className="space-y-2">
           <h2 className="font-bold text-gray-800">1. Informações coletadas</h2>
@@ -62,7 +62,7 @@ export default function Privacidade() {
         <section className="space-y-2">
           <h2 className="font-bold text-gray-800">7. Contato</h2>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Dúvidas sobre privacidade: <span className="ac-text font-medium">suporte@climapro.app</span>
+            Dúvidas sobre privacidade: <span className="ac-text font-medium">allancamaraln@gmail.com</span>
           </p>
         </section>
       </div>

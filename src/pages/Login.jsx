@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 
-const EMAIL_KEY    = 'climapro_email'
-const PASSWORD_KEY = 'climapro_pwd'
+const EMAIL_KEY = 'climapro_email'
 
 function IconOlhoAberto() {
   return (
@@ -28,20 +27,17 @@ export default function Login() {
   const [modo, setModo] = useState('login')
   const [form, setForm] = useState(() => ({
     nome: '',
-    email:    localStorage.getItem(EMAIL_KEY)    || '',
-    password: localStorage.getItem(PASSWORD_KEY) || '',
+    email:    localStorage.getItem(EMAIL_KEY) || '',
+    password: '',
   }))
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
   const [senhaVisivel, setSenhaVisivel] = useState(false)
-  const [salvarSenha, setSalvarSenha] = useState(() => !!localStorage.getItem(EMAIL_KEY))
+  const [lembrarEmail, setLembrarEmail] = useState(() => !!localStorage.getItem(EMAIL_KEY))
 
-  function toggleSalvarSenha(checked) {
-    setSalvarSenha(checked)
-    if (!checked) {
-      localStorage.removeItem(EMAIL_KEY)
-      localStorage.removeItem(PASSWORD_KEY)
-    }
+  function toggleLembrarEmail(checked) {
+    setLembrarEmail(checked)
+    if (!checked) localStorage.removeItem(EMAIL_KEY)
   }
 
   const set = (campo) => (e) => setForm(f => ({ ...f, [campo]: e.target.value }))
@@ -76,13 +72,8 @@ export default function Login() {
           setErro('Email/telefone ou senha incorretos.')
         }
       } else {
-        if (salvarSenha) {
-          localStorage.setItem(EMAIL_KEY, form.email)
-          localStorage.setItem(PASSWORD_KEY, form.password)
-        } else {
-          localStorage.removeItem(EMAIL_KEY)
-          localStorage.removeItem(PASSWORD_KEY)
-        }
+        if (lembrarEmail) localStorage.setItem(EMAIL_KEY, form.email)
+        else localStorage.removeItem(EMAIL_KEY)
       }
     } else {
       if (!form.nome.trim()) { setErro('Digite seu nome.'); setLoading(false); return }
@@ -163,6 +154,7 @@ export default function Login() {
                   placeholder="••••••••"
                   value={form.password}
                   onChange={set('password')}
+                  autoComplete={modo === 'cadastro' ? 'new-password' : 'current-password'}
                   minLength={8}
                   required
                 />
@@ -182,12 +174,12 @@ export default function Login() {
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={salvarSenha}
-                      onChange={e => toggleSalvarSenha(e.target.checked)}
+                      checked={lembrarEmail}
+                      onChange={e => toggleLembrarEmail(e.target.checked)}
                       className="w-4 h-4 rounded"
                       style={{ accentColor: 'rgb(var(--ac))' }}
                     />
-                    <span className="text-sm text-gray-500">Salvar senha</span>
+                    <span className="text-sm text-gray-500">Lembrar email</span>
                   </label>
                 )}
                 {modo === 'login' && (

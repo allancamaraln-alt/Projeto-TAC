@@ -14,8 +14,16 @@ create table if not exists public.profiles (
   nome text not null default '',
   telefone text default '',
   empresa text default '',
+  email text default '',
+  avatar_url text default '',
+  cover_url text default '',
   created_at timestamptz default now()
 );
+
+-- Adiciona colunas caso a tabela já exista (migration segura)
+alter table public.profiles add column if not exists email text default '';
+alter table public.profiles add column if not exists avatar_url text default '';
+alter table public.profiles add column if not exists cover_url text default '';
 
 -- Cria perfil automaticamente ao cadastrar usuário
 create or replace function public.handle_new_user()
