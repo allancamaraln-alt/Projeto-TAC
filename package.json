@@ -7,9 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:build": "vite build && npx cap sync",
+    "cap:android": "vite build && npx cap sync && npx cap open android",
+    "cap:ios": "vite build && npx cap sync && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
     "@sentry/react": "^10.50.0",
     "@supabase/supabase-js": "^2.104.0",
     "jspdf": "^4.2.1",
