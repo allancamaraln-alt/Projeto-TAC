@@ -25,6 +25,7 @@ const OrdemEdit    = lazy(() => import('./pages/OrdemEdit'))
 const Perfil       = lazy(() => import('./pages/Perfil'))
 const Relatorio    = lazy(() => import('./pages/Relatorio'))
 const Lembretes    = lazy(() => import('./pages/Lembretes'))
+const Privacidade  = lazy(() => import('./pages/Privacidade'))
 
 function PageLoader() {
   return (
@@ -95,6 +96,7 @@ function AppContent() {
           <Route path="/relatorio"              element={<Relatorio />} />
           <Route path="/lembretes"              element={<Lembretes />} />
           <Route path="/perfil"                 element={<Perfil />} />
+          <Route path="/privacidade"            element={<Privacidade />} />
           <Route path="*"                       element={<Navigate to="/" />} />
         </Routes>
       </Suspense>

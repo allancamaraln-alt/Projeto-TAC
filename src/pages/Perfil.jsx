@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { supabase } from '../lib/supabase'
@@ -61,6 +62,7 @@ function resizeCover(file) {
 export default function Perfil() {
   const { user, profile, updateProfile, signOut } = useAuth()
   const { isDark, toggle: toggleTheme } = useTheme()
+  const navigate = useNavigate()
   const avatarInputRef = useRef()
   const coverInputRef = useRef()
 
@@ -265,7 +267,17 @@ export default function Perfil() {
           </button>
         </div>
 
-        <button type="button" onClick={signOut} className="w-full text-center text-red-400 font-semibold py-3 mt-1">
+        <button
+          type="button"
+          onClick={() => navigate('/privacidade')}
+          className="w-full text-center text-gray-400 text-sm py-2 mt-1"
+        >
+          Política de Privacidade
+        </button>
+
+        <p className="text-center text-xs text-gray-300 pb-1">ClimaPro v1.0.0</p>
+
+        <button type="button" onClick={signOut} className="w-full text-center text-red-400 font-semibold py-3">
           Sair da conta
         </button>
       </form>
