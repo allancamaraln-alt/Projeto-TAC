@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ClimaPro</string>
+    <string name="title_activity_main">ClimaPro</string>
+    <string name="package_name">com.climapro.tecnico</string>
+    <string name="custom_url_scheme">com.climapro.tecnico</string>
+</resources>

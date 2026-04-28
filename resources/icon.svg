@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <g stroke="white" stroke-linecap="round" fill="none">
+
+    <!-- 3 main arms -->
+    <line x1="512" y1="232" x2="512" y2="792" stroke-width="52"/>
+    <line x1="754" y1="372" x2="270" y2="652" stroke-width="52"/>
+    <line x1="270" y1="372" x2="754" y2="652" stroke-width="52"/>
+
+    <!-- Fork tips — top -->
+    <line x1="512" y1="232" x2="434" y2="187" stroke-width="40"/>
+    <line x1="512" y1="232" x2="590" y2="187" stroke-width="40"/>
+
+    <!-- Fork tips — bottom -->
+    <line x1="512" y1="792" x2="434" y2="837" stroke-width="40"/>
+    <line x1="512" y1="792" x2="590" y2="837" stroke-width="40"/>
+
+    <!-- Fork tips — upper-right -->
+    <line x1="754" y1="372" x2="832" y2="417" stroke-width="40"/>
+    <line x1="754" y1="372" x2="754" y2="282" stroke-width="40"/>
+
+    <!-- Fork tips — lower-left -->
+    <line x1="270" y1="652" x2="190" y2="607" stroke-width="40"/>
+    <line x1="270" y1="652" x2="270" y2="742" stroke-width="40"/>
+
+    <!-- Fork tips — upper-left -->
+    <line x1="270" y1="372" x2="270" y2="282" stroke-width="40"/>
+    <line x1="270" y1="372" x2="190" y2="417" stroke-width="40"/>
+
+    <!-- Fork tips — lower-right -->
+    <line x1="754" y1="652" x2="754" y2="742" stroke-width="40"/>
+    <line x1="754" y1="652" x2="832" y2="607" stroke-width="40"/>
+
+  </g>
+
+  <circle cx="512" cy="512" r="34" fill="white"/>
+</svg>

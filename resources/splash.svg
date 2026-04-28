@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="2732" height="2732" fill="url(#bg)"/>
+
+  <!-- Snowflake centered at (1366, 1150), scaled 2.4x from icon -->
+  <g stroke="white" stroke-linecap="round" fill="none">
+
+    <!-- 3 main arms -->
+    <line x1="1366" y1="469"  x2="1366" y2="1831" stroke-width="125"/>
+    <line x1="1945" y1="749"  x2="787"  y2="1551" stroke-width="125"/>
+    <line x1="787"  y1="749"  x2="1945" y2="1551" stroke-width="125"/>
+
+    <!-- Fork tips — top -->
+    <line x1="1366" y1="469" x2="1179" y2="361" stroke-width="96"/>
+    <line x1="1366" y1="469" x2="1553" y2="361" stroke-width="96"/>
+
+    <!-- Fork tips — bottom -->
+    <line x1="1366" y1="1831" x2="1179" y2="1939" stroke-width="96"/>
+    <line x1="1366" y1="1831" x2="1553" y2="1939" stroke-width="96"/>
+
+    <!-- Fork tips — upper-right -->
+    <line x1="1945" y1="749" x2="2132" y2="857" stroke-width="96"/>
+    <line x1="1945" y1="749" x2="1945" y2="533" stroke-width="96"/>
+
+    <!-- Fork tips — lower-left -->
+    <line x1="787"  y1="1551" x2="600"  y2="1443" stroke-width="96"/>
+    <line x1="787"  y1="1551" x2="787"  y2="1767" stroke-width="96"/>
+
+    <!-- Fork tips — upper-left -->
+    <line x1="787"  y1="749" x2="787"  y2="533" stroke-width="96"/>
+    <line x1="787"  y1="749" x2="600"  y2="857" stroke-width="96"/>
+
+    <!-- Fork tips — lower-right -->
+    <line x1="1945" y1="1551" x2="1945" y2="1767" stroke-width="96"/>
+    <line x1="1945" y1="1551" x2="2132" y2="1443" stroke-width="96"/>
+
+  </g>
+
+  <circle cx="1366" cy="1150" r="82" fill="white"/>
+
+  <text
+    x="1366" y="2280"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    font-weight="800"
+    font-size="256"
+    fill="white"
+    letter-spacing="8"
+  >ClimaPro</text>
+
+  <text
+    x="1366" y="2450"
+    text-anchor="middle"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    font-weight="500"
+    font-size="112"
+    fill="white"
+    fill-opacity="0.65"
+    letter-spacing="4"
+  >Gestão para técnicos</text>
+</svg>
