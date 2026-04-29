@@ -33,11 +33,10 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm z-50"
+      className="fixed bottom-0 left-0 right-0 bg-white z-50"
       style={{
         boxShadow: '0 -2px 16px rgba(0,0,0,0.06)',
         paddingBottom: 'env(safe-area-inset-bottom)',
-        willChange: 'transform',
       }}
     >
       <div className="max-w-md mx-auto flex">
