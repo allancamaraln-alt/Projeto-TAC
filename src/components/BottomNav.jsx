@@ -14,8 +14,8 @@ export default function BottomNav() {
   const lastStableY = useRef(0)
 
   useEffect(() => {
-    function handleScroll() {
-      const current = window.scrollY
+    function handleScroll(e) {
+      const current = e.target.scrollTop ?? 0
       const diff = current - lastStableY.current
 
       if (diff > 60) {
@@ -27,8 +27,8 @@ export default function BottomNav() {
       }
     }
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true })
+    return () => document.removeEventListener('scroll', handleScroll, { capture: true })
   }, [])
 
   return (

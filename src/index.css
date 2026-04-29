@@ -13,14 +13,19 @@
     --ac-sf: 186 230 253; /* texto suave sobre accent */
   }
   html {
+    height: 100%;
     -webkit-tap-highlight-color: transparent;
     font-family: 'Inter', system-ui, sans-serif;
   }
   body {
+    height: 100%;
+    overflow: hidden;
     @apply bg-slate-50 text-gray-900 m-0;
     overscroll-behavior-y: none;
   }
   #root {
+    height: 100%;
+    overflow: hidden;
     @apply w-full text-left;
   }
 }
@@ -68,7 +73,10 @@
     @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4 transition-shadow;
   }
   .page-container {
-    @apply max-w-md mx-auto min-h-screen bg-slate-50 pb-24;
+    @apply max-w-md mx-auto bg-slate-50 pb-24;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }
 
