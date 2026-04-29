@@ -62,7 +62,7 @@ export default function Privacidade() {
         <section className="space-y-2">
           <h2 className="font-bold text-gray-800">7. Contato</h2>
           <p className="text-sm text-gray-600 leading-relaxed">
-            Dúvidas sobre privacidade: <span className="ac-text font-medium">allancamaraln@gmail.com</span>
+            Dúvidas sobre privacidade: <span className="ac-text font-medium">climapro.suporte@gmail.com</span>
           </p>
         </section>
       </div>
