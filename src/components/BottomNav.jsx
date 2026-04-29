@@ -11,21 +11,20 @@ const tabs = [
 
 export default function BottomNav() {
   const [minimized, setMinimized] = useState(false)
-  const lastScrollY = useRef(0)
-  const ticking = useRef(false)
+  const lastStableY = useRef(0)
 
   useEffect(() => {
     function handleScroll() {
-      if (ticking.current) return
-      ticking.current = true
-      window.requestAnimationFrame(() => {
-        const current = window.scrollY
-        const diff = current - lastScrollY.current
-        if (diff > 6) setMinimized(true)
-        else if (diff < -6) setMinimized(false)
-        lastScrollY.current = current
-        ticking.current = false
-      })
+      const current = window.scrollY
+      const diff = current - lastStableY.current
+
+      if (diff > 60) {
+        setMinimized(true)
+        lastStableY.current = current
+      } else if (diff < -30) {
+        setMinimized(false)
+        lastStableY.current = current
+      }
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
