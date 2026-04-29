@@ -12,11 +12,13 @@ function normalizePhone(input) {
   return input.trim()
 }
 
+// Usa RPC com security definer para contornar o RLS — o usuário ainda
+// não está autenticado neste momento, então a query direta retornaria vazio.
 async function findEmailByPhone(phone) {
-  const candidates = [normalizePhone(phone), phone.replace(/\D/g, ''), phone.trim()]
-  for (const q of [...new Set(candidates)]) {
-    const { data } = await supabase.from('profiles').select('email').eq('telefone', q).maybeSingle()
-    if (data?.email) return data.email
+  const candidates = [...new Set([normalizePhone(phone), phone.replace(/\D/g, ''), phone.trim()])]
+  for (const q of candidates) {
+    const { data } = await supabase.rpc('get_email_by_phone', { phone_input: q })
+    if (data) return data
   }
   return null
 }
@@ -53,7 +55,7 @@ export function AuthProvider({ children }) {
     if (data?.cover_url) {
       extractPalette(data.cover_url).then(applyPalette)
     }
-    // Salva email no perfil para permitir login por telefone
+    // Garante que email esteja salvo no perfil (usuários antigos podem não ter)
     if (userEmail && !data?.email) {
       supabase.from('profiles').update({ email: userEmail }).eq('id', userId).then(() => {})
     }
@@ -73,12 +75,15 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
-  async function signUp(email, password, nome) {
+  async function signUp(email, password, nome, telefone) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { nome },
+        data: {
+          nome,
+          telefone: telefone ? normalizePhone(telefone) : '',
+        },
         emailRedirectTo: window.location.origin,
       }
     })

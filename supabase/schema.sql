@@ -29,11 +29,35 @@ alter table public.profiles add column if not exists cover_url text default '';
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, nome)
-  values (new.id, coalesce(new.raw_user_meta_data->>'nome', new.email));
+  insert into public.profiles (id, nome, email, telefone)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'nome', new.email),
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data->>'telefone', '')
+  );
   return new;
 end;
 $$ language plpgsql security definer;
+
+-- Função RPC para buscar email por telefone sem depender do RLS
+-- (usuário não está autenticado ainda no momento do login por telefone)
+create or replace function public.get_email_by_phone(phone_input text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  found_email text;
+begin
+  select email into found_email
+  from public.profiles
+  where telefone = phone_input
+  limit 1;
+  return found_email;
+end;
+$$;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

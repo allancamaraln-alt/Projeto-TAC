@@ -27,6 +27,7 @@ export default function Login() {
   const [modo, setModo] = useState('login')
   const [form, setForm] = useState(() => ({
     nome: '',
+    telefone: '',
     email:    localStorage.getItem(EMAIL_KEY) || '',
     password: '',
   }))
@@ -77,7 +78,7 @@ export default function Login() {
       }
     } else {
       if (!form.nome.trim()) { setErro('Digite seu nome.'); setLoading(false); return }
-      const { error } = await signUp(form.email, form.password, form.nome)
+      const { error } = await signUp(form.email, form.password, form.nome, form.telefone)
       if (error) setErro(error.message === 'User already registered' ? 'Email já cadastrado.' : 'Erro ao cadastrar.')
       else setErro('✅ Verifique seu email para confirmar o cadastro.')
     }
@@ -115,17 +116,34 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {modo === 'cadastro' && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">Seu nome</label>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Ex: João Silva"
-                value={form.nome}
-                onChange={set('nome')}
-                required
-              />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Seu nome</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Ex: João Silva"
+                  value={form.nome}
+                  onChange={set('nome')}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1.5">
+                  WhatsApp <span className="text-gray-400 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  className="input-field"
+                  placeholder="(11) 99999-9999"
+                  value={form.telefone}
+                  onChange={set('telefone')}
+                  autoComplete="tel"
+                />
+                <p className="text-xs text-gray-400 mt-1">Permite fazer login pelo número de telefone</p>
+              </div>
+            </>
           )}
 
           <div>
