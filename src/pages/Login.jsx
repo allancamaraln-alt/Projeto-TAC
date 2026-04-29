@@ -134,7 +134,7 @@ export default function Login() {
             </label>
             <input
               type="text"
-              inputMode={modo === 'login' && form.email && !form.email.includes('@') ? 'tel' : 'email'}
+              inputMode={modo === 'login' && /^[\d(+]/.test(form.email) ? 'tel' : 'email'}
               className="input-field"
               placeholder={modo === 'login' ? 'email@exemplo.com ou (11) 99999-9999' : 'seu@email.com'}
               value={form.email}
