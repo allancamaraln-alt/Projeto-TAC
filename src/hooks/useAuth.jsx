@@ -23,6 +23,33 @@ async function findEmailByPhone(phone) {
   return null
 }
 
+const TRIAL_DAYS = 7
+
+function computeSubscription(profile) {
+  if (!profile) return { status: 'loading', trialDaysLeft: 0, isActive: false }
+
+  const now = new Date()
+
+  if (profile.subscribed_until && new Date(profile.subscribed_until) > now) {
+    return { status: 'active', trialDaysLeft: 0, isActive: true }
+  }
+
+  if (profile.trial_starts_at) {
+    const trialEnd = new Date(profile.trial_starts_at)
+    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS)
+    const msLeft = trialEnd - now
+    if (msLeft > 0) {
+      return {
+        status: 'trial',
+        trialDaysLeft: Math.ceil(msLeft / 86_400_000),
+        isActive: true,
+      }
+    }
+  }
+
+  return { status: 'expired', trialDaysLeft: 0, isActive: false }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -116,8 +143,20 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
+  async function refreshProfile() {
+    if (user) await fetchProfile(user.id, user.email)
+  }
+
+  const subscription = computeSubscription(profile)
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, updateProfile, resetPassword }}>
+    <AuthContext.Provider value={{
+      user, profile, loading,
+      signIn, signUp, signOut, updateProfile, resetPassword, refreshProfile,
+      subscriptionStatus: subscription.status,
+      trialDaysLeft: subscription.trialDaysLeft,
+      isActive: subscription.isActive,
+    }}>
       {children}
     </AuthContext.Provider>
   )

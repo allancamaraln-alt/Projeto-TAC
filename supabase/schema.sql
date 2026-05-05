@@ -171,3 +171,33 @@ create policy "Técnico gerencia seus lembretes"
   on public.lembretes_manutencao for all
   using (auth.uid() = tecnico_id)
   with check (auth.uid() = tecnico_id);
+
+-- ============================================
+-- MIGRATION: Assinatura / Trial
+-- ============================================
+alter table public.profiles add column if not exists trial_starts_at timestamptz;
+alter table public.profiles add column if not exists subscribed_until timestamptz;
+alter table public.profiles add column if not exists plan text
+  check (plan in ('monthly', 'annual'));
+alter table public.profiles add column if not exists mp_subscription_id text;
+
+-- Usuários já existentes: trial começa da data de criação da conta
+update public.profiles
+  set trial_starts_at = created_at
+  where trial_starts_at is null;
+
+-- Novos usuários: trigger inclui trial_starts_at = now()
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, nome, email, telefone, trial_starts_at)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'nome', new.email),
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data->>'telefone', ''),
+    now()
+  );
+  return new;
+end;
+$$ language plpgsql security definer;

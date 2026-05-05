@@ -6,6 +6,7 @@ import { ToastProvider } from './hooks/useToast'
 import BottomNav from './components/BottomNav'
 import { getTheme, applyTheme } from './lib/theme'
 import Login from './pages/Login'
+import Paywall from './pages/Paywall'
 
 // Inicializar Sentry
 Sentry.init({
@@ -56,8 +57,21 @@ function OfflineBanner() {
   )
 }
 
+function TrialBanner() {
+  const { subscriptionStatus, trialDaysLeft } = useAuth()
+  if (subscriptionStatus !== 'trial' || trialDaysLeft > 3) return null
+  return (
+    <div className="fixed top-0 left-0 right-0 z-[300] text-white text-xs font-semibold text-center py-1.5"
+      style={{ background: 'rgb(var(--ac))' }}>
+      {trialDaysLeft === 1
+        ? 'Último dia gratuito — assine para não perder o acesso'
+        : `${trialDaysLeft} dias restantes no período gratuito`}
+    </div>
+  )
+}
+
 function AppContent() {
-  const { user, loading } = useAuth()
+  const { user, loading, isActive } = useAuth()
 
   if (loading) {
     return (
@@ -80,8 +94,11 @@ function AppContent() {
 
   if (!user) return <Login />
 
+  if (!isActive) return <Paywall />
+
   return (
     <>
+      <TrialBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/"                       element={<Dashboard />} />

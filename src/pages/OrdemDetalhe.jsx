@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge'
 import ModalLembrete from '../components/ModalLembrete'
 import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../hooks/useToast'
+import { Capacitor } from '@capacitor/core'
 
 const PROXIMOS_STATUS = {
   orcamento:    { label: '✅ Marcar como Aprovado', next: 'aprovado' },
@@ -131,22 +132,32 @@ export default function OrdemDetalhe() {
     try {
       const { gerarOrcamentoPDF } = await import('../lib/pdf')
       const doc = await gerarOrcamentoPDF({ cliente: os.clientes, ordem: os, tecnico: profile })
-
       const nome = `Orcamento-${formatOS(os.numero)}-${os.clientes?.nome?.split(' ')[0]}.pdf`
-      const blob = doc.output('blob')
-      const file = new File([blob], nome, { type: 'application/pdf' })
 
-      // Envia o PDF como arquivo via compartilhamento nativo (Android/iOS)
-      if (navigator.canShare?.({ files: [file] })) {
+      // Capacitor nativo (Android/iOS app instalado)
+      if (Capacitor.isNativePlatform()) {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem')
+        const { Share } = await import('@capacitor/share')
+        const base64 = doc.output('datauristring').split(',')[1]
+        const { uri } = await Filesystem.writeFile({ path: nome, data: base64, directory: Directory.Cache })
+        await Share.share({
+          title: `Orçamento ${formatOS(os.numero)} — ${os.clientes?.nome}`,
+          url: uri,
+          dialogTitle: 'Enviar orçamento',
+        })
+        return
+      }
+
+      // Web Share API — tenta compartilhar o arquivo diretamente (Android Chrome, iOS Safari)
+      if (typeof navigator.share === 'function') {
+        const blob = doc.output('blob')
+        const file = new File([blob], nome, { type: 'application/pdf' })
         try {
-          await navigator.share({
-            files: [file],
-            title: `Orçamento ${formatOS(os.numero)} — ${os.clientes?.nome}`,
-          })
+          await navigator.share({ files: [file], title: `Orçamento ${formatOS(os.numero)} — ${os.clientes?.nome}` })
           return
         } catch (err) {
           if (err.name === 'AbortError') return
-          // Se falhou por outro motivo, cai no fallback abaixo
+          // Arquivo não suportado: cai no fallback
         }
       }
 
