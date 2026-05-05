@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
 const EMAIL_KEY = 'climapro_email'
 
@@ -23,8 +24,10 @@ function IconOlhoFechado() {
 
 export default function Login() {
   const { signIn, signUp, resetPassword } = useAuth()
+  const navigate = useNavigate()
 
-  const [modo, setModo] = useState('login')
+  const initialModo = new URLSearchParams(window.location.search).get('modo') === 'cadastro' ? 'cadastro' : 'login'
+  const [modo, setModo] = useState(initialModo)
   const [form, setForm] = useState(() => ({
     nome: '',
     telefone: '',
@@ -100,6 +103,12 @@ export default function Login() {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-8 relative">
+        <button
+          onClick={() => navigate('/')}
+          className="absolute top-6 left-6 text-white/70 text-sm font-semibold flex items-center gap-1"
+        >
+          ← Voltar
+        </button>
         <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-2xl mb-4">
           <span className="text-4xl">❄️</span>
         </div>

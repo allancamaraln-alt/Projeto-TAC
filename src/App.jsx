@@ -1,12 +1,13 @@
 import * as Sentry from "@sentry/react"
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { ToastProvider } from './hooks/useToast'
 import BottomNav from './components/BottomNav'
 import { getTheme, applyTheme } from './lib/theme'
 import Login from './pages/Login'
 import Paywall from './pages/Paywall'
+import Landing from './pages/Landing'
 
 // Inicializar Sentry
 Sentry.init({
@@ -72,6 +73,7 @@ function TrialBanner() {
 
 function AppContent() {
   const { user, loading, isActive } = useAuth()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -92,7 +94,11 @@ function AppContent() {
     )
   }
 
-  if (!user) return <Login />
+  if (!user) {
+    if (location.pathname === '/entrar') return <Login />
+    if (location.pathname === '/privacidade') return <Suspense fallback={<PageLoader />}><Privacidade /></Suspense>
+    return <Landing />
+  }
 
   if (!isActive) return <Paywall />
 
