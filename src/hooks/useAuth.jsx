@@ -72,19 +72,19 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchProfile(userId, userEmail) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    setProfile(data)
-    setLoading(false)
-    if (data?.cover_url) {
-      extractPalette(data.cover_url).then(applyPalette)
-    }
-    // Garante que email esteja salvo no perfil (usuários antigos podem não ter)
-    if (userEmail && !data?.email) {
-      supabase.from('profiles').update({ email: userEmail }).eq('id', userId).then(() => {})
+    try {
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('offline')), 5000))
+      const query = supabase.from('profiles').select('*').eq('id', userId).single()
+      const { data } = await Promise.race([query, timeout])
+      setProfile(data)
+      if (data?.cover_url) extractPalette(data.cover_url).then(applyPalette)
+      if (userEmail && !data?.email) {
+        supabase.from('profiles').update({ email: userEmail }).eq('id', userId).then(() => {})
+      }
+    } catch {
+      // sem internet — continua sem perfil
+    } finally {
+      setLoading(false)
     }
   }
 
