@@ -46,7 +46,8 @@ export default function Relatorio() {
       const inicio = getInicio(periodo)
       if (inicio) query = query.gte('created_at', inicio)
 
-      const { data } = await query
+      const timeout = new Promise(resolve => setTimeout(() => resolve({ data: [] }), 5000))
+      const { data } = await Promise.race([query, timeout])
       setOrdens(data ?? [])
       setLoading(false)
     }

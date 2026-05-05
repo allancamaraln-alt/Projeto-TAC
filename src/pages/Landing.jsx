@@ -8,7 +8,7 @@ const FEATURES = [
   { icon: '📄', title: 'Relatórios em PDF', desc: 'Gere laudos e comprovantes profissionais para enviar pelo WhatsApp.' },
   { icon: '💰', title: 'Relatório de Faturamento', desc: 'Veja quanto faturou na semana, no mês ou nos últimos 3 meses. Ticket médio e OS concluídas em um só lugar.' },
   { icon: '📱', title: 'Funciona no celular', desc: 'App rápido e leve, feito para usar em campo, em qualquer Android ou iPhone.' },
-  { icon: '🌐', title: 'Funciona offline', desc: 'Sem internet no local? Sem problema. Os dados ficam salvos e sincronizam depois.' },
+  { icon: '🌐', title: 'Acesso offline', desc: 'Sem sinal no local? O app abre e você consulta seus dados mesmo sem internet.' },
 ]
 
 const TESTIMONIALS = [
