@@ -12,9 +12,9 @@ const FEATURES = [
 ]
 
 const TESTIMONIALS = [
-  { name: 'Carlos Mendes', city: 'São Paulo, SP', text: 'Antes eu anotava tudo em papel e esquecia metade. Agora tenho tudo no ClimaPro e nunca mais perdi um cliente por falta de follow-up.' },
-  { name: 'Rogério Lima', city: 'Belo Horizonte, MG', text: 'O PDF de laudo impressiona os clientes. Parece uma empresa grande, sendo que sou autônomo. Faz diferença na hora de fechar serviço.' },
-  { name: 'Fábio Teixeira', city: 'Recife, PE', text: 'Os lembretes de revisão preventiva me trouxeram clientes que eu nem lembrava mais. Virou renda extra sem esforço nenhum.' },
+  { name: 'Carlos Mendes', city: 'São Paulo, SP', text: 'Cara, eu anotava tudo num caderno e vivia perdendo. Agora tá tudo no app, abro e tá lá. Simples assim.' },
+  { name: 'Rogério Lima', city: 'Belo Horizonte, MG', text: 'Mando o PDF pro cliente pelo WhatsApp e ele fica impressionado. Parece coisa de empresa grande, sendo que trabalho sozinho.' },
+  { name: 'Fábio Teixeira', city: 'Recife, PE', text: 'O lembrete de revisão é o que mais gostei. O app avisa o cliente na hora certa e eu nem precisei fazer nada. Voltaram sem eu ligar.' },
 ]
 
 const FAQS = [
