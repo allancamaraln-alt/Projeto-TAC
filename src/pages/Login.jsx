@@ -83,7 +83,10 @@ export default function Login() {
       if (!form.nome.trim()) { setErro('Digite seu nome.'); setLoading(false); return }
       const { error } = await signUp(form.email, form.password, form.nome, form.telefone)
       if (error) setErro(error.message === 'User already registered' ? 'Email já cadastrado.' : 'Erro ao cadastrar.')
-      else setErro('✅ Verifique seu email para confirmar o cadastro.')
+      else {
+        if (window.fbq) window.fbq('track', 'Lead')
+        setErro('✅ Verifique seu email para confirmar o cadastro.')
+      }
     }
     setLoading(false)
   }
