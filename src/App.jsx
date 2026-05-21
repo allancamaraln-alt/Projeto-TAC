@@ -28,6 +28,7 @@ const Perfil       = lazy(() => import('./pages/Perfil'))
 const Relatorio    = lazy(() => import('./pages/Relatorio'))
 const Lembretes    = lazy(() => import('./pages/Lembretes'))
 const Privacidade  = lazy(() => import('./pages/Privacidade'))
+const ExcluirConta = lazy(() => import('./pages/ExcluirConta'))
 
 function PageLoader() {
   return (
@@ -97,6 +98,7 @@ function AppContent() {
   if (!user) {
     if (location.pathname === '/entrar') return <Login />
     if (location.pathname === '/privacidade') return <Suspense fallback={<PageLoader />}><Privacidade /></Suspense>
+    if (location.pathname === '/excluir-conta') return <Suspense fallback={<PageLoader />}><ExcluirConta /></Suspense>
     return <Landing />
   }
 
