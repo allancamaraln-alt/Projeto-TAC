@@ -35,8 +35,9 @@ function computeSubscription(profile) {
   }
 
   if (profile.trial_starts_at) {
-    const trialEnd = new Date(profile.trial_starts_at)
-    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS)
+    const trialEnd = profile.trial_expires_at
+      ? new Date(profile.trial_expires_at)
+      : (() => { const d = new Date(profile.trial_starts_at); d.setDate(d.getDate() + TRIAL_DAYS); return d })()
     const msLeft = trialEnd - now
     if (msLeft > 0) {
       return {
