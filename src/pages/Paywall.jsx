@@ -163,7 +163,8 @@ export default function Paywall() {
       const { data, error } = await supabase.functions.invoke('create-pix', {
         body: { plan: planId },
       })
-      if (error || !data?.qr_code) throw new Error('Não foi possível gerar o Pix.')
+      if (error) throw new Error(error.message || 'Erro na função')
+      if (!data?.qr_code) throw new Error(data?.error || 'Pix sem QR code')
       setPixData(data)
     } catch (err) {
       setErro(err.message)
