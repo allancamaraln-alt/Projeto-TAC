@@ -499,11 +499,12 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico }) {
   const sigW = 72
   const sigH = 22
   const PAGE_H = 297
+  const BOTTOM_MARGIN = 30
   // espaço necessário do fim do box até o rodapé: imagem + gap + labels + footer
   const sigSpaceNeeded = sigH + 10 + 29
 
   let sigY
-  if (boxY + boxH + sigSpaceNeeded > PAGE_H - 8) {
+  if (boxY + boxH + sigSpaceNeeded > PAGE_H - BOTTOM_MARGIN) {
     doc.addPage()
     sigY = 50 + sigH
   } else {
