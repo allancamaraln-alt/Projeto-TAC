@@ -43,7 +43,7 @@ function useRetornoMercadoPago() {
   return params.get('pagamento') === 'sucesso'
 }
 
-function CardBricksModal({ plan, amount, onClose, onPago }) {
+function CardBricksModal({ plan, amount, saveCard, onClose, onPago }) {
   const [brickLoaded, setBrickLoaded] = useState(false)
   const [erro, setErro] = useState('')
   const controllerRef = useRef(null)
@@ -63,7 +63,7 @@ function CardBricksModal({ plan, amount, onClose, onPago }) {
             setErro('')
             try {
               const { data, error } = await supabase.functions.invoke('process-card-payment', {
-                body: { plan, cardFormData: formData, saveCard: true },
+                body: { plan, cardFormData: formData, saveCard },
               })
               if (error) throw new Error(error.message)
               if (data?.error) throw new Error(data.error)
@@ -277,6 +277,7 @@ export default function Paywall() {
   const [pixData, setPixData] = useState(null)
   const [cardBricksData, setCardBricksData] = useState(null)
   const [savedCardData, setSavedCardData] = useState(null)
+  const [saveCard, setSaveCard] = useState(true)
 
   useEffect(() => { preloadMpSdk() }, [])
 
@@ -389,6 +390,7 @@ export default function Paywall() {
         <CardBricksModal
           plan={cardBricksData.plan}
           amount={cardBricksData.amount}
+          saveCard={saveCard}
           onClose={() => setCardBricksData(null)}
           onPago={handlePagoCard}
         />
@@ -492,7 +494,7 @@ export default function Paywall() {
                   <button
                     onClick={() => handleAssinar(plano.id)}
                     disabled={!!loadingPix}
-                    className={`w-full py-2.5 rounded-xl text-center text-sm font-bold text-white mb-2 disabled:opacity-70 transition-opacity ${
+                    className={`w-full py-2.5 rounded-xl text-center text-sm font-bold text-white mb-1 disabled:opacity-70 transition-opacity ${
                       plano.destaque ? 'btn-pulse' : 'bg-white/15'
                     }`}
                     style={plano.destaque ? { background: 'rgb(var(--ac))' } : {}}
@@ -501,6 +503,20 @@ export default function Paywall() {
                       ? `Cartão •••• ${profile.mp_card_last_four}`
                       : 'Cartão de crédito'}
                   </button>
+
+                  {!temCartaoSalvo && (
+                    <label className={`flex items-center gap-2 mb-2 px-1 cursor-pointer select-none`}>
+                      <input
+                        type="checkbox"
+                        checked={saveCard}
+                        onChange={e => setSaveCard(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded accent-sky-500"
+                      />
+                      <span className={`text-xs ${plano.destaque ? 'text-gray-400' : 'text-white/60'}`}>
+                        Salvar cartão para renovação automática
+                      </span>
+                    </label>
+                  )}
 
                   <button
                     onClick={() => handlePix(plano.id)}
