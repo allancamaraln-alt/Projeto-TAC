@@ -46,7 +46,6 @@ function useRetornoMercadoPago() {
 function CardBricksModal({ plan, amount, onClose, onPago }) {
   const [brickLoaded, setBrickLoaded] = useState(false)
   const [erro, setErro] = useState('')
-  const [saveCard, setSaveCard] = useState(true)
   const controllerRef = useRef(null)
 
   useEffect(() => {
@@ -64,7 +63,7 @@ function CardBricksModal({ plan, amount, onClose, onPago }) {
             setErro('')
             try {
               const { data, error } = await supabase.functions.invoke('process-card-payment', {
-                body: { plan, cardFormData: formData, saveCard },
+                body: { plan, cardFormData: formData, saveCard: true },
               })
               if (error) throw new Error(error.message)
               if (data?.error) throw new Error(data.error)
@@ -112,16 +111,6 @@ function CardBricksModal({ plan, amount, onClose, onPago }) {
             <span className="w-7 h-7 border-[3px] border-gray-200 border-t-sky-500 rounded-full animate-spin" />
           </div>
         )}
-
-        <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={saveCard}
-            onChange={e => setSaveCard(e.target.checked)}
-            className="w-4 h-4 rounded accent-sky-500"
-          />
-          <span className="text-xs text-gray-500">Salvar cartão para renovação automática</span>
-        </label>
 
         <div id="mp-card-container" />
 
