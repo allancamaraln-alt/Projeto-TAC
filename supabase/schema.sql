@@ -186,6 +186,16 @@ update public.profiles
   set trial_starts_at = created_at
   where trial_starts_at is null;
 
+-- ============================================
+-- MIGRATION: Recibo, Forma de Pagamento e Garantia
+-- ============================================
+alter table public.ordens_servico add column if not exists forma_pagamento text;
+alter table public.ordens_servico add column if not exists garantia_valor integer;
+alter table public.ordens_servico add column if not exists garantia_unidade text;
+alter table public.ordens_servico add column if not exists garantia_vencimento date;
+alter table public.ordens_servico add column if not exists garantia_obs text;
+alter table public.ordens_servico add column if not exists data_conclusao date;
+
 -- Novos usuários: trigger inclui trial_starts_at = now()
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -201,3 +211,116 @@ begin
   return new;
 end;
 $$ language plpgsql security definer;
+
+-- ============================================
+-- TABELA: ordens_fotos (registro fotográfico da OS)
+-- ============================================
+create table if not exists public.ordens_fotos (
+  id uuid default uuid_generate_v4() primary key,
+  ordem_id uuid references public.ordens_servico(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  url text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_ordens_fotos_ordem on public.ordens_fotos(ordem_id);
+
+alter table public.ordens_fotos enable row level security;
+
+drop policy if exists "Técnico gerencia fotos de suas OS" on public.ordens_fotos;
+create policy "Técnico gerencia fotos de suas OS"
+  on public.ordens_fotos for all
+  using (auth.uid() = tecnico_id)
+  with check (auth.uid() = tecnico_id);
+
+-- Storage bucket para as fotos da OS (público para exibição/PDF)
+insert into storage.buckets (id, name, public)
+values ('ordens-fotos', 'ordens-fotos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Técnico envia fotos de OS" on storage.objects;
+create policy "Técnico envia fotos de OS"
+  on storage.objects for insert
+  with check (bucket_id = 'ordens-fotos' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Técnico remove fotos de OS" on storage.objects;
+create policy "Técnico remove fotos de OS"
+  on storage.objects for delete
+  using (bucket_id = 'ordens-fotos' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Fotos de OS são públicas para leitura" on storage.objects;
+create policy "Fotos de OS são públicas para leitura"
+  on storage.objects for select
+  using (bucket_id = 'ordens-fotos');
+
+-- ============================================
+-- SISTEMA DE AFILIADOS
+-- ============================================
+alter table public.profiles add column if not exists ref_code text default null;
+
+-- Atualiza trigger para salvar ref_code na criação do usuário
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, nome, email, telefone, trial_starts_at, ref_code)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'nome', new.email),
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data->>'telefone', ''),
+    now(),
+    new.raw_user_meta_data->>'ref_code'
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create table if not exists public.afiliados (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null unique,
+  codigo text unique not null,
+  chave_pix text default '',
+  saque_pendente boolean default false,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.comissoes (
+  id uuid default uuid_generate_v4() primary key,
+  afiliado_id uuid references public.afiliados(id) on delete cascade not null,
+  indicado_user_id uuid references public.profiles(id) on delete set null,
+  valor numeric(10,2) not null,
+  status text not null default 'pendente' check (status in ('pendente', 'pago')),
+  periodo_ref text not null,
+  payment_ref text unique not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_comissoes_afiliado on public.comissoes(afiliado_id);
+create index if not exists idx_comissoes_status on public.comissoes(status);
+
+alter table public.afiliados enable row level security;
+alter table public.comissoes enable row level security;
+
+alter table public.profiles add column if not exists assinatura_url text default null;
+
+-- ============================================
+-- MIGRATION: Cartão salvo / Renovação automática
+-- ============================================
+alter table public.profiles add column if not exists mp_customer_id text default null;
+alter table public.profiles add column if not exists mp_card_id text default null;
+alter table public.profiles add column if not exists mp_card_last_four text default null;
+alter table public.profiles add column if not exists mp_card_brand text default null;
+alter table public.profiles add column if not exists auto_renew boolean default false;
+
+drop policy if exists "Afiliado gerencia seus dados" on public.afiliados;
+create policy "Afiliado gerencia seus dados"
+  on public.afiliados for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Afiliado vê suas comissões" on public.comissoes;
+create policy "Afiliado vê suas comissões"
+  on public.comissoes for select
+  using (
+    afiliado_id in (select id from public.afiliados where user_id = auth.uid())
+  );
