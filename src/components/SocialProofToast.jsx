@@ -1,24 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 
 const EVENTS = [
-  { nome: 'Luiz H.',     cidade: 'Fortaleza, CE',         cor: '#0284c7', tipo: 'plano',   plano: 'mensal' },
-  { nome: 'João R.',     cidade: 'Goiânia, GO',           cor: '#16a34a', tipo: 'os' },
-  { nome: 'Marcos V.',   cidade: 'Campinas, SP',           cor: '#7c3aed', tipo: 'pdf' },
-  { nome: 'Alan C.',     cidade: 'Belo Horizonte, MG',    cor: '#be185d', tipo: 'cliente' },
-  { nome: 'Carlos E.',   cidade: 'São Paulo, SP',          cor: '#0891b2', tipo: 'plano',   plano: 'anual' },
-  { nome: 'Eduardo F.',  cidade: 'Curitiba, PR',           cor: '#d97706', tipo: 'os' },
-  { nome: 'Fábio S.',    cidade: 'Recife, PE',             cor: '#dc2626', tipo: 'pdf' },
-  { nome: 'Bruno M.',    cidade: 'Brasília, DF',           cor: '#9333ea', tipo: 'cliente' },
-  { nome: 'Anderson L.', cidade: 'Manaus, AM',             cor: '#0369a1', tipo: 'plano',   plano: 'mensal' },
-  { nome: 'Rogério N.',  cidade: 'Porto Alegre, RS',       cor: '#15803d', tipo: 'os' },
-  { nome: 'Thiago B.',   cidade: 'Florianópolis, SC',      cor: '#b45309', tipo: 'pdf' },
-  { nome: 'Paulo O.',    cidade: 'Salvador, BA',           cor: '#be185d', tipo: 'cliente' },
-  { nome: 'Diego C.',    cidade: 'Natal, RN',              cor: '#0284c7', tipo: 'plano',   plano: 'anual' },
-  { nome: 'Lucas A.',    cidade: 'Belém, PA',              cor: '#7c3aed', tipo: 'os' },
-  { nome: 'Rafael T.',   cidade: 'Maceió, AL',             cor: '#16a34a', tipo: 'pdf' },
-  { nome: 'Júlio R.',    cidade: 'Vitória, ES',            cor: '#0891b2', tipo: 'cliente' },
-  { nome: 'Gustavo M.',  cidade: 'Campo Grande, MS',       cor: '#d97706', tipo: 'plano',   plano: 'mensal' },
-  { nome: 'Bruno K.',    cidade: 'João Pessoa, PB',        cor: '#dc2626', tipo: 'os' },
+  { nome: 'Luiz',     cidade: 'Fortaleza, CE',         cor: '#0284c7', tipo: 'plano',   plano: 'mensal' },
+  { nome: 'João',     cidade: 'Goiânia, GO',           cor: '#16a34a', tipo: 'os' },
+  { nome: 'Marcos',   cidade: 'Campinas, SP',           cor: '#7c3aed', tipo: 'pdf' },
+  { nome: 'Alan',     cidade: 'Belo Horizonte, MG',    cor: '#be185d', tipo: 'cliente' },
+  { nome: 'Carlos',   cidade: 'São Paulo, SP',          cor: '#0891b2', tipo: 'plano',   plano: 'anual' },
+  { nome: 'Eduardo',  cidade: 'Curitiba, PR',           cor: '#d97706', tipo: 'os' },
+  { nome: 'Fábio',    cidade: 'Recife, PE',             cor: '#dc2626', tipo: 'pdf' },
+  { nome: 'Bruno',    cidade: 'Brasília, DF',           cor: '#9333ea', tipo: 'cliente' },
+  { nome: 'Anderson', cidade: 'Manaus, AM',             cor: '#0369a1', tipo: 'plano',   plano: 'mensal' },
+  { nome: 'Rogério',  cidade: 'Porto Alegre, RS',       cor: '#15803d', tipo: 'os' },
+  { nome: 'Thiago',   cidade: 'Florianópolis, SC',      cor: '#b45309', tipo: 'pdf' },
+  { nome: 'Paulo',    cidade: 'Salvador, BA',           cor: '#be185d', tipo: 'cliente' },
+  { nome: 'Diego',    cidade: 'Natal, RN',              cor: '#0284c7', tipo: 'plano',   plano: 'anual' },
+  { nome: 'Lucas',    cidade: 'Belém, PA',              cor: '#7c3aed', tipo: 'os' },
+  { nome: 'Rafael',   cidade: 'Maceió, AL',             cor: '#16a34a', tipo: 'pdf' },
+  { nome: 'Júlio',    cidade: 'Vitória, ES',            cor: '#0891b2', tipo: 'cliente' },
+  { nome: 'Gustavo',  cidade: 'Campo Grande, MS',       cor: '#d97706', tipo: 'plano',   plano: 'mensal' },
+  { nome: 'Bruno',    cidade: 'João Pessoa, PB',        cor: '#dc2626', tipo: 'os' },
 ]
 
 const TIPO_CONFIG = {
@@ -57,22 +57,6 @@ const INTERVAL_MIN  = 9000
 const INTERVAL_MAX  = 15000
 const INITIAL_DELAY = 3500
 
-function playNotifSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(1047, ctx.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(784, ctx.currentTime + 0.12)
-    gain.gain.setValueAtTime(0.07, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.45)
-  } catch {}
-}
 
 export default function SocialProofToast() {
   const [visible,   setVisible]   = useState(false)
@@ -87,7 +71,6 @@ export default function SocialProofToast() {
     indexRef.current += 1
     setCurrent(ev)
     setVisible(true)
-    playNotifSound()
     timerRef.current = setTimeout(() => {
       setVisible(false)
       const delay = INTERVAL_MIN + Math.random() * (INTERVAL_MAX - INTERVAL_MIN)

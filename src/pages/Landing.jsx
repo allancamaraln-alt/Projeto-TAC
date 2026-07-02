@@ -131,52 +131,88 @@ const FEATURES = [
 
 const TESTIMONIALS = [
   {
-    name: 'Carlos M.',
+    name: 'Bruno M.',
     role: 'Técnico de refrigeração',
-    city: 'São Paulo, SP',
+    city: 'Brasília, DF',
+    color: '#9333ea',
+    photo: 'https://randomuser.me/api/portraits/men/32.jpg',
+    messages: [
+      { from: 'customer', text: 'Bom dia', time: '10:32' },
+      { from: 'support',  text: 'Olá, bom dia! Tudo bem? Em que podemos ajudar?', time: '10:33' },
+      { from: 'customer', text: 'Passando so pra falar que o ClimaPro tem feito eu faturar muito mais. antes eu perdia bastante servico de preventiva pq esquecia de ligar pro cliente na epoca certa. Agora o app manda o aviso e o proprio cliente entra em contato. ja valeu o plano so com isso', time: '10:36' },
+      { from: 'support',  text: 'Que ótimo saber disso, Bruno! 😊 Ficamos muito felizes em fazer parte do seu crescimento. Qualquer coisa, estamos por aqui!', time: '10:38' },
+      { from: 'customer', text: 'vlw demais', time: '10:39' },
+    ],
+  },
+  {
+    name: 'Diego C.',
+    role: 'Técnico de ar-condicionado',
+    city: 'Natal, RN',
     color: '#0284c7',
-    ago: '14:23',
-    text: 'Eu anotava tudo no caderno e foto no celular misturada com foto de família. Hoje tá tudo organizado por cliente. Mudou muito.',
+    photo: 'https://randomuser.me/api/portraits/men/45.jpg',
+    messages: [
+      { from: 'customer', text: 'Fala, tudo certo', time: '14:58' },
+      { from: 'support',  text: 'Fala Diego! Tudo certo sim 😊 Como podemos ajudar?', time: '14:59' },
+      { from: 'customer', text: 'Queria deixar meu feedback sobre o ClimaPro. o app ajuda demais na organizacao dos servicos, consigo acompanhar tudo na palma da mao e ainda passo muito mais profissionalismo pro cliente. parabens pelo trabalho', time: '15:03' },
+      { from: 'support',  text: 'Fala Diego! Que mensagem top, muito obrigado! É exatamente isso que buscamos. Tamo junto!', time: '15:06' },
+      { from: 'customer', text: 'tmj 👊', time: '15:07' },
+    ],
   },
   {
     name: 'Rogério L.',
     role: 'Instalador autônomo',
     city: 'Belo Horizonte, MG',
     color: '#16a34a',
-    ago: '09:41',
-    text: 'Mandei o PDF pelo zap e o cliente perguntou: isso é de alguma empresa? Trabalho sozinho há 6 anos mas agora parece que tenho uma empresa mesmo.',
+    photo: 'https://randomuser.me/api/portraits/men/17.jpg',
+    messages: [
+      { from: 'customer', text: 'Boa tarde', time: '09:38' },
+      { from: 'support',  text: 'Boa tarde! Como podemos ajudar?', time: '09:39' },
+      { from: 'customer', text: 'Mandei o PDF pelo zap e o cliente perguntou se era de alguma empresa grande kkkk. trabalho sozinho ha 6 anos 😅', time: '09:41' },
+      { from: 'support',  text: 'Haha que demais, Rogério! Essa é exatamente a ideia — dar profissionalismo pra quem trabalha por conta. Fico feliz que tá funcionando! 💪', time: '09:43' },
+      { from: 'customer', text: '👏👏', time: '09:44' },
+    ],
   },
   {
     name: 'Fábio T.',
     role: 'Técnico de ar-condicionado',
     city: 'Recife, PE',
     color: '#7c3aed',
-    ago: '11:07',
-    text: 'Voltou um cliente que eu nem lembrava mais por causa do lembrete de revisão. Aquela OS sozinha já pagou o app.',
+    photo: 'https://randomuser.me/api/portraits/men/52.jpg',
+    messages: [
+      { from: 'customer', text: 'Eai bom dia', time: '11:05' },
+      { from: 'support',  text: 'Oi Fábio! Tudo bem? Como podemos ajudar?', time: '11:06' },
+      { from: 'customer', text: 'Voltou um cliente que eu nem lembrava mais por causa do lembrete de revisao. a OS desse cliente sozinha ja pagou o app do mes', time: '11:07' },
+      { from: 'support',  text: 'Que história incrível, Fábio! 🎉 É exatamente pra isso que os lembretes existem — trazer o cliente de volta na hora certa. Muito bom!', time: '11:09' },
+      { from: 'customer', text: 'Ta ajudando dmais', time: '11:10' },
+    ],
   },
   {
-    name: 'Renato S.',
+    name: 'Carlos M.',
     role: 'Técnico de refrigeração',
-    city: 'Salvador, BA',
-    color: '#be185d',
-    ago: '16:55',
-    text: 'Chego no cliente com tudo no app, histórico, OS anterior, tudo. Ele vê e já confia mais. Faz diferença demais.',
-  },
-  {
-    name: 'Eduardo P.',
-    role: 'Técnico de HVAC',
-    city: 'Curitiba, PR',
-    color: '#d97706',
-    ago: '08:19',
-    text: 'Uso em obra sem sinal nenhum. Quando chego em casa já sincronizou tudo. Faz 5 meses e nunca perdeu um dado.',
+    city: 'São Paulo, SP',
+    color: '#0891b2',
+    photo: 'https://randomuser.me/api/portraits/men/68.jpg',
+    messages: [
+      { from: 'customer', text: 'Bom dia', time: '14:20' },
+      { from: 'support',  text: 'Bom dia, Carlos! Como podemos ajudar?', time: '14:21' },
+      { from: 'customer', text: 'Eu anotava tudo no caderno e foto no celular misturada com foto pessoal. hoje ta tudo organizado por cliente', time: '14:23' },
+      { from: 'support',  text: 'Que ótimo ouvir isso, Carlos! Organizar o dia a dia é o primeiro passo pra crescer 😊 Qualquer dúvida, estamos aqui!', time: '14:25' },
+      { from: 'customer', text: '👍', time: '14:25' },
+    ],
   },
   {
     name: 'Marcos A.',
     role: 'Instalador',
     city: 'Fortaleza, CE',
-    color: '#0891b2',
-    ago: '13:30',
-    text: 'Fui direto no anual. Faço umas 8 OS por semana, o app se pagou na primeira semana. Não tem como não valer.',
+    color: '#d97706',
+    photo: 'https://randomuser.me/api/portraits/men/74.jpg',
+    messages: [
+      { from: 'customer', text: 'Boa tarde', time: '13:28' },
+      { from: 'support',  text: 'Boa tarde! Em que posso ajudar?', time: '13:29' },
+      { from: 'customer', text: 'Fui direto no anual. faco umas 8 OS por semana, o app se pagou na primeira semana', time: '13:30' },
+      { from: 'support',  text: 'Marcos, que demais! 🚀 Pra quem tem alto volume de OS o anual é o melhor custo-benefício mesmo. Obrigado pela confiança!', time: '13:32' },
+      { from: 'customer', text: 'Continuem assim 💪', time: '13:33' },
+    ],
   },
 ]
 
@@ -379,159 +415,97 @@ function AnimatedCanvas() {
   )
 }
 
-function ExitIntentPopup({ onClose, onAccept }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 99999,
-        background: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 20,
-        backdropFilter: 'blur(3px)',
-        animation: 'fadeInOverlay 0.25s ease',
-      }}
-    >
-      <style>{`
-        @keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes slideUpCard { from { opacity: 0; transform: translateY(32px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
-      `}</style>
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          background: 'white',
-          borderRadius: 24,
-          maxWidth: 440,
-          width: '100%',
-          overflow: 'hidden',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.28)',
-          animation: 'slideUpCard 0.35s cubic-bezier(0.34,1.2,0.64,1)',
-          position: 'relative',
-        }}
-      >
-        {/* Botão fechar */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute', top: 14, right: 14, zIndex: 2,
-            background: 'rgba(255,255,255,0.85)', border: 'none', cursor: 'pointer',
-            width: 28, height: 28, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#64748b', boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* Topo com gradiente */}
-        <div style={{
-          background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-          padding: '28px 28px 20px',
-          textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 40, marginBottom: 10 }}>🤔</div>
-          <h2 style={{ color: 'white', fontWeight: 800, fontSize: 20, margin: '0 0 8px', lineHeight: 1.3 }}>
-            O valor não coube no bolso agora?
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, margin: 0, lineHeight: 1.6 }}>
-            Antes de você ir, temos uma última oferta especial para você.
-          </p>
-        </div>
-
-        {/* Corpo */}
-        <div style={{ padding: '24px 28px 28px', textAlign: 'center' }}>
-          {/* Badge de desconto */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: '#fef3c7', border: '1.5px solid #fcd34d',
-            borderRadius: 100, padding: '6px 18px', marginBottom: 20,
-          }}>
-            <span style={{ fontSize: 16 }}>🏷️</span>
-            <span style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>Oferta exclusiva de saída — apenas agora</span>
-          </div>
-
-          {/* Preço */}
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ fontSize: 14, color: '#94a3b8', textDecoration: 'line-through', marginRight: 8 }}>R$ 19,90/mês</span>
-            <span style={{ background: '#dcfce7', color: '#16a34a', fontWeight: 700, fontSize: 12, padding: '2px 8px', borderRadius: 100 }}>50% OFF</span>
-          </div>
-          <div style={{ marginBottom: 4 }}>
-            <span style={{ fontSize: 42, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em' }}>R$ 9,95</span>
-            <span style={{ fontSize: 15, color: '#64748b' }}>/mês</span>
-          </div>
-          <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 24px', lineHeight: 1.6 }}>
-            Organize suas OS, clientes e envie PDFs pelo WhatsApp.<br />
-            Cancele quando quiser — sem fidelidade.
-          </p>
-
-          {/* CTA principal */}
-          <button
-            onClick={onAccept}
-            style={{
-              width: '100%',
-              background: 'linear-gradient(135deg, #16a34a, #15803d)',
-              color: 'white', fontWeight: 700, fontSize: 16,
-              padding: '14px', borderRadius: 14, border: 'none',
-              cursor: 'pointer', marginBottom: 12,
-              boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
-            }}
-          >
-            Quero garantir por R$ 9,95/mês 🎉
-          </button>
-
-          {/* Link secundário */}
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#94a3b8', fontSize: 13,
-              textDecoration: 'underline', padding: 0,
-            }}
-          >
-            Não, obrigado — prefiro pagar mais depois
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const WA_BG = "url(\"data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8bfb5' fill-opacity='0.15'%3E%3Cpath d='M0 0h40v40H0V0zm40 40h40v40H40V40zm0-40h2l-2 2V0zm0 4l4-4h2l-6 6V4zm0 4l8-8h2L40 10V8zm0 4L52 0h2L40 14v-2zm0 4L56 0h2L40 18v-2zm0 4L60 0h2L40 22v-2zm0 4L64 0h2L40 26v-2zm0 4L68 0h2L40 30v-2zm0 4L72 0h2L40 34v-2zm0 4L76 0h2L40 38v-2zm0 4L80 0v2L42 40h-2zm4 0L80 4v2L46 40h-2zm4 0L80 8v2L50 40h-2zm4 0l28-28v2L54 40h-2zm4 0l24-24v2L58 40h-2zm4 0l20-20v2L62 40h-2zm4 0l16-16v2L66 40h-2zm4 0l12-12v2L70 40h-2zm4 0l8-8v2l-6 6h-2zm4 0l4-4v2l-2 2h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
 
+const DOUBLE_CHECK = (
+  <svg width="14" height="10" viewBox="0 0 16 11" fill="none" style={{ flexShrink: 0 }}>
+    <path d="M1 5.5L5 9.5L11 1.5" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M5 5.5L9 9.5L15 1.5" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+)
+
 function TestimonialCard({ t }) {
   return (
-    <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.10)', background: 'white', border: '1px solid #e2e8f0', height: '100%' }}>
-      <div style={{ background: 'linear-gradient(135deg, #128C7E, #075E54)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ borderRadius: 10, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.13)', background: 'white', border: '1px solid #d1d5db', height: '100%', display: 'flex', flexDirection: 'column' }}>
+
+      {/* Header WhatsApp */}
+      <div style={{ background: 'linear-gradient(to right, #128C7E, #075E54)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <div style={{ width: 38, height: 38, borderRadius: '50%', background: t.color, border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: 'white', letterSpacing: 0.5 }}>
-            {t.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+          <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.25)' }}>
+            <img
+              src={t.photo}
+              alt=""
+              style={{ width: '130%', height: '130%', marginLeft: '-15%', marginTop: '-15%', objectFit: 'cover', filter: 'blur(4px)' }}
+            />
           </div>
-          <span style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: '#25D366', border: '2px solid #075E54' }} />
+          <span style={{ position: 'absolute', bottom: 1, right: 1, width: 9, height: 9, borderRadius: '50%', background: '#25D366', border: '2px solid #075E54' }} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: 'white', fontWeight: 700, fontSize: 13 }}>{t.name}</div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>online agora</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>{t.name.split(' ')[0]} ClimaPro</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>online</div>
         </div>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.6)">
-          <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-        </svg>
-      </div>
-      <div style={{ background: '#ece5dd', backgroundImage: WA_BG, padding: '14px 12px 10px', minHeight: 110, display: 'flex', alignItems: 'flex-start' }}>
-        <div style={{ background: 'white', borderRadius: '0 12px 12px 12px', padding: '10px 12px 8px', maxWidth: '90%', position: 'relative', boxShadow: '0 1px 2px rgba(0,0,0,0.12)' }}>
-          <div style={{ position: 'absolute', top: 0, left: -8, width: 0, height: 0, borderTop: '8px solid white', borderLeft: '8px solid transparent' }} />
-          <p style={{ margin: 0, fontSize: 13.5, color: '#1a1a1a', lineHeight: 1.55, fontStyle: 'italic' }}>"{t.text}"</p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3, marginTop: 5 }}>
-            <span style={{ fontSize: 10, color: '#94a3b8' }}>{t.ago}</span>
-            <svg width="14" height="10" viewBox="0 0 16 11" fill="none">
-              <path d="M1 5.5L5 9.5L11 1.5" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M5 5.5L9 9.5L15 1.5" stroke="#53BDEB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+        <div style={{ display: 'flex', gap: 18 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="rgba(255,255,255,0.75)"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
         </div>
       </div>
-      <div style={{ background: 'white', padding: '10px 14px 12px', borderTop: '1px solid #f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+      {/* Área do chat */}
+      <div style={{ background: '#ece5dd', backgroundImage: WA_BG, padding: '12px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
+
+        {/* HOJE */}
+        <div style={{ textAlign: 'center', marginBottom: 4 }}>
+          <span style={{ background: 'rgba(255,255,255,0.82)', borderRadius: 6, padding: '3px 10px', fontSize: 10.5, color: '#6b7280', fontWeight: 500 }}>HOJE</span>
+        </div>
+
+        {/* Aviso de criptografia */}
+        <div style={{ background: '#fef9e3', border: '1px solid #f5e179', borderRadius: 8, padding: '7px 12px', textAlign: 'center', fontSize: 10.5, color: '#7c6a00', lineHeight: 1.5, marginBottom: 4 }}>
+          🔒 As mensagens e chamadas desta conversa estão agora seguras com criptografia de ponta-a-ponta.
+        </div>
+
+        {/* Mensagens */}
+        {t.messages.map((msg, i) => {
+          const isCustomer = msg.from === 'customer'
+          return (
+            <div key={i} style={{ display: 'flex', justifyContent: isCustomer ? 'flex-start' : 'flex-end' }}>
+              <div style={{
+                background: isCustomer ? 'white' : '#dcf8c6',
+                borderRadius: isCustomer ? '0 10px 10px 10px' : '10px 0 10px 10px',
+                padding: '7px 9px 5px',
+                maxWidth: '82%',
+                position: 'relative',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              }}>
+                {isCustomer && (
+                  <div style={{ position: 'absolute', top: 0, left: -7, width: 0, height: 0, borderTop: '7px solid white', borderLeft: '7px solid transparent' }} />
+                )}
+                {!isCustomer && (
+                  <div style={{ position: 'absolute', top: 0, right: -7, width: 0, height: 0, borderTop: '7px solid #dcf8c6', borderRight: '7px solid transparent' }} />
+                )}
+                <p style={{ margin: 0, fontSize: 12.5, color: '#111827', lineHeight: 1.5 }}>{msg.text}</p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                  <span style={{ fontSize: 10, color: '#9ca3af' }}>{msg.time}</span>
+                  {!isCustomer && DOUBLE_CHECK}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Barra de digitação */}
+      <div style={{ background: '#f0f0f0', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid #d1d5db' }}>
+        <span style={{ fontSize: 20, color: '#9ca3af' }}>😊</span>
+        <div style={{ flex: 1, background: 'white', borderRadius: 20, padding: '7px 14px', fontSize: 13, color: '#9ca3af' }}>Digite aqui...</div>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#128C7E', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/><line x1="12" y1="19" x2="12" y2="23" stroke="white" strokeWidth="2" strokeLinecap="round"/><line x1="8" y1="23" x2="16" y2="23" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+        </div>
+      </div>
+
+      {/* Rodapé com cargo e estrelas */}
+      <div style={{ background: 'white', padding: '10px 14px 12px', borderTop: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 12.5, color: '#0f172a' }}>{t.role}</div>
           <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{t.city}</div>
@@ -545,8 +519,6 @@ function TestimonialCard({ t }) {
 export default function Landing() {
   const navigate = useNavigate()
   const planosRef = useRef(null)
-  const [showExitPopup, setShowExitPopup] = useState(false)
-  const exitFiredRef = useRef(false)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
   const [activeSlide, setActiveSlide] = useState(0)
   const sliderRef = useRef(null)
@@ -574,38 +546,14 @@ export default function Landing() {
     if (ref) localStorage.setItem('climapro_ref', ref.toUpperCase())
   }, [])
 
-  useEffect(() => {
-    if (sessionStorage.getItem('exit_popup_shown')) return
-    function handleMouseLeave(e) {
-      if (e.clientY < 8 && !exitFiredRef.current) {
-        exitFiredRef.current = true
-        sessionStorage.setItem('exit_popup_shown', '1')
-        setShowExitPopup(true)
-      }
-    }
-    document.addEventListener('mouseleave', handleMouseLeave)
-    return () => document.removeEventListener('mouseleave', handleMouseLeave)
-  }, [])
-
   function scrollToPlanos() {
     planosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  function handleExitAccept() {
-    setShowExitPopup(false)
-    navigate('/entrar?modo=cadastro&plano=monthly&cupom=SAIDA50')
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
       <SocialProofToast />
-      {showExitPopup && (
-        <ExitIntentPopup
-          onClose={() => setShowExitPopup(false)}
-          onAccept={handleExitAccept}
-        />
-      )}
 
       {/* Header */}
       <header style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 50 }}>
