@@ -2,24 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import SocialProofToast from '../components/SocialProofToast'
+import { getUtms } from '../lib/utms'
 
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY
 
 const PLANOS = [
   {
-    id: 'annual',
-    label: 'Anual',
-    destaque: true,
-    preco: 'R$ 149,90',
-    periodo: '/ano',
-    equivalente: 'R$ 12,49/mês',
-    economia: 'Economize 37%',
-    descricao: 'Melhor custo-benefício',
-    amount: 149.90,
-  },
-  {
     id: 'monthly',
-    label: 'Mensal',
+    label: 'Básico',
     destaque: false,
     preco: 'R$ 19,90',
     periodo: '/mês',
@@ -27,6 +17,39 @@ const PLANOS = [
     economia: null,
     descricao: 'Cancele quando quiser',
     amount: 19.90,
+  },
+  {
+    id: 'plus',
+    label: 'Técnico Plus',
+    destaque: false,
+    preco: 'R$ 29,90',
+    periodo: '/mês',
+    equivalente: null,
+    economia: null,
+    descricao: 'Com relatório de faturamento',
+    amount: 29.90,
+  },
+  {
+    id: 'professional',
+    label: 'Profissional',
+    destaque: true,
+    preco: 'R$ 39,90',
+    periodo: '/mês',
+    equivalente: null,
+    economia: 'Mais vendido',
+    descricao: 'Recursos completos + relatório',
+    amount: 39.90,
+  },
+  {
+    id: 'annual',
+    label: 'Anual',
+    destaque: false,
+    preco: 'R$ 149,90',
+    periodo: '/ano',
+    equivalente: 'R$ 12,49/mês',
+    economia: 'Economize 37%',
+    descricao: 'Melhor custo-benefício',
+    amount: 149.90,
   },
 ]
 
@@ -43,7 +66,7 @@ function useRetornoMercadoPago() {
   return params.get('pagamento') === 'sucesso'
 }
 
-function CardBricksModal({ plan, amount, saveCard, onClose, onPago }) {
+function CardBricksModal({ plan, amount, saveCard, utms, onClose, onPago }) {
   const [brickLoaded, setBrickLoaded] = useState(false)
   const [erro, setErro] = useState('')
   const controllerRef = useRef(null)
@@ -63,7 +86,7 @@ function CardBricksModal({ plan, amount, saveCard, onClose, onPago }) {
             setErro('')
             try {
               const { data, error } = await supabase.functions.invoke('process-card-payment', {
-                body: { plan, cardFormData: formData, saveCard },
+                body: { plan, cardFormData: formData, saveCard, utms },
               })
               if (error) throw new Error(error.message)
               if (data?.error) throw new Error(data.error)
@@ -122,7 +145,7 @@ function CardBricksModal({ plan, amount, saveCard, onClose, onPago }) {
   )
 }
 
-function SavedCardModal({ plan, cardLastFour, cardBrand, onClose, onPago }) {
+function SavedCardModal({ plan, cardLastFour, cardBrand, utms, onClose, onPago }) {
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -131,7 +154,7 @@ function SavedCardModal({ plan, cardLastFour, cardBrand, onClose, onPago }) {
     setErro('')
     try {
       const { data, error } = await supabase.functions.invoke('charge-saved-card', {
-        body: { plan },
+        body: { plan, utms },
       })
       if (error) throw new Error(error.message)
       if (data?.error) throw new Error(data.error)
@@ -262,6 +285,76 @@ function PixModal({ pixData, onClose, onPago }) {
   )
 }
 
+function UpsellModal({ method, onEscolha, onFechar }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70">
+      <div className="bg-white rounded-t-3xl w-full max-w-sm mx-auto shadow-2xl overflow-hidden">
+        {/* Cabeçalho em gradiente */}
+        <div className="px-6 pt-5 pb-6 text-white" style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' }}>
+          <div className="w-10 h-1 bg-white/30 rounded-full mx-auto mb-4" />
+          <div className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 mb-3">
+            <span className="text-xs font-bold tracking-wide">⚡ OFERTA ESPECIAL</span>
+          </div>
+          <h2 className="text-xl font-extrabold leading-tight mb-1">
+            Upgrade para o Técnico Plus?
+          </h2>
+          <p className="text-white/80 text-sm">
+            Por apenas <strong className="text-white">R$10 a mais</strong> você desbloqueia recursos que economizam horas de trabalho.
+          </p>
+        </div>
+
+        {/* Corpo */}
+        <div className="px-6 py-5">
+          {/* Preço */}
+          <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-2xl px-4 py-3">
+            <div>
+              <p className="font-bold text-gray-800 text-base">Técnico Plus</p>
+              <p className="text-xs text-gray-400 mt-0.5">antes <span className="line-through">R$ 39,90/mês</span></p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-extrabold text-gray-900 leading-none">R$ 29,90</p>
+              <p className="text-xs text-gray-400">/mês</p>
+              <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full mt-1">
+                só +R$10 vs Básico
+              </span>
+            </div>
+          </div>
+
+          {/* Features */}
+          <ul className="space-y-3 mb-5">
+            {[
+              { icon: '📊', text: 'Relatório de faturamento' },
+              { icon: '📋', text: 'Histórico completo de OS por cliente' },
+              { icon: '🔔', text: 'Notificações com som' },
+              { icon: '✅', text: 'Cancele quando quiser' },
+            ].map(({ icon, text }) => (
+              <li key={text} className="flex items-center gap-3">
+                <span className="text-base w-6 text-center flex-shrink-0">{icon}</span>
+                <span className="text-sm text-gray-700 font-medium">{text}</span>
+              </li>
+            ))}
+          </ul>
+
+          {/* CTAs */}
+          <button
+            onClick={() => onEscolha('plus', method)}
+            className="w-full py-3.5 rounded-2xl text-sm font-bold text-white shadow-lg mb-2"
+            style={{ background: 'linear-gradient(135deg, rgb(var(--ac)), rgb(var(--ac-dk)))' }}
+          >
+            Assinar Técnico Plus — R$ 29,90/mês
+          </button>
+          <button
+            onClick={() => onEscolha('monthly', method)}
+            className="w-full py-2.5 text-sm text-gray-400 font-medium"
+          >
+            Não, continuar com o Básico (R$ 19,90)
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function preloadMpSdk() {
   if (window.MercadoPago || document.querySelector('script[src*="mercadopago"]')) return
   const script = document.createElement('script')
@@ -278,6 +371,7 @@ export default function Paywall() {
   const [cardBricksData, setCardBricksData] = useState(null)
   const [savedCardData, setSavedCardData] = useState(null)
   const [saveCard, setSaveCard] = useState(true)
+  const [upsellMethod, setUpsellMethod] = useState(null)
 
   useEffect(() => { preloadMpSdk() }, [])
 
@@ -311,13 +405,21 @@ export default function Paywall() {
     return () => clearInterval(intervalo)
   }, [])
 
-  function handleAssinar(planId) {
+  function abrirPagamentoCartao(planId) {
     const plano = PLANOS.find(p => p.id === planId)
     setErro('')
     if (temCartaoSalvo) {
       setSavedCardData({ plan: planId, amount: plano.amount })
     } else {
       setCardBricksData({ plan: planId, amount: plano.amount })
+    }
+  }
+
+  function handleAssinar(planId) {
+    if (planId === 'monthly') {
+      setUpsellMethod('card')
+    } else {
+      abrirPagamentoCartao(planId)
     }
   }
 
@@ -328,12 +430,21 @@ export default function Paywall() {
     setCardBricksData({ plan: planId, amount: plano.amount })
   }
 
-  async function handlePix(planId) {
+  function handleUpsellEscolha(planId, method) {
+    setUpsellMethod(null)
+    if (method === 'card') {
+      abrirPagamentoCartao(planId)
+    } else {
+      iniciarPix(planId)
+    }
+  }
+
+  async function iniciarPix(planId) {
     setLoadingPix(planId)
     setErro('')
     try {
       const { data, error } = await supabase.functions.invoke('create-pix', {
-        body: { plan: planId },
+        body: { plan: planId, utms: getUtms() },
       })
       if (error) throw new Error(error.message || 'Erro na função')
       if (!data?.qr_code) throw new Error(data?.error || 'Pix sem QR code')
@@ -345,13 +456,28 @@ export default function Paywall() {
     }
   }
 
+  function handlePix(planId) {
+    if (planId === 'monthly') {
+      setUpsellMethod('pix')
+    } else {
+      iniciarPix(planId)
+    }
+  }
+
   async function handlePagoPix() {
+    const plano = PLANOS.find(p => p.id === pixData?.plan)
     await refreshProfile()
+    if (window.fbq) window.fbq('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL' })
+    if (window.utmify) window.utmify('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL', paymentMethod: 'pix', installments: 1 })
     setPixData(null)
   }
 
   async function handlePagoCard() {
+    const plan = cardBricksData?.plan || savedCardData?.plan
+    const plano = PLANOS.find(p => p.id === plan)
     await refreshProfile()
+    if (window.fbq) window.fbq('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL' })
+    if (window.utmify) window.utmify('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL', paymentMethod: 'credit_card', installments: 1 })
     setCardBricksData(null)
     setSavedCardData(null)
   }
@@ -378,6 +504,14 @@ export default function Paywall() {
     <>
       <SocialProofToast />
 
+      {upsellMethod && (
+        <UpsellModal
+          method={upsellMethod}
+          onEscolha={handleUpsellEscolha}
+          onFechar={() => setUpsellMethod(null)}
+        />
+      )}
+
       {pixData && (
         <PixModal
           pixData={pixData}
@@ -391,6 +525,7 @@ export default function Paywall() {
           plan={cardBricksData.plan}
           amount={cardBricksData.amount}
           saveCard={saveCard}
+          utms={getUtms()}
           onClose={() => setCardBricksData(null)}
           onPago={handlePagoCard}
         />
@@ -401,6 +536,7 @@ export default function Paywall() {
           plan={savedCardData.plan}
           cardLastFour={profile?.mp_card_last_four}
           cardBrand={profile?.mp_card_brand}
+          utms={getUtms()}
           onClose={() => setSavedCardData(null)}
           onPago={handlePagoCard}
         />
@@ -452,7 +588,7 @@ export default function Paywall() {
           )}
 
           <div className="w-full max-w-sm mt-5 space-y-4">
-            {PLANOS.map(plano => {
+            {PLANOS.filter(p => p.id !== 'plus').map(plano => {
               const carregandoPix = loadingPix === plano.id
               return (
                 <div

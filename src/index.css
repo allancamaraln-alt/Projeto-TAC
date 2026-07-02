@@ -4,6 +4,36 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(2,132,199,0.55), 0 0 0 0 rgba(2,132,199,0.3); }
+  60%  { box-shadow: 0 0 0 10px rgba(2,132,199,0), 0 0 0 20px rgba(2,132,199,0); }
+  100% { box-shadow: 0 0 0 0 rgba(2,132,199,0), 0 0 0 0 rgba(2,132,199,0); }
+}
+
+@keyframes pulse-ring-white {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.55), 0 0 0 0 rgba(255,255,255,0.25); }
+  60%  { box-shadow: 0 0 0 10px rgba(255,255,255,0), 0 0 0 20px rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0), 0 0 0 0 rgba(255,255,255,0); }
+}
+
+.btn-pulse {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.btn-pulse-white {
+  animation: pulse-ring-white 2s ease-out infinite;
+}
+
+@keyframes pulse-ring-green {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.55), 0 0 0 0 rgba(34,197,94,0.3); }
+  60%  { box-shadow: 0 0 0 10px rgba(34,197,94,0), 0 0 0 20px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0), 0 0 0 0 rgba(34,197,94,0); }
+}
+
+.btn-pulse-green {
+  animation: pulse-ring-green 2s ease-out infinite;
+}
+
 @layer base {
   :root {
     --ac:    2 132 199;   /* accent principal — sky-600 */
@@ -104,6 +134,12 @@
 .animate-fade-in    { animation: fadeIn    0.3s  ease-out forwards; }
 .animate-slide-down { animation: slideDown 0.25s ease-out forwards; }
 .animate-slide-up   { animation: slideUp   0.3s  cubic-bezier(0.32, 0.72, 0, 1); }
+
+@keyframes swipeHint {
+  0%, 100% { transform: translateX(0); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-3px); }
+}
 
 /* ═══════════════════════════════════════
    DARK MODE

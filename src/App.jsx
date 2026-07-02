@@ -3,17 +3,25 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { ToastProvider } from './hooks/useToast'
+import { AIProvider } from './hooks/useAI'
 import BottomNav from './components/BottomNav'
+import InstallPrompt from './components/InstallPrompt'
+import AIAssistant from './components/AIAssistant'
 import { getTheme, applyTheme } from './lib/theme'
 import Login from './pages/Login'
 import Paywall from './pages/Paywall'
 import Landing from './pages/Landing'
+import PlanoPlus from './pages/PlanoPlus'
 
 // Inicializar Sentry
 Sentry.init({
   dsn: "https://39e93ed64894fb89acb4b451fdb4a136@o4511269979291648.ingest.us.sentry.io/4511270012846080",
   tracesSampleRate: 1.0,
-  environment: "production"
+  environment: "production",
+  ignoreErrors: [
+    /ServiceWorker/i,
+    /Failed to register/i,
+  ],
 })
 
 const Dashboard    = lazy(() => import('./pages/Dashboard'))
@@ -29,6 +37,7 @@ const Relatorio    = lazy(() => import('./pages/Relatorio'))
 const Lembretes    = lazy(() => import('./pages/Lembretes'))
 const Privacidade  = lazy(() => import('./pages/Privacidade'))
 const ExcluirConta = lazy(() => import('./pages/ExcluirConta'))
+const Afiliados    = lazy(() => import('./pages/Afiliados'))
 
 function PageLoader() {
   return (
@@ -97,6 +106,7 @@ function AppContent() {
 
   if (!user) {
     if (location.pathname === '/entrar') return <Login />
+    if (location.pathname === '/plano-plus') return <PlanoPlus />
     if (location.pathname === '/privacidade') return <Suspense fallback={<PageLoader />}><Privacidade /></Suspense>
     if (location.pathname === '/excluir-conta') return <Suspense fallback={<PageLoader />}><ExcluirConta /></Suspense>
     return <Landing />
@@ -122,9 +132,12 @@ function AppContent() {
           <Route path="/lembretes"              element={<Lembretes />} />
           <Route path="/perfil"                 element={<Perfil />} />
           <Route path="/privacidade"            element={<Privacidade />} />
+          <Route path="/afiliados"              element={<Afiliados />} />
           <Route path="*"                       element={<Navigate to="/" />} />
         </Routes>
       </Suspense>
+      <AIAssistant />
+      <InstallPrompt />
       <OfflineBanner />
       <BottomNav />
     </>
@@ -138,7 +151,9 @@ export default Sentry.withErrorBoundary(function App() {
     <BrowserRouter>
       <AuthProvider>
         <ToastProvider>
-          <AppContent />
+          <AIProvider>
+            <AppContent />
+          </AIProvider>
         </ToastProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -9,9 +9,11 @@ const corsHeaders = {
 }
 
 const PLANOS = {
-  monthly:         { description: 'ClimaPro Mensal',          amount: 19.90,  days: 30  },
+  monthly:         { description: 'ClimaPro Básico',          amount: 19.90,  days: 30  },
   monthly_saida50: { description: 'ClimaPro Mensal — Oferta', amount: 9.95,   days: 30  },
-  annual:          { description: 'ClimaPro Anual',           amount: 149.90, days: 365 },
+  plus:            { description: 'ClimaPro Técnico Plus',    amount: 29.90,  days: 30  },
+  professional:    { description: 'ClimaPro Profissional',    amount: 39.90,  days: 30  },
+  annual:          { description: 'ClimaPro Premium Anual',   amount: 149.90, days: 365 },
 }
 
 async function saveCardToCustomer(mpToken: string, supabase: any, userId: string, email: string, cardToken: string) {
@@ -72,7 +74,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('Não autorizado')
 
-    const { plan, cardFormData, saveCard } = await req.json()
+    const { plan, cardFormData, saveCard, utms } = await req.json()
     if (!PLANOS[plan as keyof typeof PLANOS]) throw new Error('Plano inválido')
 
     const plano = PLANOS[plan as keyof typeof PLANOS]
@@ -104,6 +106,7 @@ serve(async (req) => {
           identification: cardFormData.payer?.identification,
         },
         external_reference: user.id,
+        ...(utms ? { metadata: { utms } } : {}),
       }),
     })
 
@@ -121,6 +124,7 @@ serve(async (req) => {
       await serviceSupabase.from('profiles').update({
         subscribed_until: until.toISOString(),
         plan: plan === 'monthly_saida50' ? 'monthly' : plan,
+        plan_locked_at: new Date().toISOString(),
       }).eq('id', user.id)
 
       if (saveCard) {

@@ -59,22 +59,6 @@ export default function Dashboard() {
 
   return (
     <div className="page-container">
-      {/* FAB — Nova OS */}
-      <button
-        onClick={() => navigate('/ordens/nova')}
-        className="fixed z-40 ac-bg rounded-full flex items-center justify-center active:scale-90 transition-all"
-        style={{
-          width: 56, height: 56,
-          bottom: 'calc(env(safe-area-inset-bottom) + 72px)',
-          right: 16,
-          boxShadow: '0 4px 20px rgb(var(--ac) / 0.45)',
-        }}
-        aria-label="Nova OS"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-      </button>
       {/* Header com gradiente */}
       <div className="relative overflow-hidden px-4 pt-12 pb-8" style={{background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)'}}>
         <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white opacity-5" />

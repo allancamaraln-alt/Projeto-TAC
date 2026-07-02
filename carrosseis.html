@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Carrosséis ClimaPro</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #e5e7eb; font-family: 'Segoe UI', sans-serif; padding: 40px 20px; }
+
+    h1 { text-align: center; color: #1f2937; margin-bottom: 8px; font-size: 24px; }
+    .instrucao { text-align: center; color: #6b7280; margin-bottom: 40px; font-size: 14px; }
+
+    .carrossel-titulo {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 40px 0 20px;
+    }
+
+    .grade {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 60px;
+    }
+
+    /* Slide base — 1080x1080 escalado para 360x360 */
+    .slide {
+      width: 360px;
+      height: 360px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 36px 32px;
+      text-align: center;
+    }
+
+    .slide-numero {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0.5;
+      letter-spacing: 1px;
+    }
+
+    /* Cores */
+    .bg-azul { background: #0284c7; }
+    .bg-branco { background: #ffffff; }
+    .txt-branco { color: #ffffff; }
+    .txt-azul { color: #0284c7; }
+    .txt-cinza { color: #1f2937; }
+    .txt-cinza-claro { color: #6b7280; }
+
+    /* Tipografia */
+    .titulo-grande {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+    .titulo-medio {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+    .corpo {
+      font-size: 15px;
+      line-height: 1.6;
+      opacity: 0.85;
+    }
+    .sub {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-top: 8px;
+    }
+
+    /* Ícone */
+    .icone { font-size: 48px; margin-bottom: 16px; }
+    .icone-pequeno { font-size: 28px; margin-bottom: 10px; }
+
+    /* Lista */
+    .lista { list-style: none; text-align: left; margin-top: 12px; }
+    .lista li { font-size: 14px; margin-bottom: 8px; font-weight: 600; }
+
+    /* Barra decorativa */
+    .barra-base {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: #0284c7;
+    }
+
+    /* Botão CTA */
+    .btn-cta {
+      margin-top: 20px;
+      background: #ffffff;
+      color: #0284c7;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 12px 28px;
+      border-radius: 50px;
+      display: inline-block;
+    }
+    .btn-cta-inv {
+      margin-top: 20px;
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 12px 28px;
+      border-radius: 50px;
+      display: inline-block;
+    }
+
+    /* Ícone X */
+    .icone-x {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #fee2e2;
+      color: #ef4444;
+      font-size: 22px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+    }
+
+    /* Mockup tela */
+    .mockup {
+      background: #f0f9ff;
+      border: 2px solid #bae6fd;
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      width: 100%;
+      font-size: 12px;
+      color: #0284c7;
+      font-weight: 700;
+    }
+    .mockup-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid #e0f2fe;
+      font-size: 11px;
+      color: #374151;
+      font-weight: 500;
+    }
+    .mockup-row:last-child { border-bottom: none; }
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+    .badge-verde { background: #d1fae5; color: #065f46; }
+    .badge-amarelo { background: #fef3c7; color: #92400e; }
+
+    hr.divisor {
+      border: none;
+      border-top: 3px solid #e5e7eb;
+      margin: 20px 0 40px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Carrosséis ClimaPro</h1>
+<p class="instrucao">Tire print de cada slide (360×360px) para usar no Meta Ads · Dica: use F11 para tela cheia antes de printar</p>
+
+<!-- ============================================================ -->
+<p class="carrossel-titulo">CARROSSEL 1 — Dor → Solução</p>
+<div class="grade">
+
+  <!-- Slide 1 -->
+  <div class="slide bg-azul txt-branco">
+    <span class="slide-numero txt-branco">01 / 06</span>
+    <div class="icone">❄️</div>
+    <div class="titulo-grande">Ainda anota suas ordens de serviço no papel?</div>
+    <div class="sub">Arrasta para ver como resolver isso 👉</div>
+  </div>
+
+  <!-- Slide 2 -->
+  <div class="slide bg-branco">
+    <span class="slide-numero txt-cinza-claro">02 / 06</span>
+    <div class="icone-x">✕</div>
+    <div class="titulo-medio txt-cinza">Papel se perde.<br/>Anotação some.</div>
+    <div class="corpo txt-cinza-claro">Quanto dinheiro você já deixou de cobrar por esquecer uma OS?</div>
+    <div class="barra-base"></div>
+  </div>
+
+  <!-- Slide 3 -->
+  <div class="slide bg-branco">
+    <span class="slide-numero txt-cinza-claro">03 / 06</span>
+    <div class="icone-x">✕</div>
+    <div class="titulo-medio txt-cinza">Cliente liga e você não lembra do serviço?</div>
+    <div class="corpo txt-cinza-claro">Sem histórico, sem controle. Parece amador — mesmo você sendo um ótimo técnico.</div>
+    <div class="barra-base"></div>
+  </div>
+
+  <!-- Slide 4 -->
+  <div class="slide bg-azul txt-branco">
+    <span class="slide-numero txt-branco">04 / 06</span>
+    <div class="icone">💡</div>
+    <div class="titulo-grande">Existe uma forma mais profissional de trabalhar.</div>
+    <div class="corpo" style="opacity:0.8">Técnicos que usam o ClimaPro economizam 2h por dia e não perdem nenhuma OS.</div>
+  </div>
+
+  <!-- Slide 5 -->
+  <div class="slide bg-branco">
+    <span class="slide-numero txt-cinza-claro">05 / 06</span>
+    <div class="icone-pequeno">❄️</div>
+    <div class="titulo-medio txt-azul">ClimaPro — o app feito para técnicos de AC</div>
+    <ul class="lista">
+      <li>✅ Crie OS em 1 minuto</li>
+      <li>✅ Histórico completo de clientes</li>
+      <li>✅ Relatório de faturamento</li>
+      <li>✅ Funciona offline</li>
+    </ul>
+    <div class="barra-base"></div>
+  </div>
+
+  <!-- Slide 6 -->
+  <div class="slide bg-azul txt-branco">
+    <span class="slide-numero txt-branco">06 / 06</span>
+    <div class="icone">🎯</div>
+    <div class="titulo-grande">Experimente grátis por 7 dias</div>
+    <div class="corpo" style="opacity:0.8">Sem cartão de crédito.<br/>Cancele quando quiser.</div>
+    <div class="btn-cta">climaproapp.com.br</div>
+  </div>
+
+</div>
+
+<hr class="divisor" />
+
+<!-- ============================================================ -->
+<p class="carrossel-titulo">CARROSSEL 2 — Funcionalidades</p>
+<div class="grade">
+
+  <!-- Slide 1 -->
+  <div class="slide bg-azul txt-branco">
+    <span class="slide-numero txt-branco">01 / 06</span>
+    <div class="icone">❄️</div>
+    <div class="titulo-grande">Tudo que um técnico de AC precisa em 1 app</div>
+    <div class="sub">Veja o que o ClimaPro faz por você 👉</div>
+  </div>
+
+  <!-- Slide 2 -->
+  <div class="slide bg-branco">
+    <span class="slide-numero txt-cinza-claro">02 / 06</span>
+    <div class="mockup">
+      📋 Nova Ordem de Serviço
+      <div class="mockup-row"><span>Cliente: João Costa</span><span class="badge badge-verde">Salvo ✓</span></div>
+      <div class="mockup-row"><span>Serviço: Instalação Split</span></div>
+      <div class="mockup-row"><span>Valor: R$ 350,00</span></div>
+    </div>
+    <div class="titulo-medio txt-azul">OS em 1 minuto</div>
+    <div class="corpo txt-cinza-claro">Crie, edite e finalize suas ordens de serviço pelo celular. Tudo registrado.</div>
+    <div class="barra-base"></div>
+  </div>
+
+  <!-- Slide 3 -->
+  <div class="slide bg-branco">
+    <span class="slide-numero txt-cinza-claro">03 / 06</span>
+    <div class="mockup">
+      👥 Clientes
+      <div class="mockup-row"><span>Mateus Silva</span><span class="badge badge-verde">3 OS</span></div>
+      <div class="mockup-row"><span>Ana Ferreira</span><span class="badge badge-amarelo">Revisão</span></div>
+      <div class="mockup-row"><span>Pedro Santos</span><span class="badge badge-verde">5 OS</span></div>
+    </div>
+    <div class="titulo-medio txt-azul">Histórico completo</div>
+    <div class="corpo txt-cinza-claro">Veja todos os serviços, equipamentos e pendências de cada cliente.</div>
+    <div class="barra-base"></div>
+  </div>
+
+  <!-- Slide 4 -->
+  <div class="slide bg-branco">
+    <span class="slide-numero txt-cinza-claro">04 / 06</span>
+    <div class="mockup">
+      🔔 Lembretes
+      <div class="mockup-row"><span>Revisão — João Costa</span><span class="badge badge-amarelo">Hoje</span></div>
+      <div class="mockup-row"><span>Manutenção — Ana</span><span class="badge badge-verde">15/06</span></div>
+      <div class="mockup-row"><span>Instalação — Pedro</span><span class="badge badge-verde">20/06</span></div>
+    </div>
+    <div class="titulo-medio txt-azul">Zero revisões perdidas</div>
+    <div class="corpo txt-cinza-claro">Configure lembretes de manutenção preventiva e fidelize seus clientes.</div>
+    <div class="barra-base"></div>
+  </div>
+
+  <!-- Slide 5 -->
+  <div class="slide bg-branco">
+    <span class="slide-numero txt-cinza-claro">05 / 06</span>
+    <div class="mockup">
+      📊 Relatório — Maio 2026
+      <div class="mockup-row"><span>OS concluídas</span><span style="font-weight:700;color:#0284c7">12</span></div>
+      <div class="mockup-row"><span>Faturamento</span><span style="font-weight:700;color:#0284c7">R$ 4.200</span></div>
+      <div class="mockup-row"><span>Ticket médio</span><span style="font-weight:700;color:#0284c7">R$ 350</span></div>
+    </div>
+    <div class="titulo-medio txt-azul">Saiba quanto você faturou</div>
+    <div class="corpo txt-cinza-claro">Relatório mensal automático. Veja seu desempenho em segundos.</div>
+    <div class="barra-base"></div>
+  </div>
+
+  <!-- Slide 6 -->
+  <div class="slide bg-azul txt-branco">
+    <span class="slide-numero txt-branco">06 / 06</span>
+    <div class="icone">🚀</div>
+    <div class="titulo-grande">Grátis por 7 dias. Sem burocracia.</div>
+    <ul class="lista txt-branco" style="margin-bottom:4px">
+      <li>✅ Sem cartão de crédito</li>
+      <li>✅ Funciona offline</li>
+      <li>✅ Pronto em 2 minutos</li>
+    </ul>
+    <div class="btn-cta">climaproapp.com.br</div>
+  </div>
+
+</div>
+
+</body>
+</html>

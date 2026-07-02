@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDate } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
+import { useAuth } from '../hooks/useAuth'
 
 const PERIODOS = [
   { label: 'Esta semana', value: 'semana' },
@@ -31,6 +32,7 @@ function getInicio(periodo) {
 
 export default function Relatorio() {
   const navigate = useNavigate()
+  const { hasFaturamento, hasRelatorioAvancado } = useAuth()
   const [periodo, setPeriodo] = useState('mes')
   const [ordens, setOrdens] = useState([])
   const [loading, setLoading] = useState(true)
@@ -60,6 +62,46 @@ export default function Relatorio() {
   const totalEmAndamento = ordens.filter(os => os.status === 'em_andamento').length
 
   const ticketMedio = concluidas.length > 0 ? totalFaturado / concluidas.length : 0
+
+  const topClientes = Object.entries(
+    concluidas.reduce((acc, os) => {
+      const nome = os.clientes?.nome ?? 'Desconhecido'
+      acc[nome] = (acc[nome] ?? 0) + Number(os.valor)
+      return acc
+    }, {})
+  )
+    .map(([nome, total]) => ({ nome, total }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5)
+
+  if (!hasFaturamento) {
+    return (
+      <div className="page-container">
+        <div className="bg-white px-4 pt-12 pb-4 border-b border-gray-100 flex items-center gap-3 sticky top-0 z-10">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-full active:bg-gray-100">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <h1 className="text-xl font-bold text-gray-800">Relatório</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <div className="w-16 h-16 bg-sky-50 rounded-2xl flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 mb-2">Recurso do plano Plus ou superior</h2>
+          <p className="text-sm text-gray-500 max-w-xs leading-relaxed mb-6">
+            O relatório de faturamento está disponível nos planos <strong>Técnico Plus</strong>, <strong>Profissional</strong> e <strong>Anual</strong>.
+          </p>
+          <p className="text-xs text-gray-400">
+            Para fazer upgrade, aguarde a renovação do seu plano e escolha um plano superior.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="page-container">
@@ -192,6 +234,35 @@ export default function Relatorio() {
                     ))}
                 </div>
               </>
+            )}
+
+            {/* Ranking de clientes — apenas plano Anual */}
+            {hasRelatorioAvancado ? (
+              topClientes.length > 0 && (
+                <>
+                  <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide pt-1">
+                    Top clientes no período
+                  </h2>
+                  <div className="space-y-2 pb-4">
+                    {topClientes.map(({ nome, total }, i) => (
+                      <div key={nome} className="card flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-full ac-bg-lt flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs font-bold ac-text">{i + 1}</span>
+                        </span>
+                        <p className="flex-1 font-medium text-gray-800 truncate">{nome}</p>
+                        <p className="font-bold text-green-600 flex-shrink-0">{formatBRL(total)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )
+            ) : (
+              <div className="card text-center py-5 border-dashed border-gray-200 mb-4">
+                <p className="text-sm font-semibold text-gray-600 mb-1">Top clientes</p>
+                <p className="text-xs text-gray-400">
+                  Ranking de clientes disponível no plano <strong>Anual</strong>.
+                </p>
+              </div>
             )}
           </>
         )}

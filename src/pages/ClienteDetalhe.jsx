@@ -3,10 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDate } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
+import { useAuth } from '../hooks/useAuth'
+
+const HISTORICO_BASICO_LIMIT = 3
 
 export default function ClienteDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { hasHistoricoCompleto } = useAuth()
   const [cliente, setCliente] = useState(null)
   const [ordens, setOrdens] = useState([])
   const [loading, setLoading] = useState(true)
@@ -125,7 +129,7 @@ export default function ClienteDetalhe() {
           </div>
         ) : (
           <div className="space-y-3">
-            {ordens.map(os => (
+            {(hasHistoricoCompleto ? ordens : ordens.slice(0, HISTORICO_BASICO_LIMIT)).map(os => (
               <button
                 key={os.id}
                 onClick={() => navigate(`/ordens/${os.id}`)}
@@ -144,6 +148,16 @@ export default function ClienteDetalhe() {
                 <p className="text-xs text-gray-400">{formatDate(os.created_at)}</p>
               </button>
             ))}
+            {!hasHistoricoCompleto && ordens.length > HISTORICO_BASICO_LIMIT && (
+              <div className="card text-center py-5 border-dashed border-gray-200">
+                <p className="text-gray-400 text-sm mb-1">
+                  +{ordens.length - HISTORICO_BASICO_LIMIT} OS anteriores bloqueadas
+                </p>
+                <p className="text-xs text-gray-400">
+                  Histórico completo disponível nos planos <strong>Técnico Plus</strong>, <strong>Profissional</strong> e <strong>Anual</strong>.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

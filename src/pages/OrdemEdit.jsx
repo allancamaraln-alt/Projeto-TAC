@@ -1,8 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS } from '../lib/format'
+import { formatOS, formatDate } from '../lib/format'
 import { useToast } from '../hooks/useToast'
+
+const FORMAS_PAGAMENTO = [
+  { value: '', label: 'Não informada' },
+  { value: 'pix', label: 'Pix' },
+  { value: 'dinheiro', label: 'Dinheiro / Espécie' },
+  { value: 'cartao_credito', label: 'Cartão de Crédito' },
+  { value: 'cartao_debito', label: 'Cartão de Débito' },
+  { value: 'outros', label: 'Outros' },
+]
+
+function calcularVencimento(valor, unidade, base) {
+  const d = base ? new Date(base + 'T12:00:00') : new Date()
+  if (unidade === 'dias')  d.setDate(d.getDate() + valor)
+  if (unidade === 'meses') d.setMonth(d.getMonth() + valor)
+  if (unidade === 'anos')  d.setFullYear(d.getFullYear() + valor)
+  return d.toISOString().split('T')[0]
+}
 
 const TIPOS = [
   'Instalação', 'Manutenção preventiva', 'Manutenção corretiva',
@@ -44,6 +61,10 @@ export default function OrdemEdit() {
           hora_agendamento: data.hora_agendamento || '',
           observacoes: data.observacoes || '',
           status: data.status,
+          forma_pagamento: data.forma_pagamento || '',
+          garantia_valor: data.garantia_valor || '',
+          garantia_unidade: data.garantia_unidade || 'meses',
+          garantia_obs: data.garantia_obs || '',
         })
       })
   }, [id])
@@ -53,6 +74,8 @@ export default function OrdemEdit() {
     setErro('')
     setSaving(true)
 
+    const gValor = parseInt(form.garantia_valor) || null
+    const base = os.data_conclusao || null
     const { error } = await supabase
       .from('ordens_servico')
       .update({
@@ -63,6 +86,11 @@ export default function OrdemEdit() {
         hora_agendamento: form.hora_agendamento || null,
         observacoes: form.observacoes,
         status: form.status,
+        forma_pagamento: form.forma_pagamento || null,
+        garantia_valor: gValor,
+        garantia_unidade: gValor ? form.garantia_unidade : null,
+        garantia_vencimento: gValor ? calcularVencimento(gValor, form.garantia_unidade, base) : null,
+        garantia_obs: form.garantia_obs || null,
       })
       .eq('id', id)
 
@@ -179,6 +207,46 @@ export default function OrdemEdit() {
             value={form.observacoes}
             onChange={set('observacoes')}
             placeholder="Notas internas..."
+          />
+        </div>
+
+        {/* Forma de pagamento */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Forma de pagamento</label>
+          <select className="input-field" value={form.forma_pagamento} onChange={set('forma_pagamento')}>
+            {FORMAS_PAGAMENTO.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+          </select>
+        </div>
+
+        {/* Garantia */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Garantia <span className="font-normal text-gray-400">(opcional)</span></label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              className="input-field flex-1"
+              placeholder="Ex: 3"
+              min="1"
+              value={form.garantia_valor}
+              onChange={set('garantia_valor')}
+            />
+            <select className="input-field w-32" value={form.garantia_unidade} onChange={set('garantia_unidade')}>
+              <option value="dias">Dias</option>
+              <option value="meses">Meses</option>
+              <option value="anos">Anos</option>
+            </select>
+          </div>
+          {form.garantia_valor && parseInt(form.garantia_valor) > 0 && (
+            <p className="text-xs text-gray-500 mt-1.5 pl-1">
+              Vence em: {formatDate(calcularVencimento(parseInt(form.garantia_valor), form.garantia_unidade, os.data_conclusao || null))}
+            </p>
+          )}
+          <textarea
+            className="input-field resize-none mt-2"
+            rows={2}
+            value={form.garantia_obs}
+            onChange={set('garantia_obs')}
+            placeholder="Observações da garantia (ex: cobre peças e mão de obra)..."
           />
         </div>
 

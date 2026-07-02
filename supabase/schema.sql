@@ -145,6 +145,52 @@ create policy "Técnico vê suas OS"
   using (auth.uid() = tecnico_id);
 
 -- ============================================
+-- TABELA: gastos (controle financeiro)
+-- ============================================
+create table if not exists public.gastos (
+  id uuid default uuid_generate_v4() primary key,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  data date not null default current_date,
+  categoria text not null default 'Outros',
+  descricao text not null,
+  valor numeric(10,2) not null default 0,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_gastos_tecnico on public.gastos(tecnico_id);
+create index if not exists idx_gastos_data on public.gastos(tecnico_id, data);
+
+alter table public.gastos enable row level security;
+
+drop policy if exists "Técnico vê seus gastos" on public.gastos;
+create policy "Técnico vê seus gastos"
+  on public.gastos for all
+  using (auth.uid() = tecnico_id);
+
+-- ============================================
+-- TABELA: receitas (controle financeiro)
+-- ============================================
+create table if not exists public.receitas (
+  id uuid default uuid_generate_v4() primary key,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  data date not null default current_date,
+  descricao text not null,
+  valor numeric(10,2) not null default 0,
+  ordem_id uuid references public.ordens_servico(id) on delete set null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_receitas_tecnico on public.receitas(tecnico_id);
+create index if not exists idx_receitas_data on public.receitas(tecnico_id, data);
+
+alter table public.receitas enable row level security;
+
+drop policy if exists "Técnico vê suas receitas" on public.receitas;
+create policy "Técnico vê suas receitas"
+  on public.receitas for all
+  using (auth.uid() = tecnico_id);
+
+-- ============================================
 -- TABELA: lembretes_manutencao
 -- ============================================
 create table if not exists public.lembretes_manutencao (
@@ -178,7 +224,8 @@ create policy "Técnico gerencia seus lembretes"
 alter table public.profiles add column if not exists trial_starts_at timestamptz;
 alter table public.profiles add column if not exists subscribed_until timestamptz;
 alter table public.profiles add column if not exists plan text
-  check (plan in ('monthly', 'annual'));
+  check (plan in ('monthly', 'monthly_saida50', 'plus', 'professional', 'annual'));
+alter table public.profiles add column if not exists plan_locked_at timestamptz default null;
 alter table public.profiles add column if not exists mp_subscription_id text;
 
 -- Usuários já existentes: trial começa da data de criação da conta
@@ -324,3 +371,27 @@ create policy "Afiliado vê suas comissões"
   using (
     afiliado_id in (select id from public.afiliados where user_id = auth.uid())
   );
+
+-- ============================================
+-- CRON: Renovação automática de assinaturas mensais
+-- Pré-requisitos:
+--   1. Habilitar extensões no Supabase Dashboard → Database → Extensions:
+--      • pg_cron
+--      • pg_net
+--   2. Definir CRON_SECRET nas env vars da Edge Function (Dashboard → Edge Functions → auto-renew-subscriptions → Secrets)
+--   3. Substituir <SUPABASE_URL> e <CRON_SECRET> pelos valores reais antes de executar
+-- ============================================
+select cron.schedule(
+  'auto-renew-monthly',
+  '0 8 * * *',   -- Todo dia às 08:00 UTC
+  $$
+  select net.http_post(
+    url     := '<SUPABASE_URL>/functions/v1/auto-renew-subscriptions',
+    headers := jsonb_build_object(
+      'Content-Type',   'application/json',
+      'x-cron-secret',  '<CRON_SECRET>'
+    ),
+    body    := '{}'::jsonb
+  )
+  $$
+);

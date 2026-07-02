@@ -149,6 +149,17 @@ export function AuthProvider({ children }) {
   }
 
   const subscription = computeSubscription(profile)
+  const plan = profile?.plan ?? null
+
+  // isLocked: assinante ativo sob o novo regime de planos (tem plan_locked_at)
+  // Usuários sem plan_locked_at são grandfathered e recebem acesso completo.
+  const isLocked = subscription.status === 'active' && !!profile?.plan_locked_at
+  const isBasico = profile?.plan === 'monthly'
+
+  const hasFaturamento        = !(isLocked && isBasico)
+  const hasSound              = !(isLocked && isBasico)
+  const hasHistoricoCompleto  = !(isLocked && isBasico)
+  const hasRelatorioAvancado  = !isLocked || profile?.plan === 'annual'
 
   return (
     <AuthContext.Provider value={{
@@ -157,6 +168,11 @@ export function AuthProvider({ children }) {
       subscriptionStatus: subscription.status,
       trialDaysLeft: subscription.trialDaysLeft,
       isActive: subscription.isActive,
+      plan,
+      hasFaturamento,
+      hasSound,
+      hasHistoricoCompleto,
+      hasRelatorioAvancado,
     }}>
       {children}
     </AuthContext.Provider>

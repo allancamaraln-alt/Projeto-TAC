@@ -7,8 +7,11 @@ const corsHeaders = {
 }
 
 const PLANOS = {
-  monthly: { description: 'ClimaPro Mensal', amount: 19.90, days: 30 },
-  annual:  { description: 'ClimaPro Anual',  amount: 149.90, days: 365 },
+  monthly:         { description: 'ClimaPro Básico',          amount: 19.90,  days: 30  },
+  monthly_saida50: { description: 'ClimaPro Mensal — Oferta', amount: 9.95,   days: 30  },
+  plus:            { description: 'ClimaPro Técnico Plus',    amount: 29.90,  days: 30  },
+  professional:    { description: 'ClimaPro Profissional',    amount: 39.90,  days: 30  },
+  annual:          { description: 'ClimaPro Premium Anual',   amount: 149.90, days: 365 },
 }
 
 serve(async (req) => {
@@ -29,7 +32,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('Não autorizado')
 
-    const { plan } = await req.json()
+    const { plan, utms } = await req.json()
     if (!PLANOS[plan as keyof typeof PLANOS]) throw new Error('Plano inválido')
 
     const plano = PLANOS[plan as keyof typeof PLANOS]
@@ -55,14 +58,16 @@ serve(async (req) => {
         payer: {
           email: profile?.email ?? user.email,
         },
+        ...(utms ? { metadata: { utms } } : {}),
       }),
     })
 
     const mpData = await mpRes.json()
 
     if (!mpData.point_of_interaction?.transaction_data?.qr_code) {
-      console.error('MP Pix error:', mpData)
-      throw new Error('Falha ao gerar Pix')
+      console.error('MP Pix error:', JSON.stringify(mpData))
+      const msgErro = mpData?.message || mpData?.error || JSON.stringify(mpData)
+      throw new Error(`Falha ao gerar Pix: ${msgErro}`)
     }
 
     return new Response(
@@ -78,7 +83,7 @@ serve(async (req) => {
   } catch (err) {
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

@@ -41,24 +41,29 @@ serve(async (req) => {
       .eq('id', user.id)
       .single()
 
-    const mpRes = await fetch('https://api.mercadopago.com/preapproval', {
+    const mpRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('MP_ACCESS_TOKEN')}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        reason: plano.reason,
-        external_reference: user.id,
-        payer_email: profile?.email ?? user.email,
-        auto_recurring: {
-          frequency: plano.frequency,
-          frequency_type: 'months',
-          transaction_amount: plano.amount,
+        items: [{
+          title: plano.reason,
+          unit_price: plano.amount,
+          quantity: 1,
           currency_id: 'BRL',
+        }],
+        payer: {
+          email: profile?.email ?? user.email,
         },
-        back_url: `${appUrl}/?pagamento=sucesso`,
-        status: 'pending',
+        external_reference: user.id,
+        back_urls: {
+          success: `${appUrl}/?pagamento=sucesso`,
+          failure: `${appUrl}/`,
+          pending: `${appUrl}/`,
+        },
+        auto_return: 'approved',
       }),
     })
 
@@ -66,6 +71,13 @@ serve(async (req) => {
     if (!mpData.init_point) {
       console.error('MP error:', mpData)
       throw new Error('Falha ao criar checkout no Mercado Pago')
+    }
+
+    // Salva o ID da assinatura para que verify-payment possa consultar o status depois
+    if (mpData.id) {
+      await supabase.from('profiles').update({
+        mp_subscription_id: mpData.id,
+      }).eq('id', user.id)
     }
 
     return new Response(

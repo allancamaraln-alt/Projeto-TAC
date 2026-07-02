@@ -20,7 +20,7 @@ export function gerarLinkWhatsApp({ cliente, ordem, tecnico }) {
 📍 Local: ${cliente.endereco}
 💰 Valor: R$ ${Number(ordem.valor).toFixed(2).replace('.', ',')}
 
-📝 ${ordem.descricao}${ordem.observacoes ? `\n\n📌 Obs: ${ordem.observacoes}` : ''}
+📝 ${ordem.descricao}
 
 Para aprovar, responda *SIM*.
 

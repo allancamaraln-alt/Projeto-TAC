@@ -12,3 +12,11 @@ export const formatDate = (iso) =>
 /** 08:30 */
 export const formatTime = (time) =>
   time ? time.slice(0, 5) : ''
+
+/** 1 ano / 2 anos / 1 mês / 3 meses / 1 dia / 5 dias */
+export const formatGarantia = (valor, unidade) => {
+  const n = parseInt(valor)
+  const singular = { dias: 'dia', meses: 'mês', anos: 'ano' }
+  const label = n === 1 ? (singular[unidade] ?? unidade) : unidade
+  return `${n} ${label}`
+}

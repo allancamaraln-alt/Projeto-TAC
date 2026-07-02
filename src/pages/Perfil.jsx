@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { supabase } from '../lib/supabase'
+import SignaturePad from '../components/SignaturePad'
 
 function CameraIcon({ className = 'w-4 h-4' }) {
   return (
@@ -76,6 +77,8 @@ export default function Perfil() {
   const [uploadingCover, setUploadingCover] = useState(false)
   const [sucesso, setSucesso] = useState(false)
   const [erro, setErro] = useState('')
+  const [mostrarPadAssinatura, setMostrarPadAssinatura] = useState(false)
+  const [savingAssinatura, setSavingAssinatura] = useState(false)
 
   const set = (campo) => (e) => setForm(f => ({ ...f, [campo]: e.target.value }))
 
@@ -128,6 +131,36 @@ export default function Perfil() {
     setSucesso(true)
     setTimeout(() => setSucesso(false), 2000)
     setSaving(false)
+  }
+
+  async function salvarAssinaturaPerfil(blob) {
+    setSavingAssinatura(true)
+    try {
+      const path = `${user.id}_assinatura.png`
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, { contentType: 'image/png', upsert: true })
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      const { error: dbErr } = await updateProfile({ assinatura_url: `${publicUrl}?v=${Date.now()}` })
+      if (dbErr) throw dbErr
+    } catch (err) {
+      setErro(`Erro ao salvar assinatura: ${err?.message || ''}`)
+    } finally {
+      setSavingAssinatura(false)
+      setMostrarPadAssinatura(false)
+    }
+  }
+
+  async function removerAssinaturaPerfil() {
+    setSavingAssinatura(true)
+    try {
+      const path = `${user.id}_assinatura.png`
+      await supabase.storage.from('avatars').remove([path])
+      await updateProfile({ assinatura_url: null })
+    } finally {
+      setSavingAssinatura(false)
+    }
   }
 
   const avatarUrl = profile?.avatar_url
@@ -245,6 +278,48 @@ export default function Perfil() {
           {saving ? 'Salvando...' : 'Salvar perfil'}
         </button>
 
+        {/* Minha Assinatura */}
+        <div className="pt-4 border-t border-gray-100 space-y-2">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Minha assinatura</h2>
+          <p className="text-xs text-gray-400">Salve uma vez e ela será aplicada automaticamente nos recibos.</p>
+          {profile?.assinatura_url ? (
+            <div className="relative border border-gray-100 rounded-xl overflow-hidden bg-gray-50">
+              <img src={profile.assinatura_url} alt="Minha assinatura" className="w-full h-20 object-contain" />
+              <button
+                type="button"
+                onClick={removerAssinaturaPerfil}
+                disabled={savingAssinatura}
+                className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center active:bg-red-50"
+              >
+                <svg className="w-3.5 h-3.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setMostrarPadAssinatura(true)}
+              disabled={savingAssinatura}
+              className="w-full h-16 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center gap-2 text-gray-400 text-sm active:bg-gray-50"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Desenhar minha assinatura
+            </button>
+          )}
+          {profile?.assinatura_url && (
+            <button
+              type="button"
+              onClick={() => setMostrarPadAssinatura(true)}
+              className="w-full text-center text-xs text-gray-400 py-1 active:opacity-70"
+            >
+              Alterar assinatura
+            </button>
+          )}
+        </div>
+
         {/* Toggle de tema */}
         <div className="flex items-center justify-between py-4 border-t border-gray-100">
           <div className="flex items-center gap-3">
@@ -267,6 +342,26 @@ export default function Perfil() {
           </button>
         </div>
 
+        {/* Indique e Ganhe */}
+        <button
+          type="button"
+          onClick={() => navigate('/afiliados')}
+          className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 active:opacity-80"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-lg">💸</span>
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-green-800">Indique e Ganhe</p>
+              <p className="text-xs text-green-600">20% de comissão por indicado ativo</p>
+            </div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
         <button
           type="button"
           onClick={() => navigate('/privacidade')}
@@ -281,6 +376,20 @@ export default function Perfil() {
           Sair da conta
         </button>
       </form>
+
+    {mostrarPadAssinatura && (
+      <SignaturePad
+        titulo="Minha Assinatura"
+        onConfirmar={salvarAssinaturaPerfil}
+        onFechar={() => setMostrarPadAssinatura(false)}
+      />
+    )}
+
+    {savingAssinatura && (
+      <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center">
+        <span className="w-8 h-8 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    )}
     </div>
   )
 }

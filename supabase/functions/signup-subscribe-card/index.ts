@@ -11,6 +11,8 @@ const corsHeaders = {
 const PLANOS = {
   monthly:         { description: 'ClimaPro Mensal',          amount: 19.90,  days: 30  },
   monthly_saida50: { description: 'ClimaPro Mensal — Oferta', amount: 9.95,   days: 30  },
+  plus:            { description: 'ClimaPro Técnico Plus',    amount: 29.90,  days: 30  },
+  professional:    { description: 'ClimaPro Profissional',    amount: 39.90,  days: 30  },
   annual:          { description: 'ClimaPro Anual',           amount: 149.90, days: 365 },
 }
 
@@ -66,7 +68,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, nome, telefone, plan, cardFormData, ref_code } = await req.json()
+    const { email, password, nome, telefone, plan, cardFormData, ref_code, utms } = await req.json()
 
     if (!email || !password || !nome || !plan || !cardFormData) {
       throw new Error('Dados incompletos')
@@ -128,6 +130,7 @@ serve(async (req) => {
           identification: cardFormData.payer?.identification,
         },
         external_reference: user.id,
+        ...(utms ? { metadata: { utms } } : {}),
       }),
     })
 

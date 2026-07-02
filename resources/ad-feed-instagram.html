@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1080" />
+  <title>ClimaPro — Anúncio Feed Instagram</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 1080px;
+      height: 1080px;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(160deg, #0284C7 0%, #0369A1 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Círculos decorativos de fundo */
+    .circle {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .c1 { width: 600px; height: 600px; top: -180px; right: -180px; }
+    .c2 { width: 400px; height: 400px; bottom: -120px; left: -120px; }
+    .c3 { width: 200px; height: 200px; bottom: 180px; right: 60px; }
+
+    .content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* Badge trial */
+    .badge {
+      background: rgba(255,255,255,0.18);
+      border: 1.5px solid rgba(255,255,255,0.35);
+      border-radius: 100px;
+      padding: 10px 28px;
+      color: #fff;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 48px;
+    }
+
+    /* Logo */
+    .logo-wrap {
+      width: 140px;
+      height: 140px;
+      background: #fff;
+      border-radius: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 72px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      margin-bottom: 36px;
+    }
+
+    .app-name {
+      color: #fff;
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 16px;
+    }
+
+    /* Headline principal */
+    .headline {
+      color: #fff;
+      font-size: 58px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      margin-bottom: 28px;
+      max-width: 860px;
+    }
+
+    .headline span {
+      color: #BAE6FD;
+    }
+
+    /* Subtítulo */
+    .sub {
+      color: rgba(255,255,255,0.82);
+      font-size: 30px;
+      font-weight: 500;
+      line-height: 1.5;
+      max-width: 780px;
+      margin-bottom: 60px;
+    }
+
+    /* Benefícios */
+    .benefits {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 64px;
+    }
+
+    .benefit {
+      background: rgba(255,255,255,0.14);
+      border: 1.5px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
+      padding: 20px 30px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #fff;
+      font-size: 26px;
+      font-weight: 600;
+    }
+
+    .benefit-icon {
+      font-size: 30px;
+    }
+
+    /* CTA */
+    .cta {
+      background: #fff;
+      color: #0284C7;
+      font-size: 34px;
+      font-weight: 800;
+      padding: 28px 72px;
+      border-radius: 100px;
+      letter-spacing: -0.5px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="circle c1"></div>
+  <div class="circle c2"></div>
+  <div class="circle c3"></div>
+
+  <div class="content">
+    <div class="badge">✨ Grátis por 7 dias</div>
+
+    <div class="logo-wrap">❄️</div>
+    <div class="app-name">ClimaPro</div>
+
+    <h1 class="headline">
+      Gerencie suas <span>ordens de serviço</span><br>pelo celular
+    </h1>
+
+    <p class="sub">
+      Crie OS, agende visitas e controle seus clientes<br>em um só lugar — direto do seu smartphone
+    </p>
+
+    <div class="benefits">
+      <div class="benefit">
+        <span class="benefit-icon">📋</span>
+        Ordens de Serviço
+      </div>
+      <div class="benefit">
+        <span class="benefit-icon">👥</span>
+        Gestão de Clientes
+      </div>
+      <div class="benefit">
+        <span class="benefit-icon">🔔</span>
+        Lembretes de Manutenção
+      </div>
+    </div>
+
+    <div class="cta">Criar conta grátis →</div>
+  </div>
+</body>
+</html>

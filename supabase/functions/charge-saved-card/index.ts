@@ -9,8 +9,10 @@ const corsHeaders = {
 }
 
 const PLANOS = {
-  monthly: { description: 'ClimaPro Mensal', amount: 19.90, days: 30 },
-  annual:  { description: 'ClimaPro Anual',  amount: 149.90, days: 365 },
+  monthly:      { description: 'ClimaPro Básico',        amount: 19.90,  days: 30  },
+  plus:         { description: 'ClimaPro Técnico Plus',  amount: 29.90,  days: 30  },
+  professional: { description: 'ClimaPro Profissional',  amount: 39.90,  days: 30  },
+  annual:       { description: 'ClimaPro Premium Anual', amount: 149.90, days: 365 },
 }
 
 serve(async (req) => {
@@ -31,7 +33,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) throw new Error('Não autorizado')
 
-    const { plan } = await req.json()
+    const { plan, utms } = await req.json()
     if (!PLANOS[plan as keyof typeof PLANOS]) throw new Error('Plano inválido')
     const plano = PLANOS[plan as keyof typeof PLANOS]
 
@@ -85,6 +87,7 @@ serve(async (req) => {
           email: profile.email ?? user.email,
         },
         external_reference: user.id,
+        ...(utms ? { metadata: { utms } } : {}),
       }),
     })
     const payment = await paymentRes.json()
@@ -101,6 +104,7 @@ serve(async (req) => {
       await serviceSupabase.from('profiles').update({
         subscribed_until: until.toISOString(),
         plan,
+        plan_locked_at: new Date().toISOString(),
       }).eq('id', user.id)
 
       return new Response(

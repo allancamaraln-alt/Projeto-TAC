@@ -8,7 +8,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const PLAN_DAYS: Record<string, number> = { monthly: 30, annual: 365 }
+const PLAN_DAYS: Record<string, number> = { monthly: 30, monthly_saida50: 30, plus: 30, professional: 30, annual: 365 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -48,7 +48,8 @@ serve(async (req) => {
 
       await serviceSupabase.from('profiles').update({
         subscribed_until: expiresAt.toISOString(),
-        plan,
+        plan: plan === 'monthly_saida50' ? 'monthly' : plan,
+        plan_locked_at: new Date().toISOString(),
       }).eq('id', user.id)
 
       return new Response(

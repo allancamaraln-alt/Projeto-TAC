@@ -17,6 +17,26 @@ async function loadImageAsBase64(url) {
   }
 }
 
+function getImageSize(b64) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
+    img.onerror = () => resolve({ w: 1, h: 1 })
+    img.src = b64
+  })
+}
+
+// Renderiza imagem com object-fit: contain dentro do slot (slotW x slotH) em (x, y)
+async function addImageContain(doc, b64, x, y, slotW, slotH) {
+  const { w, h } = await getImageSize(b64)
+  const scale = Math.min(slotW / w, slotH / h)
+  const drawW = w * scale
+  const drawH = h * scale
+  const ox = (slotW - drawW) / 2
+  const oy = (slotH - drawH) / 2
+  doc.addImage(b64, 'JPEG', x + ox, y + oy, drawW, drawH)
+}
+
 const clamp = v => Math.max(0, Math.min(255, Math.round(v)))
 
 const SKY    = [2, 132, 199]
@@ -309,7 +329,7 @@ function rcRow(doc, label, value, y, margin) {
   return y + 9
 }
 
-export async function gerarReciboPDF({ cliente, ordem, tecnico }) {
+export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   const W = 210
   const margin = 18
@@ -561,7 +581,303 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico }) {
     { align: 'center' }
   )
 
+  // ── REGISTRO FOTOGRÁFICO ────────────────────────────────────
+  if (fotos.length > 0) {
+    const PAGE_H = 297
+    const BOTTOM_MARGIN = 18
+    const PHOTO_W = (contentW - 6) / 2   // 2 colunas com gap de 6mm
+    const PHOTO_H = PHOTO_W * 0.75       // proporção 4:3
+    const ROW_GAP = 5
+
+    doc.addPage()
+    let py = margin + 10
+
+    // cabeçalho da seção
+    doc.setFillColor(...ACCENT)
+    doc.rect(margin, py + 0.5, 3, 5.5, 'F')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...SLATE5)
+    doc.text('REGISTRO FOTOGRÁFICO', margin + 5.5, py + 5)
+    const lw2 = doc.getTextWidth('REGISTRO FOTOGRÁFICO')
+    doc.setDrawColor(...SLATE2)
+    doc.setLineWidth(0.25)
+    doc.line(margin + 6.5 + lw2, py + 3, margin + contentW, py + 3)
+    py += 14
+
+    for (let i = 0; i < fotos.length; i += 2) {
+      const rowH = PHOTO_H + ROW_GAP
+      // quebra de página se não couber a linha
+      if (py + PHOTO_H > PAGE_H - BOTTOM_MARGIN) {
+        doc.addPage()
+        py = margin + 10
+      }
+
+      for (let col = 0; col < 2; col++) {
+        const foto = fotos[i + col]
+        if (!foto) break
+        const px = margin + col * (PHOTO_W + 6)
+        const imgData = await loadImageAsBase64(foto.url)
+        if (imgData) {
+          await addImageContain(doc, imgData, px, py, PHOTO_W, PHOTO_H)
+        } else {
+          // placeholder cinza caso a imagem falhe
+          doc.setFillColor(...SLATE2)
+          doc.roundedRect(px, py, PHOTO_W, PHOTO_H, 2, 2, 'F')
+        }
+      }
+
+      py += rowH
+    }
+  }
+
   return doc
+}
+
+function textBlock(doc, text, y, margin, contentW) {
+  doc.setFontSize(13)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...SLATE8)
+  const lines = doc.splitTextToSize(text, contentW)
+  doc.text(lines, margin, y)
+  return y + lines.length * 7.5 + 4
+}
+
+function pageBreak(doc, y, needed = 45) {
+  if (y + needed > 270) { doc.addPage(); return 22 }
+  return y
+}
+
+export async function gerarLaudoPDF({ laudo, tecnico }) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+  const W = 210
+  const margin = 18
+  const contentW = W - margin * 2
+
+  const coverImgData = tecnico?.cover_url ? await loadImageAsBase64(tecnico.cover_url) : null
+  const palette   = coverImgData ? await extractPalette(coverImgData) : null
+  const ACCENT    = palette?.main     ?? SKY
+  const ACCENT_DK = palette?.dark     ?? SKY_DK
+  const ACCENT_LT = palette?.light    ?? SKY_LT
+  const HDR_TEXT  = palette?.text     ?? WHITE
+  const HDR_SOFT  = palette?.textSoft ?? SKY_LT
+
+  // ── HEADER ─────────────────────────────────────────────────
+  const HDR_H   = 50
+  const HDR_IMG = 36
+
+  if (coverImgData) {
+    doc.addImage(coverImgData, 'JPEG', 0, 0, W, HDR_IMG)
+    doc.setGState(doc.GState({ opacity: 0.35 }))
+    doc.setFillColor(255, 255, 255)
+    doc.rect(0, 0, W, HDR_IMG, 'F')
+    doc.setGState(doc.GState({ opacity: 1 }))
+  } else {
+    const steps = HDR_IMG * 2
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps
+      doc.setFillColor(
+        clamp(ACCENT[0] + (ACCENT_DK[0] - ACCENT[0]) * t),
+        clamp(ACCENT[1] + (ACCENT_DK[1] - ACCENT[1]) * t),
+        clamp(ACCENT[2] + (ACCENT_DK[2] - ACCENT[2]) * t)
+      )
+      doc.rect(0, i * 0.5, W, 0.6, 'F')
+    }
+  }
+
+  doc.setFillColor(...ACCENT_DK)
+  doc.rect(0, HDR_IMG, W, HDR_H - HDR_IMG, 'F')
+  doc.rect(0, HDR_H, W, 3.5, 'F')
+
+  const lineY = HDR_IMG + 9
+
+  doc.setTextColor(...HDR_TEXT)
+  doc.setFontSize(13)
+  doc.setFont('helvetica', 'bold')
+  const empresaStr = tecnico?.empresa || 'ClimaPro'
+  doc.text(empresaStr, margin, lineY)
+  const empresaW = doc.getTextWidth(empresaStr)
+
+  const pillLabel = 'LAUDO TÉCNICO'
+  doc.setFontSize(8)
+  doc.setFont('helvetica', 'bold')
+  const pillW = doc.getTextWidth(pillLabel) + 6
+  const pillX = margin + empresaW + 4
+  const pillTop = lineY - 5
+  doc.setFillColor(...ACCENT)
+  doc.roundedRect(pillX, pillTop, pillW, 5.5, 1, 1, 'F')
+  doc.setTextColor(...HDR_TEXT)
+  doc.text(pillLabel, pillX + pillW / 2, pillTop + 4, { align: 'center' })
+
+  const dataStr = new Date().toLocaleDateString('pt-BR')
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...HDR_SOFT)
+  doc.text(dataStr, W - margin, lineY, { align: 'right' })
+
+  // ── TITLE ──────────────────────────────────────────────────
+  let y = HDR_H + 3.5 + 13
+
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...SLATE8)
+  doc.text('Laudo Técnico', margin, y)
+
+  doc.setDrawColor(...SLATE2)
+  doc.setLineWidth(0.35)
+  doc.line(margin, y + 4, W - margin, y + 4)
+  y += 14
+
+  // ── IDENTIFICAÇÃO DO EQUIPAMENTO ───────────────────────────
+  y = sectionHeader(doc, 'IDENTIFICAÇÃO DO EQUIPAMENTO', y, margin, contentW, ACCENT)
+
+  const equipCampos = [
+    ['Cliente:', laudo.cliente_nome],
+    ['Tipo:', laudo.equipamento_tipo],
+    ['Marca:', laudo.equipamento_marca],
+    ['Modelo:', laudo.equipamento_modelo],
+    ['Capacidade:', laudo.equipamento_capacidade],
+    ['Fluido Refrig.:', laudo.equipamento_fluido],
+    ['Nº de Série:', laudo.numero_serie],
+  ].filter(([, v]) => v)
+
+  for (const [label, value] of equipCampos) {
+    y = infoRow(doc, label, value, y, margin)
+  }
+  y += 8
+
+  // ── DEFEITO RELATADO ───────────────────────────────────────
+  if (laudo.defeito_relatado) {
+    y = pageBreak(doc, y)
+    y = sectionHeader(doc, 'DEFEITO RELATADO', y, margin, contentW, ACCENT)
+    y = textBlock(doc, laudo.defeito_relatado, y, margin, contentW)
+    y += 5
+  }
+
+  // ── DIAGNÓSTICO TÉCNICO ────────────────────────────────────
+  if (laudo.diagnostico) {
+    y = pageBreak(doc, y)
+    y = sectionHeader(doc, 'DIAGNÓSTICO TÉCNICO', y, margin, contentW, ACCENT)
+    y = textBlock(doc, laudo.diagnostico, y, margin, contentW)
+    y += 5
+  }
+
+  // ── SERVIÇOS EXECUTADOS ────────────────────────────────────
+  if (laudo.servicos_executados) {
+    y = pageBreak(doc, y)
+    y = sectionHeader(doc, 'SERVIÇOS EXECUTADOS', y, margin, contentW, ACCENT)
+    y = textBlock(doc, laudo.servicos_executados, y, margin, contentW)
+    y += 5
+  }
+
+  // ── PEÇAS / MATERIAIS ──────────────────────────────────────
+  if (laudo.pecas_utilizadas) {
+    y = pageBreak(doc, y)
+    y = sectionHeader(doc, 'PEÇAS / MATERIAIS UTILIZADOS', y, margin, contentW, ACCENT)
+    y = textBlock(doc, laudo.pecas_utilizadas, y, margin, contentW)
+    y += 5
+  }
+
+  // ── RECOMENDAÇÕES ──────────────────────────────────────────
+  if (laudo.recomendacoes) {
+    y = pageBreak(doc, y)
+    y = sectionHeader(doc, 'RECOMENDAÇÕES', y, margin, contentW, ACCENT)
+    y = textBlock(doc, laudo.recomendacoes, y, margin, contentW)
+    y += 5
+  }
+
+  // ── CONCLUSÃO (caixa accent) ───────────────────────────────
+  if (laudo.conclusao) {
+    y = pageBreak(doc, y, 55)
+    const conclusaoLines = doc.splitTextToSize(laudo.conclusao, contentW - 14)
+    const boxH = Math.max(22, conclusaoLines.length * 7.5 + 18)
+
+    doc.setFillColor(...ACCENT_LT)
+    doc.roundedRect(margin, y, contentW, boxH, 3, 3, 'F')
+    doc.setFillColor(...ACCENT)
+    doc.roundedRect(margin, y, 5, boxH, 3, 3, 'F')
+    doc.rect(margin + 2, y, 3, boxH, 'F')
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...ACCENT_DK)
+    doc.text('CONCLUSÃO', margin + 11, y + 9)
+
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...SLATE8)
+    doc.text(conclusaoLines, margin + 11, y + 17)
+
+    y += boxH + 14
+  }
+
+  // ── ASSINATURA DO TÉCNICO ──────────────────────────────────
+  y = pageBreak(doc, y, 40)
+  const sigW = 72
+
+  doc.setDrawColor(...SLATE5)
+  doc.setLineWidth(0.4)
+  doc.line(W / 2 - sigW / 2, y, W / 2 + sigW / 2, y)
+
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...SLATE8)
+  doc.text(tecnico?.nome || 'Técnico', W / 2, y + 6, { align: 'center' })
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...SLATE5)
+  doc.text('Responsável Técnico', W / 2, y + 11, { align: 'center' })
+  if (tecnico?.empresa) doc.text(tecnico.empresa, W / 2, y + 16, { align: 'center' })
+
+  // ── FOOTER ─────────────────────────────────────────────────
+  const footerY = y + 24
+  doc.setDrawColor(...SLATE2)
+  doc.setLineWidth(0.4)
+  doc.line(margin, footerY, W - margin, footerY)
+
+  doc.setFontSize(13)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...SLATE8)
+  doc.text(tecnico?.nome || 'Técnico', margin, footerY + 7)
+
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...SLATE5)
+  if (tecnico?.empresa) doc.text(tecnico.empresa, margin, footerY + 13)
+  if (tecnico?.telefone) doc.text(tecnico.telefone, W - margin, footerY + 7, { align: 'right' })
+
+  doc.setFontSize(10)
+  doc.setTextColor(...SLATE2)
+  doc.text(
+    `Gerado em ${dataStr} via ClimaPro`,
+    W / 2, footerY + 20,
+    { align: 'center' }
+  )
+
+  return doc
+}
+
+export async function compartilharLaudo({ laudo, tecnico }) {
+  const doc = await gerarLaudoPDF({ laudo, tecnico })
+  const clientePrimeiro = laudo.cliente_nome?.split(' ')[0] || 'laudo'
+  const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')
+  const nomeArquivo = `Laudo-${clientePrimeiro}-${data}.pdf`
+
+  if (typeof navigator.canShare === 'function') {
+    const blob = doc.output('blob')
+    const file = new File([blob], nomeArquivo, { type: 'application/pdf' })
+    if (navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: nomeArquivo })
+        return
+      } catch (err) {
+        if (err.name === 'AbortError') return
+      }
+    }
+  }
+
+  doc.save(nomeArquivo)
 }
 
 export async function compartilharOrcamento({ cliente, ordem, tecnico }) {
