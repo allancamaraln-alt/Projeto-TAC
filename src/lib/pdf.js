@@ -242,8 +242,15 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   y += 10
 
   // ── VALOR BOX ──────────────────────────────────────────────
-  const boxY = Math.max(y + 4, 200)
   const boxH = 20
+  // limite seguro para a caixa não invadir o rodapé (box + gap + texto do rodapé)
+  const MAX_BOX_Y = 235
+
+  let boxY = Math.max(y + 4, 200)
+  if (boxY > MAX_BOX_Y) {
+    doc.addPage()
+    boxY = 40
+  }
 
   // Light background
   doc.setFillColor(...ACCENT_LT)
@@ -267,7 +274,7 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   doc.text(formatBRL(ordem.valor), W - margin - 6, boxY + 13, { align: 'right' })
 
   // ── FOOTER ─────────────────────────────────────────────────
-  const footerY = 276
+  const footerY = Math.max(boxY + boxH + 12, 276)
   doc.setDrawColor(...SLATE2)
   doc.setLineWidth(0.4)
   doc.line(margin, footerY, W - margin, footerY)
