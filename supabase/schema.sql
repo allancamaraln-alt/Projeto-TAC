@@ -527,3 +527,236 @@ create index if not exists idx_purchase_tracking_log_user on public.purchase_tra
 -- RLS habilitado sem nenhuma policy para anon/authenticated: só as Edge
 -- Functions (service_role, que sempre ignora RLS) leem/gravam esta tabela.
 alter table public.purchase_tracking_log enable row level security;
+
+-- ============================================
+-- MIGRATION: Analytics e observabilidade (/admin/analytics, /admin/purchase/:id)
+-- Auditoria completa de cada envio (request/response/tempo/retries), log de
+-- visitas da Landing (para conversão real) e funções SQL de agregação —
+-- SUM/COUNT feitos no Postgres em vez de trazer todas as linhas para o
+-- edge function somar em JS.
+-- ============================================
+
+-- Auditoria completa de cada tentativa de envio
+alter table public.purchase_tracking_log add column if not exists utmify_request_json text;
+alter table public.purchase_tracking_log add column if not exists utmify_sent_at timestamptz;
+alter table public.purchase_tracking_log add column if not exists meta_request_json text;
+alter table public.purchase_tracking_log add column if not exists meta_sent_at timestamptz;
+alter table public.purchase_tracking_log add column if not exists retry_count int default 0;
+alter table public.purchase_tracking_log add column if not exists last_retry_at timestamptz;
+alter table public.purchase_tracking_log add column if not exists processing_time_ms int;
+alter table public.purchase_tracking_log add column if not exists processing_status text;
+alter table public.purchase_tracking_log add column if not exists error_message text;
+
+-- Timestamps extras necessários para a timeline real da seção 4 (sem eles,
+-- "webhook" e "liberação de acesso" cairiam no mesmo instante do Utmify/Meta).
+alter table public.purchase_tracking_log add column if not exists payment_created_at timestamptz;
+alter table public.purchase_tracking_log add column if not exists webhook_received_at timestamptz;
+alter table public.purchase_tracking_log add column if not exists access_granted_at timestamptz;
+
+-- Marca quando uma assinatura foi cancelada — sem isso não dá para contar
+-- "cancelamentos" por período (só o estado atual, sem dimensão de tempo).
+alter table public.profiles add column if not exists cancelled_at timestamptz default null;
+
+-- Log de visitas da Landing (necessário para "Conversão da Landing" — hoje só
+-- existe dado quando alguém se cadastra). Insert público, sem select público:
+-- só service_role (edge functions de admin) lê de volta.
+create table if not exists public.page_views (
+  id uuid default uuid_generate_v4() primary key,
+  session_key text not null,
+  path text not null,
+  fbclid text,
+  utm_source text,
+  utm_campaign text,
+  created_at timestamptz default now()
+);
+
+alter table public.page_views enable row level security;
+
+drop policy if exists "Qualquer um pode registrar page view" on public.page_views;
+create policy "Qualquer um pode registrar page view"
+  on public.page_views for insert
+  with check (true);
+
+-- Índices para as consultas de analytics (hoje profiles não tinha nenhum além
+-- da PK, e purchase_tracking_log só tinha payment_id/user_id).
+create index if not exists idx_profiles_created_at on public.profiles(created_at);
+create index if not exists idx_profiles_plan on public.profiles(plan);
+create index if not exists idx_profiles_utm_campaign on public.profiles(utm_campaign);
+create index if not exists idx_profiles_utm_source on public.profiles(utm_source);
+create index if not exists idx_profiles_cancelled_at on public.profiles(cancelled_at);
+
+create index if not exists idx_purchase_tracking_log_purchased_at on public.purchase_tracking_log(purchased_at);
+create index if not exists idx_purchase_tracking_log_processing_status on public.purchase_tracking_log(processing_status);
+
+create index if not exists idx_page_views_session on public.page_views(session_key);
+create index if not exists idx_page_views_created on public.page_views(created_at);
+create index if not exists idx_page_views_campaign on public.page_views(utm_campaign);
+
+-- ============================================
+-- Funções de classificação (reaproveitadas por várias funções de agregação
+-- abaixo — evita repetir o mesmo CASE WHEN em cada uma).
+-- ============================================
+create or replace function public.classify_origin(p_fbclid text, p_utm_source text, p_referrer text)
+returns text language sql immutable as $$
+  select case
+    when p_fbclid is not null or p_utm_source ilike '%facebook%' or p_utm_source ilike '%fb%' then 'Facebook'
+    when p_utm_source ilike '%instagram%' or p_referrer ilike '%instagram%' then 'Instagram'
+    when p_utm_source ilike '%google%' or p_referrer ilike '%google%' then 'Google'
+    when p_utm_source is null and p_referrer is null then 'Direto'
+    when p_referrer is not null and p_utm_source is null then 'Orgânico'
+    else 'Outros'
+  end
+$$;
+
+create or replace function public.classify_device(p_user_agent text)
+returns text language sql immutable as $$
+  select case
+    when p_user_agent is null then 'Desconhecido'
+    when p_user_agent ilike '%iPad%' then 'Tablet'
+    when p_user_agent ilike '%Android%' and p_user_agent not ilike '%Mobile%' then 'Tablet'
+    when p_user_agent ilike '%Android%' then 'Android'
+    when p_user_agent ilike '%iPhone%' then 'iPhone'
+    when p_user_agent ilike '%Macintosh%' or p_user_agent ilike '%Windows%' or p_user_agent ilike '%Linux%' or p_user_agent ilike '%X11%' then 'Desktop'
+    else 'Outros'
+  end
+$$;
+
+create or replace function public.classify_browser(p_user_agent text)
+returns text language sql immutable as $$
+  select case
+    when p_user_agent is null then 'Desconhecido'
+    when p_user_agent ilike '%FBAN%' or p_user_agent ilike '%FBAV%' or p_user_agent ilike '%FB_IAB%' then 'Facebook In-App Browser'
+    when p_user_agent ilike '%Instagram%' then 'Instagram In-App Browser'
+    when p_user_agent ilike '%EdgiOS%' or p_user_agent ilike '%EdgA%' or p_user_agent ilike '%Edg/%' then 'Edge'
+    when p_user_agent ilike '%Firefox%' or p_user_agent ilike '%FxiOS%' then 'Firefox'
+    when p_user_agent ilike '%CriOS%' or p_user_agent ilike '%Chrome%' then 'Chrome'
+    when p_user_agent ilike '%Safari%' then 'Safari'
+    else 'Outros'
+  end
+$$;
+
+-- ============================================
+-- Funções de agregação para /admin/analytics (chamadas via supabase.rpc()).
+-- Todas "stable" (sem efeitos colaterais) e recebem o intervalo de datas —
+-- os filtros de campanha/origem/plano são opcionais (null = sem filtro).
+-- ============================================
+create or replace function public.analytics_summary(
+  desde timestamptz, ate timestamptz,
+  filtro_campanha text default null,
+  filtro_origem text default null,
+  filtro_plano text default null
+)
+returns table(receita numeric, compras bigint)
+language sql stable as $$
+  select coalesce(sum(ptl.value), 0), count(*)
+  from public.purchase_tracking_log ptl
+  join public.profiles p on p.id = ptl.user_id
+  where ptl.purchased_at >= desde and ptl.purchased_at < ate
+    and (filtro_campanha is null or p.utm_campaign = filtro_campanha)
+    and (filtro_plano is null or ptl.plan = filtro_plano)
+    and (filtro_origem is null or public.classify_origin(p.fbclid, p.utm_source, p.referrer) = filtro_origem)
+$$;
+
+create or replace function public.analytics_subscriptions(desde timestamptz, ate timestamptz)
+returns table(novas_assinaturas bigint, assinaturas_ativas bigint, cancelamentos bigint)
+language sql stable as $$
+  select
+    (select count(*) from (
+      select user_id, min(purchased_at) as primeira_compra
+      from public.purchase_tracking_log group by user_id
+    ) t where t.primeira_compra >= desde and t.primeira_compra < ate),
+    (select count(*) from public.profiles where subscribed_until >= now() and plan is not null),
+    (select count(*) from public.profiles where cancelled_at >= desde and cancelled_at < ate)
+$$;
+
+create or replace function public.analytics_landing_conversion(desde timestamptz, ate timestamptz)
+returns table(visitas bigint, cadastros bigint)
+language sql stable as $$
+  select
+    (select count(*) from public.page_views where created_at >= desde and created_at < ate),
+    (select count(*) from public.profiles where created_at >= desde and created_at < ate)
+$$;
+
+create or replace function public.analytics_por_campanha(desde timestamptz, ate timestamptz)
+returns table(
+  utm_campaign text, utm_source text, utm_medium text,
+  compras bigint, receita numeric, ticket_medio numeric,
+  visitas bigint, conversao numeric
+)
+language sql stable as $$
+  with compras_camp as (
+    select p.utm_campaign, p.utm_source, p.utm_medium,
+      count(*) as compras, coalesce(sum(ptl.value), 0) as receita
+    from public.purchase_tracking_log ptl
+    join public.profiles p on p.id = ptl.user_id
+    where ptl.purchased_at >= desde and ptl.purchased_at < ate
+    group by p.utm_campaign, p.utm_source, p.utm_medium
+  ),
+  visitas_camp as (
+    select utm_campaign, count(*) as visitas
+    from public.page_views
+    where created_at >= desde and created_at < ate
+    group by utm_campaign
+  )
+  select c.utm_campaign, c.utm_source, c.utm_medium, c.compras, c.receita,
+    case when c.compras > 0 then round(c.receita / c.compras, 2) else 0 end as ticket_medio,
+    coalesce(v.visitas, 0) as visitas,
+    case when coalesce(v.visitas, 0) > 0 then round((c.compras::numeric / v.visitas) * 100, 2) else null end as conversao
+  from compras_camp c
+  left join visitas_camp v on v.utm_campaign is not distinct from c.utm_campaign
+  order by c.receita desc
+$$;
+
+create or replace function public.analytics_por_anuncio(desde timestamptz, ate timestamptz)
+returns table(utm_content text, utm_term text, compras bigint, receita numeric)
+language sql stable as $$
+  select p.utm_content, p.utm_term, count(*), coalesce(sum(ptl.value), 0)
+  from public.purchase_tracking_log ptl
+  join public.profiles p on p.id = ptl.user_id
+  where ptl.purchased_at >= desde and ptl.purchased_at < ate
+    and (p.utm_content is not null or p.utm_term is not null)
+  group by p.utm_content, p.utm_term
+  order by 4 desc
+$$;
+
+create or replace function public.analytics_origem(desde timestamptz, ate timestamptz)
+returns table(origem text, compras bigint, receita numeric)
+language sql stable as $$
+  select public.classify_origin(p.fbclid, p.utm_source, p.referrer) as origem,
+    count(*), coalesce(sum(ptl.value), 0)
+  from public.purchase_tracking_log ptl
+  join public.profiles p on p.id = ptl.user_id
+  where ptl.purchased_at >= desde and ptl.purchased_at < ate
+  group by 1 order by 3 desc
+$$;
+
+create or replace function public.analytics_dispositivo(desde timestamptz, ate timestamptz)
+returns table(dispositivo text, compras bigint, receita numeric)
+language sql stable as $$
+  select public.classify_device(p.signup_user_agent) as dispositivo,
+    count(*), coalesce(sum(ptl.value), 0)
+  from public.purchase_tracking_log ptl
+  join public.profiles p on p.id = ptl.user_id
+  where ptl.purchased_at >= desde and ptl.purchased_at < ate
+  group by 1 order by 3 desc
+$$;
+
+create or replace function public.analytics_navegador(desde timestamptz, ate timestamptz)
+returns table(navegador text, compras bigint, receita numeric)
+language sql stable as $$
+  select public.classify_browser(p.signup_user_agent) as navegador,
+    count(*), coalesce(sum(ptl.value), 0)
+  from public.purchase_tracking_log ptl
+  join public.profiles p on p.id = ptl.user_id
+  where ptl.purchased_at >= desde and ptl.purchased_at < ate
+  group by 1 order by 3 desc
+$$;
+
+create or replace function public.analytics_revenue_timeseries(desde timestamptz, ate timestamptz)
+returns table(dia date, receita numeric, compras bigint)
+language sql stable as $$
+  select date_trunc('day', purchased_at)::date as dia, coalesce(sum(value), 0), count(*)
+  from public.purchase_tracking_log
+  where purchased_at >= desde and purchased_at < ate
+  group by 1 order by 1
+$$;

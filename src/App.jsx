@@ -39,6 +39,8 @@ const Privacidade  = lazy(() => import('./pages/Privacidade'))
 const ExcluirConta = lazy(() => import('./pages/ExcluirConta'))
 const Afiliados    = lazy(() => import('./pages/Afiliados'))
 const AdminTrackingDebug = lazy(() => import('./pages/AdminTrackingDebug'))
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'))
+const AdminPurchaseDetail = lazy(() => import('./pages/AdminPurchaseDetail'))
 
 function PageLoader() {
   return (
@@ -113,13 +115,31 @@ function AppContent() {
     return <Landing />
   }
 
-  // Página de admin fica acima do gate de assinatura (Paywall): quem é admin
-  // precisa acessá-la mesmo com trial expirado/sem plano ativo na própria conta.
+  // Páginas de admin ficam acima do gate de assinatura (Paywall): quem é admin
+  // precisa acessá-las mesmo com trial expirado/sem plano ativo na própria conta.
   if (location.pathname === '/admin/tracking-debug') {
     if (!isAdmin) return <Navigate to="/" />
     return (
       <Suspense fallback={<PageLoader />}>
         <AdminTrackingDebug />
+      </Suspense>
+    )
+  }
+
+  if (location.pathname === '/admin/analytics') {
+    if (!isAdmin) return <Navigate to="/" />
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AdminAnalytics />
+      </Suspense>
+    )
+  }
+
+  if (location.pathname.startsWith('/admin/purchase/')) {
+    if (!isAdmin) return <Navigate to="/" />
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AdminPurchaseDetail />
       </Suspense>
     )
   }

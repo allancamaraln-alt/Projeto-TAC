@@ -22,6 +22,8 @@ export type DispatchResult = {
   httpStatus?: number
   response?: string
   errorMessage?: string
+  requestPayload?: string
+  sentAt?: string
 }
 
 // Registra o resultado de cada tentativa de envio (sucesso ou falha) para que
@@ -38,8 +40,25 @@ export async function registrarPurchaseLog(supabase: any, params: {
   purchasedAt: string
   utmifyResult: DispatchResult
   metaCapiResult: DispatchResult
+  // Opcionais: usados para popular a timeline (/admin/purchase/:id) e o
+  // controle de retries do botão "Reenviar Purchase". Omitidos = coluna não
+  // é tocada no upsert (preserva o valor já gravado em vez de zerá-lo).
+  processingTimeMs?: number
+  paymentCreatedAt?: string | null
+  webhookReceivedAt?: string
+  accessGrantedAt?: string
+  retryCount?: number
+  lastRetryAt?: string
 }) {
   try {
+    const utmifyOk = params.utmifyResult.success
+    const metaOk = params.metaCapiResult.success
+    const processingStatus = utmifyOk && metaOk ? 'success' : (utmifyOk || metaOk ? 'partial' : 'failed')
+    const errorMessage = [
+      !utmifyOk ? `Utmify: ${params.utmifyResult.errorMessage ?? 'falhou'}` : null,
+      !metaOk ? `Meta CAPI: ${params.metaCapiResult.errorMessage ?? 'falhou'}` : null,
+    ].filter(Boolean).join(' | ') || null
+
     await supabase.from('purchase_tracking_log').upsert({
       user_id: params.userId,
       payment_id: params.paymentId,
@@ -48,12 +67,24 @@ export async function registrarPurchaseLog(supabase: any, params: {
       value: params.value,
       purchased_at: params.purchasedAt,
       utmify_order_id: params.paymentId,
-      utmify_status: params.utmifyResult.success ? 'success' : 'error',
+      utmify_status: utmifyOk ? 'success' : 'error',
       utmify_http_status: params.utmifyResult.httpStatus ?? null,
       utmify_response: params.utmifyResult.response ?? params.utmifyResult.errorMessage ?? null,
-      meta_capi_status: params.metaCapiResult.success ? 'success' : 'error',
+      utmify_request_json: params.utmifyResult.requestPayload ?? null,
+      utmify_sent_at: params.utmifyResult.sentAt ?? null,
+      meta_capi_status: metaOk ? 'success' : 'error',
       meta_capi_http_status: params.metaCapiResult.httpStatus ?? null,
       meta_capi_response: params.metaCapiResult.response ?? params.metaCapiResult.errorMessage ?? null,
+      meta_request_json: params.metaCapiResult.requestPayload ?? null,
+      meta_sent_at: params.metaCapiResult.sentAt ?? null,
+      processing_status: processingStatus,
+      error_message: errorMessage,
+      ...(params.processingTimeMs !== undefined ? { processing_time_ms: params.processingTimeMs } : {}),
+      ...(params.paymentCreatedAt !== undefined ? { payment_created_at: params.paymentCreatedAt } : {}),
+      ...(params.webhookReceivedAt !== undefined ? { webhook_received_at: params.webhookReceivedAt } : {}),
+      ...(params.accessGrantedAt !== undefined ? { access_granted_at: params.accessGrantedAt } : {}),
+      ...(params.retryCount !== undefined ? { retry_count: params.retryCount } : {}),
+      ...(params.lastRetryAt !== undefined ? { last_retry_at: params.lastRetryAt } : {}),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'payment_id' })
   } catch (e) {
@@ -142,23 +173,25 @@ export async function notificarUtmify(
       },
     }
 
-    debugLog('[utmify][DEBUG] payload enviado:', JSON.stringify(body))
+    const requestPayload = JSON.stringify(body)
+    debugLog('[utmify][DEBUG] payload enviado:', requestPayload)
 
+    const sentAt = new Date().toISOString()
     const res = await fetch('https://api.utmify.com.br/api-credentials/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-token': token },
-      body: JSON.stringify(body),
+      body: requestPayload,
     })
     const responseText = await res.text()
 
     if (!res.ok) {
       console.error('[utmify] pedido REJEITADO:', { orderId, httpStatus: res.status, corpoResposta: responseText })
-      return { success: false, httpStatus: res.status, response: responseText, errorMessage: `HTTP ${res.status}` }
+      return { success: false, httpStatus: res.status, response: responseText, errorMessage: `HTTP ${res.status}`, requestPayload, sentAt }
     }
 
     console.log('[utmify] pedido aceito:', { orderId, httpStatus: res.status })
     debugLog('[utmify][DEBUG] corpo completo da resposta:', responseText)
-    return { success: true, httpStatus: res.status, response: responseText }
+    return { success: true, httpStatus: res.status, response: responseText, requestPayload, sentAt }
   } catch (e) {
     console.error('[utmify] erro ao notificar (exceção de rede/parsing):', e)
     return { success: false, errorMessage: (e as Error).message }
@@ -240,12 +273,14 @@ export async function enviarMetaCAPI(params: {
       }],
     }
 
-    debugLog('[meta-capi][DEBUG] payload completo enviado (em/external_id já são hashes SHA-256):', JSON.stringify(payload))
+    const requestPayload = JSON.stringify(payload)
+    debugLog('[meta-capi][DEBUG] payload completo enviado (em/external_id já são hashes SHA-256):', requestPayload)
 
+    const sentAt = new Date().toISOString()
     const res = await fetch(`https://graph.facebook.com/v20.0/${pixelId}/events?access_token=${accessToken}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: requestPayload,
     })
     const json = await res.json()
 
@@ -267,6 +302,8 @@ export async function enviarMetaCAPI(params: {
         httpStatus: res.status,
         response: JSON.stringify(json),
         errorMessage: json.error?.message ?? `HTTP ${res.status}`,
+        requestPayload,
+        sentAt,
       }
     }
 
@@ -279,7 +316,7 @@ export async function enviarMetaCAPI(params: {
       fbtrace_id: json.fbtrace_id,
     })
     debugLog('[meta-capi][DEBUG] corpo completo da resposta:', JSON.stringify(json))
-    return { success: true, httpStatus: res.status, response: JSON.stringify(json) }
+    return { success: true, httpStatus: res.status, response: JSON.stringify(json), requestPayload, sentAt }
   } catch (e) {
     console.error('[meta-capi] erro ao enviar evento Purchase (exceção de rede/parsing):', {
       eventId: params.eventId,

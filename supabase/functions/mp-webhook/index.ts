@@ -37,6 +37,9 @@ serve(async (req) => {
     debugLog('[mp-webhook][DEBUG] notificação recebida do Mercado Pago:', JSON.stringify(notification))
 
     if (notification.type === 'payment') {
+      const webhookStart = Date.now()
+      const webhookReceivedAt = new Date(webhookStart).toISOString()
+
       const paymentId = notification.data?.id
       if (!paymentId) return new Response('ok', { status: 200 })
 
@@ -72,6 +75,7 @@ serve(async (req) => {
         plan: plan === 'monthly_saida50' ? 'monthly' : plan,
         plan_locked_at: new Date().toISOString(),
       }).eq('id', userId)
+      const accessGrantedAt = new Date().toISOString()
 
       await registrarComissao(supabase, userId, payment.transaction_amount, String(paymentId))
 
@@ -137,14 +141,21 @@ serve(async (req) => {
         purchasedAt: payment.date_approved ?? new Date().toISOString(),
         utmifyResult,
         metaCapiResult,
+        processingTimeMs: Date.now() - webhookStart,
+        paymentCreatedAt: payment.date_created ?? null,
+        webhookReceivedAt,
+        accessGrantedAt,
       })
 
-      console.log(`[mp-webhook] fluxo concluído com sucesso para usuário ${userId}, pagamento ${paymentId}`)
+      console.log(`[mp-webhook] fluxo concluído com sucesso para usuário ${userId}, pagamento ${paymentId} em ${Date.now() - webhookStart}ms`)
 
       return new Response('ok', { status: 200 })
     }
 
     if (notification.type === 'preapproval') {
+      const webhookStart = Date.now()
+      const webhookReceivedAt = new Date(webhookStart).toISOString()
+
       const subscriptionId = notification.data?.id
       if (!subscriptionId) return new Response('ok', { status: 200 })
 
@@ -184,6 +195,7 @@ serve(async (req) => {
           plan,
           mp_subscription_id: subscriptionId,
         }).eq('id', userId)
+        const accessGrantedAt = new Date().toISOString()
 
         const subAmount = sub.auto_recurring?.transaction_amount ?? 0
         const periodo = new Date().toISOString().slice(0, 7)
@@ -218,11 +230,15 @@ serve(async (req) => {
           purchasedAt: new Date().toISOString(),
           utmifyResult,
           metaCapiResult: { success: false, errorMessage: 'Não aplicável a renovações de assinatura' },
+          processingTimeMs: Date.now() - webhookStart,
+          webhookReceivedAt,
+          accessGrantedAt,
         })
       } else if (sub.status === 'cancelled') {
         await supabase.from('profiles').update({
           plan: null,
           mp_subscription_id: null,
+          cancelled_at: new Date().toISOString(),
         }).eq('id', userId)
       }
     }

@@ -13,6 +13,10 @@ export const formatDate = (iso) =>
 export const formatTime = (time) =>
   time ? time.slice(0, 5) : ''
 
+/** 20/04/2026 14:32 */
+export const formatDateTime = (iso) =>
+  iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+
 /** 1 ano / 2 anos / 1 mês / 3 meses / 1 dia / 5 dias */
 export const formatGarantia = (valor, unidade) => {
   const n = parseInt(valor)

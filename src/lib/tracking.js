@@ -75,3 +75,16 @@ export function captureTracking() {
 export function getTracking() {
   return captureTracking()
 }
+
+const SESSION_KEY_STORAGE = 'climapro_session_key'
+
+/** ID estável de sessão do visitante (não é PII), usado só para contar visitas
+ * únicas em page_views — gerado uma vez e reaproveitado enquanto durar o localStorage. */
+export function getSessionKey() {
+  let key = localStorage.getItem(SESSION_KEY_STORAGE)
+  if (!key) {
+    key = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    localStorage.setItem(SESSION_KEY_STORAGE, key)
+  }
+  return key
+}

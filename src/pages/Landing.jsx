@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SocialProofToast from '../components/SocialProofToast'
-import { captureTracking } from '../lib/tracking'
+import { captureTracking, getSessionKey } from '../lib/tracking'
+import { supabase } from '../lib/supabase'
 
 const STATS = [
   {
@@ -549,8 +550,19 @@ export default function Landing() {
     // Captura fbclid/fbc/fbp/UTMs assim que a Landing (ponto de entrada do tráfego
     // pago) carrega. Refaz a captura após um pequeno delay para pegar o cookie _fbp
     // do Meta Pixel, que é setado de forma assíncrona pelo fbevents.js.
-    captureTracking()
+    const tracking = captureTracking()
     const timeout = setTimeout(captureTracking, 1500)
+
+    // Log de visita para "Conversão da Landing" em /admin/analytics — não
+    // bloqueante, erro engolido (se a tabela/rede falhar, não afeta a página).
+    supabase.from('page_views').insert({
+      session_key: getSessionKey(),
+      path: window.location.pathname,
+      fbclid: tracking.fbclid ?? null,
+      utm_source: tracking.utm_source ?? null,
+      utm_campaign: tracking.utm_campaign ?? null,
+    }).then(() => {}, () => {})
+
     return () => clearTimeout(timeout)
   }, [])
 
