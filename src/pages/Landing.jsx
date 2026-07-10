@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SocialProofToast from '../components/SocialProofToast'
+import { captureTracking } from '../lib/tracking'
 
 const STATS = [
   {
@@ -544,6 +545,13 @@ export default function Landing() {
   useEffect(() => {
     const ref = new URLSearchParams(window.location.search).get('ref')
     if (ref) localStorage.setItem('climapro_ref', ref.toUpperCase())
+
+    // Captura fbclid/fbc/fbp/UTMs assim que a Landing (ponto de entrada do tráfego
+    // pago) carrega. Refaz a captura após um pequeno delay para pegar o cookie _fbp
+    // do Meta Pixel, que é setado de forma assíncrona pelo fbevents.js.
+    captureTracking()
+    const timeout = setTimeout(captureTracking, 1500)
+    return () => clearTimeout(timeout)
   }, [])
 
   function scrollToPlanos() {

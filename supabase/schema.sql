@@ -395,3 +395,56 @@ select cron.schedule(
   )
   $$
 );
+
+-- ============================================
+-- MIGRATION: Rastreamento de origem (Meta Ads / UTMify)
+-- Persiste fbclid/fbc/fbp e UTMs no momento do cadastro,
+-- para que o webhook do Mercado Pago consiga recuperá-los
+-- na aprovação do pagamento e repassá-los à Utmify e à
+-- Meta Conversions API mesmo quando o metadata do pagamento
+-- não estiver disponível.
+-- ============================================
+alter table public.profiles add column if not exists fbclid text default null;
+alter table public.profiles add column if not exists fbc text default null;
+alter table public.profiles add column if not exists fbp text default null;
+alter table public.profiles add column if not exists utm_source text default null;
+alter table public.profiles add column if not exists utm_medium text default null;
+alter table public.profiles add column if not exists utm_campaign text default null;
+alter table public.profiles add column if not exists utm_content text default null;
+alter table public.profiles add column if not exists utm_term text default null;
+alter table public.profiles add column if not exists src text default null;
+alter table public.profiles add column if not exists sck text default null;
+alter table public.profiles add column if not exists signup_ip text default null;
+alter table public.profiles add column if not exists signup_user_agent text default null;
+
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (
+    id, nome, email, telefone, trial_starts_at, ref_code,
+    fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, src, sck,
+    signup_ip, signup_user_agent
+  )
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'nome', new.email),
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data->>'telefone', ''),
+    now(),
+    new.raw_user_meta_data->>'ref_code',
+    new.raw_user_meta_data->>'fbclid',
+    new.raw_user_meta_data->>'fbc',
+    new.raw_user_meta_data->>'fbp',
+    new.raw_user_meta_data->>'utm_source',
+    new.raw_user_meta_data->>'utm_medium',
+    new.raw_user_meta_data->>'utm_campaign',
+    new.raw_user_meta_data->>'utm_content',
+    new.raw_user_meta_data->>'utm_term',
+    new.raw_user_meta_data->>'src',
+    new.raw_user_meta_data->>'sck',
+    new.raw_user_meta_data->>'signup_ip',
+    new.raw_user_meta_data->>'signup_user_agent'
+  );
+  return new;
+end;
+$$ language plpgsql security definer;

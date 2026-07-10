@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { getUtms } from '../lib/utms'
+import { getTracking } from '../lib/tracking'
 
 const EMAIL_KEY = 'climapro_email'
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY
@@ -219,7 +219,7 @@ function SignupCardBricksModal({ plan, amount, pendingSignup, utms, onClose, onP
               if (error) throw new Error(error.message)
               if (data?.error) throw new Error(data.error)
               if (data?.status === 'approved') {
-                onPago()
+                onPago(data.payment_id)
               } else {
                 throw new Error(data?.message || 'Pagamento não aprovado.')
               }
@@ -373,6 +373,7 @@ export default function Login() {
   // Estado do fluxo de cadastro com pagamento antecipado
   const [pendingSignup, setPendingSignup] = useState(null) // { nome, email, password, telefone }
   const [signupPixData, setSignupPixData] = useState(null)
+  const [showSignupPixModal, setShowSignupPixModal] = useState(false)
   const [signupCardData, setSignupCardData] = useState(null)
   const [loadingSignupPix, setLoadingSignupPix] = useState(null)
   const [signupUpsellMethod, setSignupUpsellMethod] = useState(null)
@@ -451,11 +452,25 @@ export default function Login() {
     setModo(novoModo)
     setErro('')
     setSenhaVisivel(false)
-    if (novoModo !== 'planos') setPendingSignup(null)
+    if (novoModo !== 'planos') {
+      setPendingSignup(null)
+      setSignupPixData(null)
+      setShowSignupPixModal(false)
+    }
+  }
+
+  // Dispara no momento em que o usuário escolhe uma forma de pagamento para um
+  // plano — o InitiateCheckout do Meta Pixel não existia antes desta correção.
+  function dispararInitiateCheckout(planId) {
+    const plano = PLANOS_SIGNUP.find(p => p.id === planId)
+    if (window.fbq) {
+      window.fbq('track', 'InitiateCheckout', { value: plano?.amount ?? 0, currency: 'BRL', content_name: planId })
+    }
   }
 
   function handleSignupUpsellEscolha(planId, method) {
     setSignupUpsellMethod(null)
+    dispararInitiateCheckout(planId)
     if (method === 'card') {
       const plano = PLANOS_SIGNUP.find(p => p.id === planId)
       setErro('')
@@ -468,6 +483,7 @@ export default function Login() {
   async function handleSignupCard(planId) {
     const plano = PLANOS_SIGNUP.find(p => p.id === planId)
     setErro('')
+    dispararInitiateCheckout(planId)
     setSignupCardData({ plan: planId, amount: plano.amount })
   }
 
@@ -477,16 +493,24 @@ export default function Login() {
 
   async function iniciarSignupPix(planId) {
     if (!pendingSignup) return
+    dispararInitiateCheckout(planId)
+    // Se já tem QR code para este plano, só reabre o modal sem chamar o backend
+    if (signupPixData?.plan === planId) {
+      setShowSignupPixModal(true)
+      return
+    }
     setLoadingSignupPix(planId)
     setErro('')
     try {
-      const { data, error } = await supabase.functions.invoke('signup-create-pix', {
-        body: { ...pendingSignup, plan: planId, utms: getUtms() },
-      })
+      const body = { ...pendingSignup, plan: planId, utms: getTracking() }
+      // Se o usuário já foi criado numa tentativa anterior, passa o ID para evitar erro de duplicidade
+      if (signupPixData?.user_id) body.existing_user_id = signupPixData.user_id
+      const { data, error } = await supabase.functions.invoke('signup-create-pix', { body })
       if (error) throw new Error(error.message || 'Erro na função')
       if (data?.error) throw new Error(data.error)
       if (!data?.qr_code) throw new Error('Pix sem QR code')
       setSignupPixData(data)
+      setShowSignupPixModal(true)
     } catch (err) {
       setErro(err.message)
     } finally {
@@ -497,10 +521,14 @@ export default function Login() {
   async function handleSignupPixPago() {
     if (!pendingSignup) return
     const plano = PLANOS_SIGNUP.find(p => p.id === signupPixData?.plan)
+    const paymentId = signupPixData?.payment_id
     setSignupPixData(null)
+    setShowSignupPixModal(false)
     if (window.fbq) {
       window.fbq('track', 'Lead')
-      window.fbq('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL' })
+      // eventID = payment_id: permite a Meta deduplicar com o evento equivalente
+      // enviado pelo servidor via Conversions API no webhook do Mercado Pago.
+      window.fbq('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL' }, { eventID: String(paymentId) })
     }
     if (window.ttq) window.ttq.track('CompleteRegistration')
     if (window.utmify) window.utmify('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL', paymentMethod: 'pix', installments: 1 })
@@ -513,13 +541,13 @@ export default function Login() {
     setPendingSignup(null)
   }
 
-  async function handleSignupCardPago() {
+  async function handleSignupCardPago(paymentId) {
     if (!pendingSignup) return
     const plano = PLANOS_SIGNUP.find(p => p.id === signupCardData?.plan)
     setSignupCardData(null)
     if (window.fbq) {
       window.fbq('track', 'Lead')
-      window.fbq('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL' })
+      window.fbq('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL' }, { eventID: String(paymentId) })
     }
     if (window.ttq) window.ttq.track('CompleteRegistration')
     if (window.utmify) window.utmify('track', 'Purchase', { value: plano?.amount ?? 0, currency: 'BRL', paymentMethod: 'credit_card', installments: 1 })
@@ -546,10 +574,10 @@ export default function Login() {
           />
         )}
 
-        {signupPixData && (
+        {signupPixData && showSignupPixModal && (
           <SignupPixModal
             pixData={signupPixData}
-            onClose={() => setSignupPixData(null)}
+            onClose={() => setShowSignupPixModal(false)}
             onPago={handleSignupPixPago}
           />
         )}
@@ -559,7 +587,7 @@ export default function Login() {
             plan={signupCardData.plan}
             amount={signupCardData.amount}
             pendingSignup={pendingSignup}
-            utms={getUtms()}
+            utms={getTracking()}
             onClose={() => setSignupCardData(null)}
             onPago={handleSignupCardPago}
           />

@@ -83,6 +83,26 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
+    // Dados de rastreamento (fbclid/fbc/fbp/UTMs) capturados no frontend em
+    // src/lib/tracking.js e enviados aqui para serem persistidos no perfil,
+    // já que o webhook do Mercado Pago não tem acesso ao localStorage do navegador.
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip') || null
+    const userAgent = req.headers.get('user-agent') || null
+    const trackingMetadata = utms ? {
+      ...(utms.fbclid ? { fbclid: utms.fbclid } : {}),
+      ...(utms.fbc ? { fbc: utms.fbc } : {}),
+      ...(utms.fbp ? { fbp: utms.fbp } : {}),
+      ...(utms.utm_source ? { utm_source: utms.utm_source } : {}),
+      ...(utms.utm_medium ? { utm_medium: utms.utm_medium } : {}),
+      ...(utms.utm_campaign ? { utm_campaign: utms.utm_campaign } : {}),
+      ...(utms.utm_content ? { utm_content: utms.utm_content } : {}),
+      ...(utms.utm_term ? { utm_term: utms.utm_term } : {}),
+      ...(utms.src ? { src: utms.src } : {}),
+      ...(utms.sck ? { sck: utms.sck } : {}),
+    } : {}
+    console.log('[signup-subscribe-card] tracking recebido:', { utms, clientIp, hasUserAgent: !!userAgent })
+
     // 1. Cria o usuário
     const { data: { user }, error: createError } = await adminClient.auth.admin.createUser({
       email,
@@ -92,6 +112,9 @@ serve(async (req) => {
         nome,
         telefone: telefone ? normalizePhone(telefone) : '',
         ...(ref_code ? { ref_code } : {}),
+        ...trackingMetadata,
+        ...(clientIp ? { signup_ip: clientIp } : {}),
+        ...(userAgent ? { signup_user_agent: userAgent } : {}),
       },
     })
 
@@ -153,7 +176,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ status: 'approved' }),
+        JSON.stringify({ status: 'approved', payment_id: payment.id }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

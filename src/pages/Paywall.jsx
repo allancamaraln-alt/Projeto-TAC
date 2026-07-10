@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import SocialProofToast from '../components/SocialProofToast'
-import { getUtms } from '../lib/utms'
+import { getTracking } from '../lib/tracking'
 
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY
 
@@ -444,7 +444,7 @@ export default function Paywall() {
     setErro('')
     try {
       const { data, error } = await supabase.functions.invoke('create-pix', {
-        body: { plan: planId, utms: getUtms() },
+        body: { plan: planId, utms: getTracking() },
       })
       if (error) throw new Error(error.message || 'Erro na função')
       if (!data?.qr_code) throw new Error(data?.error || 'Pix sem QR code')
@@ -525,7 +525,7 @@ export default function Paywall() {
           plan={cardBricksData.plan}
           amount={cardBricksData.amount}
           saveCard={saveCard}
-          utms={getUtms()}
+          utms={getTracking()}
           onClose={() => setCardBricksData(null)}
           onPago={handlePagoCard}
         />
@@ -536,7 +536,7 @@ export default function Paywall() {
           plan={savedCardData.plan}
           cardLastFour={profile?.mp_card_last_four}
           cardBrand={profile?.mp_card_brand}
-          utms={getUtms()}
+          utms={getTracking()}
           onClose={() => setSavedCardData(null)}
           onPago={handlePagoCard}
         />
