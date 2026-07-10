@@ -56,6 +56,12 @@ export function captureTracking() {
     if (value) merged[key] = value
   }
 
+  // entry_url/referrer são de "primeiro toque": diferente dos campos acima,
+  // window.location.href muda a cada página da SPA, então só gravamos uma vez
+  // (na primeira captura) para preservar a URL/origem real de entrada do usuário.
+  if (!merged.entry_url) merged.entry_url = window.location.href
+  if (!merged.referrer && document.referrer) merged.referrer = document.referrer
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
   console.log('[tracking] captureTracking:', merged)
   return merged

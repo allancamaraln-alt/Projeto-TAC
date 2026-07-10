@@ -105,6 +105,8 @@ serve(async (req) => {
       ...(utms.utm_term ? { utm_term: utms.utm_term } : {}),
       ...(utms.src ? { src: utms.src } : {}),
       ...(utms.sck ? { sck: utms.sck } : {}),
+      ...(utms.entry_url ? { entry_url: utms.entry_url } : {}),
+      ...(utms.referrer ? { referrer: utms.referrer } : {}),
     } : {}
 
     console.log('[signup-subscribe-card] tracking recebido:', {

@@ -38,6 +38,7 @@ const Lembretes    = lazy(() => import('./pages/Lembretes'))
 const Privacidade  = lazy(() => import('./pages/Privacidade'))
 const ExcluirConta = lazy(() => import('./pages/ExcluirConta'))
 const Afiliados    = lazy(() => import('./pages/Afiliados'))
+const AdminTrackingDebug = lazy(() => import('./pages/AdminTrackingDebug'))
 
 function PageLoader() {
   return (
@@ -82,7 +83,7 @@ function TrialBanner() {
 }
 
 function AppContent() {
-  const { user, loading, isActive } = useAuth()
+  const { user, loading, isActive, isAdmin } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -110,6 +111,17 @@ function AppContent() {
     if (location.pathname === '/privacidade') return <Suspense fallback={<PageLoader />}><Privacidade /></Suspense>
     if (location.pathname === '/excluir-conta') return <Suspense fallback={<PageLoader />}><ExcluirConta /></Suspense>
     return <Landing />
+  }
+
+  // Página de admin fica acima do gate de assinatura (Paywall): quem é admin
+  // precisa acessá-la mesmo com trial expirado/sem plano ativo na própria conta.
+  if (location.pathname === '/admin/tracking-debug') {
+    if (!isAdmin) return <Navigate to="/" />
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <AdminTrackingDebug />
+      </Suspense>
+    )
   }
 
   if (!isActive) return <Paywall />

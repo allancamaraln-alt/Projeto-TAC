@@ -456,3 +456,74 @@ begin
   return new;
 end;
 $$ language plpgsql security definer;
+
+-- ============================================
+-- MIGRATION: Painel /admin/tracking-debug
+-- Acesso administrativo (is_admin), atribuição de primeiro toque
+-- (entry_url/referrer, capturados uma única vez na Landing) e log
+-- persistente de cada tentativa de envio a Utmify/Meta CAPI — antes
+-- disso só existia como console.log, sem histórico consultável.
+-- ============================================
+alter table public.profiles add column if not exists is_admin boolean default false;
+alter table public.profiles add column if not exists entry_url text default null;
+alter table public.profiles add column if not exists referrer text default null;
+
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (
+    id, nome, email, telefone, trial_starts_at, ref_code,
+    fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, src, sck,
+    signup_ip, signup_user_agent, signup_page_url, entry_url, referrer
+  )
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'nome', new.email),
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data->>'telefone', ''),
+    now(),
+    new.raw_user_meta_data->>'ref_code',
+    new.raw_user_meta_data->>'fbclid',
+    new.raw_user_meta_data->>'fbc',
+    new.raw_user_meta_data->>'fbp',
+    new.raw_user_meta_data->>'utm_source',
+    new.raw_user_meta_data->>'utm_medium',
+    new.raw_user_meta_data->>'utm_campaign',
+    new.raw_user_meta_data->>'utm_content',
+    new.raw_user_meta_data->>'utm_term',
+    new.raw_user_meta_data->>'src',
+    new.raw_user_meta_data->>'sck',
+    new.raw_user_meta_data->>'signup_ip',
+    new.raw_user_meta_data->>'signup_user_agent',
+    new.raw_user_meta_data->>'signup_page_url',
+    new.raw_user_meta_data->>'entry_url',
+    new.raw_user_meta_data->>'referrer'
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create table if not exists public.purchase_tracking_log (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade,
+  payment_id text not null,
+  event_id text not null,
+  plan text,
+  value numeric(10,2),
+  purchased_at timestamptz default now(),
+  utmify_order_id text,
+  utmify_status text,
+  utmify_http_status int,
+  utmify_response text,
+  meta_capi_status text,
+  meta_capi_http_status int,
+  meta_capi_response text,
+  updated_at timestamptz default now()
+);
+
+create unique index if not exists idx_purchase_tracking_log_payment on public.purchase_tracking_log(payment_id);
+create index if not exists idx_purchase_tracking_log_user on public.purchase_tracking_log(user_id);
+
+-- RLS habilitado sem nenhuma policy para anon/authenticated: só as Edge
+-- Functions (service_role, que sempre ignora RLS) leem/gravam esta tabela.
+alter table public.purchase_tracking_log enable row level security;

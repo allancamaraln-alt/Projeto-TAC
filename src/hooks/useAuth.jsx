@@ -173,6 +173,7 @@ export function AuthProvider({ children }) {
       hasSound,
       hasHistoricoCompleto,
       hasRelatorioAvancado,
+      isAdmin: !!profile?.is_admin,
     }}>
       {children}
     </AuthContext.Provider>
