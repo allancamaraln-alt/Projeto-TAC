@@ -6,6 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const DEBUG = Deno.env.get('DEBUG') === 'true'
+function debugLog(...args: unknown[]) {
+  if (DEBUG) console.log(...args)
+}
+
 const PLANOS = {
   monthly:         { description: 'ClimaPro Mensal',          amount: 19.90,  days: 30  },
   monthly_saida50: { description: 'ClimaPro Mensal — Oferta', amount: 9.95,   days: 30  },
@@ -28,7 +33,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, nome, telefone, plan, ref_code, utms, existing_user_id } = await req.json()
+    const { email, password, nome, telefone, plan, ref_code, utms, existing_user_id, page_url } = await req.json()
 
     if (!email || !password || !nome || !plan) {
       throw new Error('Dados incompletos')
@@ -63,7 +68,19 @@ serve(async (req) => {
       ...(utms.src ? { src: utms.src } : {}),
       ...(utms.sck ? { sck: utms.sck } : {}),
     } : {}
-    console.log('[signup-create-pix] tracking recebido:', { utms, clientIp, hasUserAgent: !!userAgent })
+
+    // Log essencial: sempre visível, mostra só presença/ausência dos campos
+    // (sem despejar valores completos, que só aparecem em modo DEBUG).
+    console.log('[signup-create-pix] tracking recebido:', {
+      hasFbclid: !!utms?.fbclid,
+      hasFbc: !!utms?.fbc,
+      hasFbp: !!utms?.fbp,
+      hasUtmSource: !!utms?.utm_source,
+      hasClientIp: !!clientIp,
+      hasUserAgent: !!userAgent,
+      hasPageUrl: !!page_url,
+    })
+    debugLog('[signup-create-pix][DEBUG] tracking completo:', { utms, clientIp, userAgent, page_url })
 
     if (existing_user_id) {
       // Usuário já foi criado em tentativa anterior — só gera novo PIX
@@ -81,6 +98,7 @@ serve(async (req) => {
           ...trackingMetadata,
           ...(clientIp ? { signup_ip: clientIp } : {}),
           ...(userAgent ? { signup_user_agent: userAgent } : {}),
+          ...(page_url ? { signup_page_url: page_url } : {}),
         },
       })
 
@@ -102,6 +120,21 @@ serve(async (req) => {
       await adminClient.from('profiles')
         .update({ trial_starts_at: null })
         .eq('id', userId)
+
+      // Confirmação de que o trigger persistiu o tracking corretamente no perfil
+      const { data: persisted } = await adminClient
+        .from('profiles')
+        .select('fbclid, fbc, fbp, utm_source, signup_ip, signup_page_url')
+        .eq('id', userId)
+        .single()
+      console.log('[signup-create-pix] perfil confirmado em profiles:', {
+        userId,
+        fbclidPersistido: !!persisted?.fbclid,
+        fbcPersistido: !!persisted?.fbc,
+        fbpPersistido: !!persisted?.fbp,
+        utmSourcePersistido: !!persisted?.utm_source,
+      })
+      debugLog('[signup-create-pix][DEBUG] perfil completo:', persisted)
     }
 
     // 3. Gera Pix no Mercado Pago
@@ -130,6 +163,13 @@ serve(async (req) => {
       console.error('MP Pix error:', JSON.stringify(mpData))
       throw new Error(`Falha ao gerar Pix: ${mpData?.message || mpData?.error || 'Erro desconhecido'}`)
     }
+
+    console.log('[signup-create-pix] pagamento Pix criado no Mercado Pago:', {
+      payment_id: mpData.id,
+      userId,
+      plan,
+      hasMetadataUtms: !!utms,
+    })
 
     return new Response(
       JSON.stringify({

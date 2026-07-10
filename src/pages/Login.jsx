@@ -214,7 +214,7 @@ function SignupCardBricksModal({ plan, amount, pendingSignup, utms, onClose, onP
             setErro('')
             try {
               const { data, error } = await supabase.functions.invoke('signup-subscribe-card', {
-                body: { ...pendingSignup, plan, cardFormData: formData, saveCard: true, utms },
+                body: { ...pendingSignup, plan, cardFormData: formData, saveCard: true, utms, page_url: window.location.href },
               })
               if (error) throw new Error(error.message)
               if (data?.error) throw new Error(data.error)
@@ -502,7 +502,7 @@ export default function Login() {
     setLoadingSignupPix(planId)
     setErro('')
     try {
-      const body = { ...pendingSignup, plan: planId, utms: getTracking() }
+      const body = { ...pendingSignup, plan: planId, utms: getTracking(), page_url: window.location.href }
       // Se o usuário já foi criado numa tentativa anterior, passa o ID para evitar erro de duplicidade
       if (signupPixData?.user_id) body.existing_user_id = signupPixData.user_id
       const { data, error } = await supabase.functions.invoke('signup-create-pix', { body })

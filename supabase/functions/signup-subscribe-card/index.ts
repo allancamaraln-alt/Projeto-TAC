@@ -8,6 +8,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const DEBUG = Deno.env.get('DEBUG') === 'true'
+function debugLog(...args: unknown[]) {
+  if (DEBUG) console.log(...args)
+}
+
 const PLANOS = {
   monthly:         { description: 'ClimaPro Mensal',          amount: 19.90,  days: 30  },
   monthly_saida50: { description: 'ClimaPro Mensal — Oferta', amount: 9.95,   days: 30  },
@@ -68,7 +73,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, nome, telefone, plan, cardFormData, ref_code, utms } = await req.json()
+    const { email, password, nome, telefone, plan, cardFormData, ref_code, utms, page_url } = await req.json()
 
     if (!email || !password || !nome || !plan || !cardFormData) {
       throw new Error('Dados incompletos')
@@ -101,7 +106,17 @@ serve(async (req) => {
       ...(utms.src ? { src: utms.src } : {}),
       ...(utms.sck ? { sck: utms.sck } : {}),
     } : {}
-    console.log('[signup-subscribe-card] tracking recebido:', { utms, clientIp, hasUserAgent: !!userAgent })
+
+    console.log('[signup-subscribe-card] tracking recebido:', {
+      hasFbclid: !!utms?.fbclid,
+      hasFbc: !!utms?.fbc,
+      hasFbp: !!utms?.fbp,
+      hasUtmSource: !!utms?.utm_source,
+      hasClientIp: !!clientIp,
+      hasUserAgent: !!userAgent,
+      hasPageUrl: !!page_url,
+    })
+    debugLog('[signup-subscribe-card][DEBUG] tracking completo:', { utms, clientIp, userAgent, page_url })
 
     // 1. Cria o usuário
     const { data: { user }, error: createError } = await adminClient.auth.admin.createUser({
@@ -115,6 +130,7 @@ serve(async (req) => {
         ...trackingMetadata,
         ...(clientIp ? { signup_ip: clientIp } : {}),
         ...(userAgent ? { signup_user_agent: userAgent } : {}),
+        ...(page_url ? { signup_page_url: page_url } : {}),
       },
     })
 
@@ -133,6 +149,21 @@ serve(async (req) => {
     await adminClient.from('profiles')
       .update({ trial_starts_at: null })
       .eq('id', user.id)
+
+    // Confirmação de que o trigger persistiu o tracking corretamente no perfil
+    const { data: persistedCard } = await adminClient
+      .from('profiles')
+      .select('fbclid, fbc, fbp, utm_source, signup_ip, signup_page_url')
+      .eq('id', user.id)
+      .single()
+    console.log('[signup-subscribe-card] perfil confirmado em profiles:', {
+      userId: user.id,
+      fbclidPersistido: !!persistedCard?.fbclid,
+      fbcPersistido: !!persistedCard?.fbc,
+      fbpPersistido: !!persistedCard?.fbp,
+      utmSourcePersistido: !!persistedCard?.utm_source,
+    })
+    debugLog('[signup-subscribe-card][DEBUG] perfil completo:', persistedCard)
 
     // 3. Processa pagamento no Mercado Pago
     const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -158,6 +189,14 @@ serve(async (req) => {
     })
 
     const payment = await mpRes.json()
+
+    console.log('[signup-subscribe-card] pagamento processado no Mercado Pago:', {
+      payment_id: payment.id,
+      status: payment.status,
+      userId: user.id,
+      plan,
+      hasMetadataUtms: !!utms,
+    })
 
     if (payment.status === 'approved') {
       const until = new Date()

@@ -417,13 +417,20 @@ alter table public.profiles add column if not exists sck text default null;
 alter table public.profiles add column if not exists signup_ip text default null;
 alter table public.profiles add column if not exists signup_user_agent text default null;
 
+-- ============================================
+-- MIGRATION: event_source_url para a Meta Conversions API
+-- Meta recomenda enviar a URL da página onde o evento ocorreu
+-- (event_source_url); capturamos a URL no momento do cadastro.
+-- ============================================
+alter table public.profiles add column if not exists signup_page_url text default null;
+
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (
     id, nome, email, telefone, trial_starts_at, ref_code,
     fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, src, sck,
-    signup_ip, signup_user_agent
+    signup_ip, signup_user_agent, signup_page_url
   )
   values (
     new.id,
@@ -443,7 +450,8 @@ begin
     new.raw_user_meta_data->>'src',
     new.raw_user_meta_data->>'sck',
     new.raw_user_meta_data->>'signup_ip',
-    new.raw_user_meta_data->>'signup_user_agent'
+    new.raw_user_meta_data->>'signup_user_agent',
+    new.raw_user_meta_data->>'signup_page_url'
   );
   return new;
 end;
