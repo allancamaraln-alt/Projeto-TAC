@@ -24,7 +24,8 @@ Sentry.init({
   ],
 })
 
-const Dashboard    = lazy(() => import('./pages/Dashboard'))
+const ChatHome     = lazy(() => import('./pages/ChatHome'))
+const Painel       = lazy(() => import('./pages/Painel'))
 const Clientes     = lazy(() => import('./pages/Clientes'))
 const ClienteDetalhe = lazy(() => import('./pages/ClienteDetalhe'))
 const ClienteForm  = lazy(() => import('./pages/ClienteForm'))
@@ -32,6 +33,7 @@ const OrdensList   = lazy(() => import('./pages/OrdensList'))
 const OrdemForm    = lazy(() => import('./pages/OrdemForm'))
 const OrdemDetalhe = lazy(() => import('./pages/OrdemDetalhe'))
 const OrdemEdit    = lazy(() => import('./pages/OrdemEdit'))
+const AtendimentoIA = lazy(() => import('./pages/AtendimentoIA'))
 const Perfil       = lazy(() => import('./pages/Perfil'))
 const Relatorio    = lazy(() => import('./pages/Relatorio'))
 const Lembretes    = lazy(() => import('./pages/Lembretes'))
@@ -151,7 +153,8 @@ function AppContent() {
       <TrialBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/"                       element={<Dashboard />} />
+          <Route path="/"                       element={<ChatHome />} />
+          <Route path="/painel"                 element={<Painel />} />
           <Route path="/clientes"               element={<Clientes />} />
           <Route path="/clientes/novo"          element={<ClienteForm />} />
           <Route path="/clientes/:id"           element={<ClienteDetalhe />} />
@@ -160,6 +163,7 @@ function AppContent() {
           <Route path="/ordens/nova"            element={<OrdemForm />} />
           <Route path="/ordens/:id"             element={<OrdemDetalhe />} />
           <Route path="/ordens/:id/editar"      element={<OrdemEdit />} />
+          <Route path="/ordens/:id/atendimento" element={<AtendimentoIA />} />
           <Route path="/relatorio"              element={<Relatorio />} />
           <Route path="/lembretes"              element={<Lembretes />} />
           <Route path="/perfil"                 element={<Perfil />} />

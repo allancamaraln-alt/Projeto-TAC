@@ -14,8 +14,13 @@ export function AIProvider({ children }) {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || [] } catch { return [] }
   })
   const [loading, setLoading] = useState(false)
+  const [phase, setPhase] = useState(null) // 'pensando' | 'executando' | null
   const [error, setError] = useState(null)
+  const [activeOrdemId, setActiveOrdemId] = useState(null)
   const abortRef = useRef(null)
+
+  const setActiveOrdem = useCallback((ordemId) => setActiveOrdemId(ordemId), [])
+  const clearActiveOrdem = useCallback(() => setActiveOrdemId(null), [])
 
   const send = useCallback(async (text, imageDataUrl = null) => {
     const hasContent = text?.trim() || imageDataUrl
@@ -40,8 +45,10 @@ export function AIProvider({ children }) {
       const reply = await callClimaPro(nextMessages, abortRef.current.signal, {
         profile,
         userId: user?.id,
+        activeOrdemId,
+        onPhaseChange: setPhase,
       })
-      const assistantMsg = { role: 'assistant', content: reply }
+      const assistantMsg = { role: 'assistant', content: reply.text, ...(reply.actions?.length ? { actions: reply.actions } : {}) }
       const updated = [...nextMessages, assistantMsg]
       setMessages(updated)
 
@@ -58,8 +65,9 @@ export function AIProvider({ children }) {
       setError(err.message || 'Erro ao conectar com a IA. Tente novamente.')
     } finally {
       setLoading(false)
+      setPhase(null)
     }
-  }, [messages, loading, profile, user])
+  }, [messages, loading, profile, user, activeOrdemId])
 
   const clear = useCallback(() => {
     abortRef.current?.abort()
@@ -75,7 +83,10 @@ export function AIProvider({ children }) {
   }, [])
 
   return (
-    <AIContext.Provider value={{ open, setOpen, messages, loading, error, send, clear, cancel }}>
+    <AIContext.Provider value={{
+      open, setOpen, messages, loading, phase, error, send, clear, cancel,
+      activeOrdemId, setActiveOrdem, clearActiveOrdem,
+    }}>
       {children}
     </AIContext.Provider>
   )

@@ -26,6 +26,12 @@ const TIPOS = [
   'Limpeza', 'Recarga de gás', 'Diagnóstico', 'Outro'
 ]
 
+const EQUIPAMENTO_TIPOS = [
+  '', 'Split', 'Janela', 'Portátil', 'Central', 'VRF', 'Chiller', 'Câmara fria', 'Outro'
+]
+
+const FLUIDOS = ['', 'R-410A', 'R-32', 'R-22', 'R-134a', 'R-290', 'R-404A', 'Outro']
+
 const STATUS_OPTIONS = [
   { value: 'orcamento', label: 'Orçamento' },
   { value: 'aprovado', label: 'Aprovado' },
@@ -65,6 +71,12 @@ export default function OrdemEdit() {
           garantia_valor: data.garantia_valor || '',
           garantia_unidade: data.garantia_unidade || 'meses',
           garantia_obs: data.garantia_obs || '',
+          equipamento_tipo: data.equipamento_tipo || '',
+          equipamento_marca: data.equipamento_marca || '',
+          equipamento_modelo: data.equipamento_modelo || '',
+          equipamento_capacidade: data.equipamento_capacidade || '',
+          equipamento_fluido: data.equipamento_fluido || '',
+          equipamento_numero_serie: data.equipamento_numero_serie || '',
         })
       })
   }, [id])
@@ -91,6 +103,12 @@ export default function OrdemEdit() {
         garantia_unidade: gValor ? form.garantia_unidade : null,
         garantia_vencimento: gValor ? calcularVencimento(gValor, form.garantia_unidade, base) : null,
         garantia_obs: form.garantia_obs || null,
+        equipamento_tipo: form.equipamento_tipo || null,
+        equipamento_marca: form.equipamento_marca || null,
+        equipamento_modelo: form.equipamento_modelo || null,
+        equipamento_capacidade: form.equipamento_capacidade || null,
+        equipamento_fluido: form.equipamento_fluido || null,
+        equipamento_numero_serie: form.equipamento_numero_serie || null,
       })
       .eq('id', id)
 
@@ -160,6 +178,64 @@ export default function OrdemEdit() {
             onChange={set('descricao')}
             placeholder="Descreva o serviço..."
           />
+        </div>
+
+        {/* Equipamento — preenchido manualmente ou automaticamente pelo ClimaPro IA (diagnóstico/laudo) */}
+        <div className="card space-y-3">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Equipamento</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+              <select className="input-field" value={form.equipamento_tipo} onChange={set('equipamento_tipo')}>
+                {EQUIPAMENTO_TIPOS.map(t => <option key={t} value={t}>{t || 'Não informado'}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Fluido</label>
+              <select className="input-field" value={form.equipamento_fluido} onChange={set('equipamento_fluido')}>
+                {FLUIDOS.map(f => <option key={f} value={f}>{f || 'Não informado'}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Marca</label>
+              <input
+                className="input-field"
+                placeholder="Ex: Samsung"
+                value={form.equipamento_marca}
+                onChange={set('equipamento_marca')}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Modelo</label>
+              <input
+                className="input-field"
+                placeholder="Ex: AR12"
+                value={form.equipamento_modelo}
+                onChange={set('equipamento_modelo')}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Capacidade</label>
+              <input
+                className="input-field"
+                placeholder="Ex: 9.000 BTU"
+                value={form.equipamento_capacidade}
+                onChange={set('equipamento_capacidade')}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nº de série</label>
+              <input
+                className="input-field"
+                value={form.equipamento_numero_serie}
+                onChange={set('equipamento_numero_serie')}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Valor */}

@@ -26,7 +26,11 @@ async function createExpense({ data, categoria, descricao, valor }, userId) {
     .select('id, data, categoria, descricao, valor')
     .single()
   if (error) return { error: error.message }
-  return { success: true, ...row }
+  return {
+    success: true,
+    ...row,
+    action: { type: 'expense_registered', valor: row.valor, categoria: row.categoria },
+  }
 }
 
 async function createIncome({ data, descricao, valor }, userId) {
@@ -36,7 +40,11 @@ async function createIncome({ data, descricao, valor }, userId) {
     .select('id, data, descricao, valor')
     .single()
   if (error) return { error: error.message }
-  return { success: true, ...row }
+  return {
+    success: true,
+    ...row,
+    action: { type: 'income_registered', valor: row.valor },
+  }
 }
 
 async function markOrderAsPaid({ os_numero, valor }, userId) {
@@ -63,7 +71,12 @@ async function markOrderAsPaid({ os_numero, valor }, userId) {
     ordem_id: os.id,
   })
 
-  return { success: true, os_numero, valor: valorFinal }
+  return {
+    success: true,
+    os_numero,
+    valor: valorFinal,
+    action: { type: 'order_paid', numero: os_numero, valor: valorFinal },
+  }
 }
 
 async function getFinancialSummary({ periodo, data_inicio, data_fim, categoria }, userId) {

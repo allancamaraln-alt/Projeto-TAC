@@ -12,7 +12,10 @@ function diasParaData(dataIso) {
   return Math.round((new Date(y, m - 1, d) - hoje) / 86400000)
 }
 
-export default function Dashboard() {
+// Antigo Dashboard (estatísticas da semana, revisões preventivas, OS
+// recentes) — a Home ("/") agora é o chat em ChatHome.jsx; este painel
+// fica acessível a partir do ícone no topo da Home.
+export default function Painel() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState({ orcamento: 0, aprovado: 0, em_andamento: 0, concluido: 0 })

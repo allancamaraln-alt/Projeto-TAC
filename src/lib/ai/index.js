@@ -1,33 +1,35 @@
-import { technicalSpecialist } from './specialists/technical'
-import { financialSpecialist } from './specialists/financial'
-import { classifyIntent } from './router'
-
-const SPECIALISTS = {
-  technical: technicalSpecialist,
-  financial: financialSpecialist,
-}
+import { runAgent } from './agent'
+import { buildSystemPrompt } from './systemPrompt'
+import { ALL_TOOLS, executeTool } from './tools'
+import { fetchOsContext } from './context/osContext'
 
 /**
  * Ponto de entrada unificado do ClimaPro IA.
- * Classifica a intenção do usuário e delega ao especialista correto.
+ * Chama o agente com o prompt e o conjunto completo de ferramentas —
+ * o próprio modelo decide qual ação executar via tool-calling
+ * (não há mais roteador de intenção/especialistas separados).
  *
- * Para adicionar um novo especialista:
- * 1. Crie src/lib/ai/specialists/meuEspecialista.js
- * 2. Adicione à constante SPECIALISTS acima
- * 3. Adicione os padrões de detecção em router.js
+ * Para adicionar um novo domínio de ferramentas:
+ * 1. Crie src/lib/ai/tools/meuDominio.js (schemas) + meuDominioExecutor.js (execução)
+ * 2. Registre ambos em src/lib/ai/tools/index.js
+ * 3. Descreva as regras de uso em src/lib/ai/systemPrompt.js
  */
-function extractText(content) {
-  if (typeof content === 'string') return content
-  if (Array.isArray(content)) return content.find(c => c.type === 'text')?.text ?? ''
-  return ''
-}
-
 export async function callClimaPro(messages, signal, context) {
-  const lastUserText = extractText(messages[messages.length - 1]?.content)
-  const lastAIText = extractText([...messages].reverse().find(m => m.role === 'assistant')?.content ?? '')
+  let systemPrompt = buildSystemPrompt(context?.profile)
 
-  const intent = classifyIntent(lastUserText, lastAIText)
-  const specialist = SPECIALISTS[intent] ?? SPECIALISTS.technical
+  // Se o técnico abriu o assistente a partir de uma OS (useAI().activeOrdemId),
+  // anexa um resumo automático dela ao prompt — ver src/lib/ai/context/osContext.js.
+  if (context?.activeOrdemId && context?.userId) {
+    const osContext = await fetchOsContext(context.activeOrdemId, context.userId)
+    if (osContext) systemPrompt += `\n\n${osContext}`
+  }
 
-  return specialist.call(messages, signal, context)
+  return runAgent({
+    messages,
+    signal,
+    systemPrompt,
+    tools: ALL_TOOLS,
+    executeTool: (name, args) => executeTool(name, args, context?.userId),
+    onPhaseChange: context?.onPhaseChange,
+  })
 }

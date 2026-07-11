@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useAI } from '../hooks/useAI'
 import { formatOS, formatBRL, formatDate, formatTime, formatGarantia } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import ModalLembrete from '../components/ModalLembrete'
@@ -93,6 +94,7 @@ export default function OrdemDetalhe() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user, profile, updateProfile } = useAuth()
+  const { setActiveOrdem, clearActiveOrdem } = useAI()
   const toast = useToast()
   const coverInputRef = useRef()
   const fotoInputRef = useRef()
@@ -103,6 +105,8 @@ export default function OrdemDetalhe() {
   const [enviandoRecibo, setEnviandoRecibo] = useState(false)
   const [uploadingCover, setUploadingCover] = useState(false)
   const [fotos, setFotos] = useState([])
+  const [laudos, setLaudos] = useState([])
+  const [atendimentoAtivo, setAtendimentoAtivo] = useState(false)
   const [uploadingFoto, setUploadingFoto] = useState(false)
   const [fotoSelecionada, setFotoSelecionada] = useState(null)
   const [assinaturaPad, setAssinaturaPad] = useState(null) // 'tecnico' | 'cliente' | null
@@ -147,7 +151,30 @@ export default function OrdemDetalhe() {
       .eq('ordem_id', id)
       .order('created_at', { ascending: true })
       .then(({ data }) => setFotos(data || []))
+
+    supabase
+      .from('laudos')
+      .select('*')
+      .eq('ordem_id', id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setLaudos(data || []))
+
+    supabase
+      .from('ai_conversations')
+      .select('id')
+      .eq('ordem_id', id)
+      .eq('tipo', 'atendimento')
+      .eq('status', 'ativa')
+      .maybeSingle()
+      .then(({ data }) => setAtendimentoAtivo(!!data))
   }, [id])
+
+  // Enquanto o técnico está vendo esta OS, o ClimaPro IA já sabe cliente/
+  // equipamento/histórico dela automaticamente (ver src/lib/ai/context/osContext.js).
+  useEffect(() => {
+    setActiveOrdem(id)
+    return () => clearActiveOrdem()
+  }, [id, setActiveOrdem, clearActiveOrdem])
 
   async function handleFotoChange(e) {
     const files = Array.from(e.target.files || [])
@@ -518,6 +545,18 @@ export default function OrdemDetalhe() {
           </button>
         )}
 
+        {/* Modo Atendimento IA — narração ao vivo durante o serviço */}
+        {(os.status === 'aprovado' || os.status === 'em_andamento') && (
+          <button
+            onClick={() => navigate(`/ordens/${id}/atendimento`)}
+            className="w-full text-white font-bold py-4 px-4 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all"
+            style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)', boxShadow: '0 4px 20px rgb(var(--ac) / 0.35)' }}
+          >
+            <span className="text-xl">▶️</span>
+            <span>{atendimentoAtivo ? 'Continuar Atendimento com IA' : 'Iniciar Atendimento com IA'}</span>
+          </button>
+        )}
+
         {/* Dados do cliente */}
         <div className="card">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Cliente</h2>
@@ -552,6 +591,18 @@ export default function OrdemDetalhe() {
             <p className="text-sm text-gray-600">{formatDate(os.created_at)}</p>
           </div>
         </div>
+
+        {/* Laudos técnicos gerados pelo ClimaPro IA */}
+        {laudos.length > 0 && (
+          <div className="card">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Laudos técnicos</h2>
+            <div className="space-y-2">
+              {laudos.map(laudo => (
+                <LaudoItem key={laudo.id} laudo={laudo} tecnico={profile} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Registro fotográfico */}
         <div className="card">
@@ -831,5 +882,38 @@ function Row({ label, value, highlight }) {
       <p className="text-xs text-gray-400">{label}</p>
       <p className={`text-sm ${highlight ? 'text-lg font-bold text-green-600' : 'text-gray-700'}`}>{value}</p>
     </div>
+  )
+}
+
+function LaudoItem({ laudo, tecnico }) {
+  const [baixando, setBaixando] = useState(false)
+
+  async function handleBaixar() {
+    setBaixando(true)
+    try {
+      const { compartilharLaudo } = await import('../lib/pdf')
+      await compartilharLaudo({ laudo, tecnico })
+    } finally {
+      setBaixando(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleBaixar}
+      disabled={baixando}
+      className="w-full text-left rounded-xl border border-gray-100 px-3.5 py-3 flex items-center justify-between gap-3 active:bg-slate-50 transition-colors disabled:opacity-60"
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-gray-800 truncate">
+          {laudo.equipamento_tipo || 'Equipamento'}{laudo.equipamento_marca ? ` · ${laudo.equipamento_marca}` : ''}
+        </p>
+        <p className="text-xs text-gray-400 mt-0.5">{formatDate(laudo.created_at)}</p>
+      </div>
+      {baixando
+        ? <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin shrink-0" />
+        : <span className="text-xs font-semibold shrink-0" style={{ color: 'rgb(var(--ac))' }}>📄 PDF</span>
+      }
+    </button>
   )
 }

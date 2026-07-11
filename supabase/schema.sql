@@ -769,3 +769,136 @@ language sql stable as $$
   where purchased_at >= desde and purchased_at < ate
   group by 1 order by 1
 $$;
+
+-- ============================================
+-- MIGRATION: ClimaPro IA 2.0 — Fase 3
+-- Persistência de laudo técnico (antes só existia como PDF efêmero, gerado
+-- a partir de um bloco <<<LAUDO_JSON>>> no texto da IA) + campos de
+-- equipamento na OS, para a IA passar a ter contexto técnico persistente.
+-- ============================================
+
+-- TABELA: laudos
+create table if not exists public.laudos (
+  id uuid default uuid_generate_v4() primary key,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  ordem_id uuid references public.ordens_servico(id) on delete set null,
+  cliente_nome text not null default '',
+  equipamento_tipo text not null default '',
+  equipamento_marca text not null default '',
+  equipamento_modelo text not null default '',
+  equipamento_capacidade text not null default '',
+  equipamento_fluido text not null default '',
+  numero_serie text not null default '',
+  defeito_relatado text not null default '',
+  diagnostico text not null default '',
+  servicos_executados text not null default '',
+  pecas_utilizadas text not null default '',
+  recomendacoes text not null default '',
+  conclusao text not null default '',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_laudos_tecnico on public.laudos(tecnico_id);
+create index if not exists idx_laudos_ordem on public.laudos(ordem_id);
+
+alter table public.laudos enable row level security;
+
+drop policy if exists "Técnico gerencia seus laudos" on public.laudos;
+create policy "Técnico gerencia seus laudos"
+  on public.laudos for all
+  using (auth.uid() = tecnico_id);
+
+drop trigger if exists set_updated_at on public.laudos;
+create trigger set_updated_at
+  before update on public.laudos
+  for each row execute procedure public.update_updated_at();
+
+-- Campos de equipamento na OS — colunas planas (mesma convenção de
+-- garantia_*/forma_pagamento acima), preenchidas pela IA ou manualmente.
+alter table public.ordens_servico add column if not exists equipamento_tipo text;
+alter table public.ordens_servico add column if not exists equipamento_marca text;
+alter table public.ordens_servico add column if not exists equipamento_modelo text;
+alter table public.ordens_servico add column if not exists equipamento_capacidade text;
+alter table public.ordens_servico add column if not exists equipamento_fluido text;
+alter table public.ordens_servico add column if not exists equipamento_numero_serie text;
+
+-- ============================================
+-- MIGRATION: ClimaPro IA 2.0 — Fase 5 (Modo Atendimento IA)
+-- Histórico persistente de conversas (sessionStorage não é suficiente para
+-- uma sessão de atendimento, que precisa sobreviver a troca de app/aba
+-- durante o serviço) + linha do tempo estruturada do atendimento ao vivo.
+-- ============================================
+
+-- TABELA: ai_conversations
+create table if not exists public.ai_conversations (
+  id uuid default uuid_generate_v4() primary key,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  ordem_id uuid references public.ordens_servico(id) on delete set null,
+  tipo text not null default 'chat' check (tipo in ('chat', 'atendimento')),
+  titulo text not null default '',
+  status text not null default 'ativa' check (status in ('ativa', 'encerrada')),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_ai_conversations_tecnico on public.ai_conversations(tecnico_id);
+create index if not exists idx_ai_conversations_ordem on public.ai_conversations(ordem_id);
+
+alter table public.ai_conversations enable row level security;
+
+drop policy if exists "Técnico gerencia suas conversas" on public.ai_conversations;
+create policy "Técnico gerencia suas conversas"
+  on public.ai_conversations for all
+  using (auth.uid() = tecnico_id);
+
+drop trigger if exists set_updated_at on public.ai_conversations;
+create trigger set_updated_at
+  before update on public.ai_conversations
+  for each row execute procedure public.update_updated_at();
+
+-- TABELA: ai_messages
+create table if not exists public.ai_messages (
+  id uuid default uuid_generate_v4() primary key,
+  conversation_id uuid references public.ai_conversations(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  role text not null check (role in ('user', 'assistant', 'tool', 'system')),
+  content jsonb not null,
+  tool_name text default null,
+  tool_call_id text default null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_ai_messages_conversation on public.ai_messages(conversation_id);
+
+alter table public.ai_messages enable row level security;
+
+drop policy if exists "Técnico gerencia suas mensagens" on public.ai_messages;
+create policy "Técnico gerencia suas mensagens"
+  on public.ai_messages for all
+  using (auth.uid() = tecnico_id);
+
+-- TABELA: atendimento_eventos (linha do tempo do Modo Atendimento IA)
+-- Camada só de auditoria/exibição — o dado real (pagamento, status, laudo)
+-- é sempre gravado pela ferramenta de domínio correspondente (gastos,
+-- receitas, ordens_servico, laudos); esta tabela nunca é fonte de verdade.
+create table if not exists public.atendimento_eventos (
+  id uuid default uuid_generate_v4() primary key,
+  conversation_id uuid references public.ai_conversations(id) on delete cascade not null,
+  ordem_id uuid references public.ordens_servico(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  tipo text not null check (tipo in ('chegada', 'diagnostico', 'peca_trocada', 'pagamento', 'garantia', 'observacao', 'conclusao', 'outro')),
+  descricao text not null,
+  metadata jsonb default '{}',
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_atendimento_eventos_conversation on public.atendimento_eventos(conversation_id);
+create index if not exists idx_atendimento_eventos_ordem on public.atendimento_eventos(ordem_id);
+
+alter table public.atendimento_eventos enable row level security;
+
+drop policy if exists "Técnico gerencia eventos de atendimento" on public.atendimento_eventos;
+create policy "Técnico gerencia eventos de atendimento"
+  on public.atendimento_eventos for all
+  using (auth.uid() = tecnico_id);
