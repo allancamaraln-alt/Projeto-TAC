@@ -37,12 +37,12 @@ function buildSystemMsg(profile) {
 
 export const financialSpecialist = {
   id: 'financial',
-  async call(messages, apiKey, signal, { profile, userId }) {
+  async call(messages, signal, { profile, userId }) {
     const systemMsg = buildSystemMsg(profile)
     const loop = [systemMsg, ...messages]
 
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-      const response = await fetchWithTools(loop, apiKey, signal, FINANCIAL_TOOLS)
+      const response = await fetchWithTools(loop, signal, FINANCIAL_TOOLS)
       const choice = response.choices[0]
 
       if (choice.finish_reason !== 'tool_calls') {

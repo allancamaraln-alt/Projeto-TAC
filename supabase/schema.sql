@@ -228,6 +228,15 @@ alter table public.profiles add column if not exists plan text
 alter table public.profiles add column if not exists plan_locked_at timestamptz default null;
 alter table public.profiles add column if not exists mp_subscription_id text;
 
+-- Override manual: libera o histórico completo de OS de um cliente Básico
+-- específico (ex: reclamação) sem destravar o resto do plano dele.
+alter table public.profiles add column if not exists historico_liberado boolean not null default false;
+
+-- Add-on pago do Assistente IA (R$19,90/mês) — independente do plano base,
+-- por isso é uma coluna própria e não um valor em profiles.plan.
+alter table public.profiles add column if not exists ai_addon_until timestamptz default null;
+alter table public.profiles add column if not exists ai_addon_auto_renew boolean not null default false;
+
 -- Usuários já existentes: trial começa da data de criação da conta
 update public.profiles
   set trial_starts_at = created_at

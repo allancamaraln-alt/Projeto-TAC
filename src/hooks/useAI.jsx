@@ -4,7 +4,6 @@ import { callClimaPro } from '../lib/ai'
 import { trimHistory } from '../lib/openai'
 
 const SESSION_KEY = 'climapro_ai_history'
-const API_KEY = import.meta.env.VITE_OPENAI_API_KEY
 
 const AIContext = createContext(null)
 
@@ -21,10 +20,6 @@ export function AIProvider({ children }) {
   const send = useCallback(async (text, imageDataUrl = null) => {
     const hasContent = text?.trim() || imageDataUrl
     if (!hasContent || loading) return
-    if (!API_KEY) {
-      setError('Chave da API OpenAI não configurada (VITE_OPENAI_API_KEY).')
-      return
-    }
 
     const content = imageDataUrl
       ? [
@@ -42,7 +37,7 @@ export function AIProvider({ children }) {
     abortRef.current = new AbortController()
 
     try {
-      const reply = await callClimaPro(nextMessages, API_KEY, abortRef.current.signal, {
+      const reply = await callClimaPro(nextMessages, abortRef.current.signal, {
         profile,
         userId: user?.id,
       })

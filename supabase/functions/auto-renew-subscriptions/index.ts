@@ -7,6 +7,7 @@ const PLANOS_RENOVAVEIS: Record<string, { description: string; amount: number; d
   plus:         { description: 'ClimaPro Técnico Plus', amount: 29.90, days: 30 },
   professional: { description: 'ClimaPro Profissional', amount: 39.90, days: 30 },
 }
+const ADDON = { description: 'ClimaPro — Assistente IA', amount: 19.90, days: 30 }
 
 function emailFalhaHtml(nome: string): string {
   const primeiroNome = nome.split(' ')[0] || 'Técnico'
@@ -236,8 +237,105 @@ serve(async (req) => {
   }
 
   console.log(`Auto-renew concluído: ${results.length} usuário(s) processado(s)`)
+
+  // Renovação do add-on do Assistente IA — independente do plano, usa o mesmo
+  // cartão salvo. Nunca mexe em profiles.plan/subscribed_until.
+  const { data: addonUsers, error: addonError } = await supabase
+    .from('profiles')
+    .select('id, email, nome, mp_customer_id, mp_card_id, mp_card_brand, ai_addon_until')
+    .eq('ai_addon_auto_renew', true)
+    .not('mp_customer_id', 'is', null)
+    .not('mp_card_id', 'is', null)
+    .gte('ai_addon_until', windowStart.toISOString())
+    .lte('ai_addon_until', windowEnd.toISOString())
+
+  if (addonError) {
+    console.error('Erro ao buscar usuários elegíveis pro add-on:', addonError)
+  }
+
+  const addonResults: Array<{ id: string; email: string; status: string; detail?: string }> = []
+
+  for (const user of addonUsers ?? []) {
+    try {
+      const tokenRes = await fetch('https://api.mercadopago.com/v1/card_tokens', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${mpToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customer_id: user.mp_customer_id,
+          card_id: user.mp_card_id,
+        }),
+      })
+      const tokenData = await tokenRes.json()
+
+      if (!tokenData.id) {
+        throw new Error(`Token inválido: ${JSON.stringify(tokenData)}`)
+      }
+
+      const monthRef = now.toISOString().slice(0, 7)
+
+      const paymentRes = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${mpToken}`,
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': `auto-renew-addon-${user.id}-${monthRef}`,
+        },
+        body: JSON.stringify({
+          transaction_amount: ADDON.amount,
+          token: tokenData.id,
+          description: ADDON.description,
+          installments: 1,
+          payment_method_id: user.mp_card_brand,
+          payer: {
+            type: 'customer',
+            id: user.mp_customer_id,
+            email: user.email,
+          },
+          external_reference: user.id,
+          metadata: { produto: 'ai_addon' },
+        }),
+      })
+      const payment = await paymentRes.json()
+
+      if (payment.status === 'approved') {
+        const until = new Date()
+        until.setDate(until.getDate() + ADDON.days + GRACE_DAYS)
+
+        await supabase.from('profiles').update({
+          ai_addon_until: until.toISOString(),
+        }).eq('id', user.id)
+
+        addonResults.push({ id: user.id, email: user.email, status: 'renewed' })
+        console.log(`✓ Add-on IA renovado: ${user.email} até ${until.toISOString()}`)
+      } else {
+        const vencimento = new Date(user.ai_addon_until)
+        const eHoje = vencimento.toISOString().slice(0, 10) === now.toISOString().slice(0, 10)
+        if (eHoje) {
+          await enviarEmailFalha(user.email, user.nome || 'Técnico')
+        }
+
+        addonResults.push({
+          id: user.id,
+          email: user.email,
+          status: 'failed',
+          detail: payment.status_detail ?? payment.status,
+        })
+        console.error(`✗ Falha ao renovar add-on IA de ${user.email}: ${payment.status} — ${payment.status_detail}`)
+      }
+    } catch (err) {
+      await enviarEmailFalha(user.email, user.nome || 'Técnico').catch(() => {})
+      addonResults.push({ id: user.id, email: user.email, status: 'error', detail: (err as Error).message })
+      console.error(`✗ Erro inesperado ao renovar add-on IA de ${user.email}:`, err)
+    }
+  }
+
+  console.log(`Auto-renew add-on IA concluído: ${addonResults.length} usuário(s) processado(s)`)
+
   return new Response(
-    JSON.stringify({ processed: results.length, results }),
+    JSON.stringify({ processed: results.length, results, addonProcessed: addonResults.length, addonResults }),
     { headers: { 'Content-Type': 'application/json' } }
   )
 })

@@ -58,6 +58,71 @@ serve(async (req) => {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       )
 
+      // Add-on do Assistente IA: identificado por metadata.produto, não pelo valor —
+      // R$19,90 colide com o preço do plano Básico, então nunca inferir por transaction_amount aqui.
+      if (payment.metadata?.produto === 'ai_addon') {
+        const addonUntil = new Date()
+        addonUntil.setDate(addonUntil.getDate() + 30 + GRACE_DAYS)
+
+        await supabase.from('profiles').update({
+          ai_addon_until: addonUntil.toISOString(),
+        }).eq('id', userId)
+        const accessGrantedAt = new Date().toISOString()
+
+        await registrarComissao(supabase, userId, payment.transaction_amount, String(paymentId))
+
+        const { data: addonProfile } = await supabase
+          .from('profiles')
+          .select(PROFILE_TRACKING_FIELDS)
+          .eq('id', userId).single()
+
+        const tracking = resolverTracking(addonProfile, payment.metadata?.utms)
+
+        const utmifyResult = await notificarUtmify(
+          String(paymentId),
+          payment.transaction_amount,
+          'ai_addon',
+          payment.payment_type_id ?? '',
+          payment.date_created ?? new Date().toISOString(),
+          payment.date_approved ?? null,
+          addonProfile,
+          tracking,
+        )
+
+        const metaCapiResult = await enviarMetaCAPI({
+          eventId: String(paymentId),
+          eventTime: payment.date_approved
+            ? Math.floor(new Date(payment.date_approved).getTime() / 1000)
+            : Math.floor(Date.now() / 1000),
+          value: payment.transaction_amount,
+          email: addonProfile?.email,
+          userId,
+          fbc: tracking.fbc,
+          fbp: tracking.fbp,
+          clientIp: addonProfile?.signup_ip,
+          userAgent: addonProfile?.signup_user_agent,
+          eventSourceUrl: addonProfile?.signup_page_url,
+        })
+
+        await registrarPurchaseLog(supabase, {
+          userId,
+          paymentId: String(paymentId),
+          eventId: String(paymentId),
+          plan: 'ai_addon',
+          value: payment.transaction_amount,
+          purchasedAt: payment.date_approved ?? new Date().toISOString(),
+          utmifyResult,
+          metaCapiResult,
+          processingTimeMs: Date.now() - webhookStart,
+          paymentCreatedAt: payment.date_created ?? null,
+          webhookReceivedAt,
+          accessGrantedAt,
+        })
+
+        console.log(`[mp-webhook] add-on IA concluído para usuário ${userId}, pagamento ${paymentId}`)
+        return new Response('ok', { status: 200 })
+      }
+
       const amt = payment.transaction_amount
       const plan = amt >= 100 ? 'annual' : amt >= 35 ? 'professional' : amt >= 25 ? 'plus' : amt <= 12 ? 'monthly_saida50' : 'monthly'
       const days = plan === 'annual' ? 365 : 30

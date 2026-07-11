@@ -22,12 +22,12 @@ function extractText(content) {
   return ''
 }
 
-export async function callClimaPro(messages, apiKey, signal, context) {
+export async function callClimaPro(messages, signal, context) {
   const lastUserText = extractText(messages[messages.length - 1]?.content)
   const lastAIText = extractText([...messages].reverse().find(m => m.role === 'assistant')?.content ?? '')
 
   const intent = classifyIntent(lastUserText, lastAIText)
   const specialist = SPECIALISTS[intent] ?? SPECIALISTS.technical
 
-  return specialist.call(messages, apiKey, signal, context)
+  return specialist.call(messages, signal, context)
 }

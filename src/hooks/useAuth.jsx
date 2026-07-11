@@ -158,8 +158,13 @@ export function AuthProvider({ children }) {
 
   const hasFaturamento        = !(isLocked && isBasico)
   const hasSound              = !(isLocked && isBasico)
-  const hasHistoricoCompleto  = !(isLocked && isBasico)
+  // historico_liberado: override manual pra liberar o histórico completo de OS de um
+  // cliente Básico específico (ex: reclamação), sem destravar o resto do plano dele.
+  const hasHistoricoCompleto  = !(isLocked && isBasico) || !!profile?.historico_liberado
   const hasRelatorioAvancado  = !isLocked || profile?.plan === 'annual'
+
+  // Add-on pago independente do plano — R$19,90/mês, some sobre qualquer plano base.
+  const hasAiAssistant = !!profile?.ai_addon_until && new Date(profile.ai_addon_until) > new Date()
 
   return (
     <AuthContext.Provider value={{
@@ -171,6 +176,7 @@ export function AuthProvider({ children }) {
       plan,
       hasFaturamento,
       hasSound,
+      hasAiAssistant,
       hasHistoricoCompleto,
       hasRelatorioAvancado,
       isAdmin: !!profile?.is_admin,

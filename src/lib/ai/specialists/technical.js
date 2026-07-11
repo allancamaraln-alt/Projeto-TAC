@@ -58,8 +58,8 @@ function buildSystemMsg(profile) {
 
 export const technicalSpecialist = {
   id: 'technical',
-  async call(messages, apiKey, signal, { profile }) {
+  async call(messages, signal, { profile }) {
     const systemMsg = buildSystemMsg(profile)
-    return fetchText([systemMsg, ...messages], apiKey, signal)
+    return fetchText([systemMsg, ...messages], signal)
   },
 }
