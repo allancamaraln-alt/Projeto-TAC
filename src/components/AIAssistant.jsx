@@ -22,7 +22,7 @@ export default function AIAssistant() {
   const composerRef = useRef(null)
 
   const firstName = profile?.nome?.split(' ')[0] || null
-  const isHome = location.pathname === '/'
+  const isChatTab = location.pathname === '/chat'
 
   const handleQuickAction = useCallback((action) => {
     if (action.type === 'photo') { composerRef.current?.openGallery(); return }
@@ -33,7 +33,7 @@ export default function AIAssistant() {
 
   return (
     <>
-      {!open && !isHome && (
+      {!open && !isChatTab && (
         <button
           onClick={() => setOpen(true)}
           aria-label="Abrir ClimaPro IA"

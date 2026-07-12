@@ -153,8 +153,8 @@ function AppContent() {
       <TrialBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/"                       element={<ChatHome />} />
-          <Route path="/painel"                 element={<Painel />} />
+          <Route path="/"                       element={<Painel />} />
+          <Route path="/chat"                   element={<ChatHome />} />
           <Route path="/clientes"               element={<Clientes />} />
           <Route path="/clientes/novo"          element={<ClienteForm />} />
           <Route path="/clientes/:id"           element={<ClienteDetalhe />} />

@@ -52,8 +52,11 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
     return () => clearTimeout(timer)
   }, [])
 
-  // Solicita mic + câmera assim que o composer aparece em tela
+  // Solicita permissão de mic assim que o composer aparece em tela — só
+  // quando o navegador realmente suporta reconhecimento de voz (Safari não
+  // suporta, então não faz sentido pedir a permissão à toa).
   useEffect(() => {
+    if (!supportsVoice) return
     const request = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
@@ -65,7 +68,7 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
     navigator.permissions?.query({ name: 'microphone' })
       .then(p => { if (p.state === 'prompt') request() })
       .catch(() => request()) // fallback: tenta pedir direto se a API não suportar query
-  }, [])
+  }, [supportsVoice])
 
   useEffect(() => {
     const ta = inputRef.current
@@ -75,7 +78,11 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   }, [input])
 
   const toggleVoice = useCallback(() => {
-    if (!SpeechRecognition) return
+    if (!SpeechRecognition) {
+      setVoiceError('Reconhecimento de voz não é suportado neste navegador. No iPhone, o Safari não suporta — tente pelo Chrome no Android ou digite a mensagem.')
+      setTimeout(() => setVoiceError(null), 6000)
+      return
+    }
 
     if (listening) {
       recognitionRef.current?.abort()
@@ -240,12 +247,14 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
           </button>
         ) : (
           <button
-            onClick={supportsVoice ? toggleVoice : undefined}
+            onClick={toggleVoice}
             aria-label={listening ? 'Parar gravação' : 'Gravar voz'}
             className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 ${
               listening
                 ? 'bg-red-500 text-white animate-pulse'
-                : 'bg-white text-gray-700'
+                : supportsVoice
+                  ? 'bg-white text-gray-700'
+                  : 'bg-white text-gray-300'
             }`}
           >
             <MicIcon active={listening} className="w-5 h-5" />
