@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { fetchDashboardStats, getGreeting, formatCompact } from '../../lib/ai/dashboardStats'
 
-function StatChip({ label, value, loading }) {
+function StatChip({ icon, label, value, loading }) {
   return (
     <div className="flex-1 min-w-0 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm">
       {loading ? (
@@ -10,7 +10,9 @@ function StatChip({ label, value, loading }) {
       ) : (
         <p className="text-[15px] font-bold text-gray-900 leading-none tabular-nums truncate">{value}</p>
       )}
-      <p className="text-[11px] text-gray-400 mt-1.5 leading-tight">{label}</p>
+      <p className="text-[11px] text-gray-400 mt-1.5 leading-tight flex items-center gap-1">
+        <span className="text-xs">{icon}</span>{label}
+      </p>
     </div>
   )
 }
@@ -55,29 +57,38 @@ export default function GreetingHero({ firstName }) {
   }
 
   return (
-    <div>
-      <div className="mb-4">
-        <h2 className="text-[22px] font-bold text-gray-900 leading-tight tracking-tight">
-          {greeting}{firstName ? `, ${firstName}` : ''}.
+    <div className="relative">
+      {/* Orbe decorativo — mesma linguagem visual do gradiente do header */}
+      <div
+        className="absolute -top-8 -right-10 w-40 h-40 rounded-full pointer-events-none"
+        style={{ background: 'rgb(var(--ac) / 0.10)', filter: 'blur(28px)' }}
+      />
+
+      <div className="relative mb-4 animate-fade-up">
+        <h2 className="text-[24px] font-bold text-gray-900 leading-tight tracking-tight">
+          {greeting}{firstName ? `, ${firstName}` : ''} <span className="inline-block">👋</span>
         </h2>
-        <p className="text-sm text-gray-400 mt-0.5">{dateLabel}</p>
+        <p className="text-sm text-gray-400 mt-1">{dateLabel}</p>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <StatChip label="OS hoje" value={String(stats?.osHoje ?? 0)} loading={loadingStats} />
-        <StatChip label="A receber" value={stats ? formatCompact(stats.aReceber) : '—'} loading={loadingStats} />
-        <StatChip label="No mês" value={stats ? formatCompact(stats.receitaMes) : '—'} loading={loadingStats} />
+      <div className="relative flex gap-2 mb-4 animate-fade-up" style={{ animationDelay: '60ms' }}>
+        <StatChip icon="📅" label="OS hoje" value={String(stats?.osHoje ?? 0)} loading={loadingStats} />
+        <StatChip icon="💳" label="A receber" value={stats ? formatCompact(stats.aReceber) : '—'} loading={loadingStats} />
+        <StatChip icon="📈" label="No mês" value={stats ? formatCompact(stats.receitaMes) : '—'} loading={loadingStats} />
       </div>
 
       {insight && (
         <div
-          className="flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 mb-4 border"
-          style={insight.isAccent ? {
-            backgroundColor: 'rgb(var(--ac) / 0.07)',
-            borderColor: 'rgb(var(--ac) / 0.2)',
-          } : {
-            backgroundColor: '#fffbeb',
-            borderColor: '#fde68a',
+          className="relative flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 mb-4 border animate-fade-up"
+          style={{
+            animationDelay: '120ms',
+            ...(insight.isAccent ? {
+              backgroundColor: 'rgb(var(--ac) / 0.07)',
+              borderColor: 'rgb(var(--ac) / 0.2)',
+            } : {
+              backgroundColor: '#fffbeb',
+              borderColor: '#fde68a',
+            }),
           }}
         >
           <span className="text-sm">{insight.icon}</span>

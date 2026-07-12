@@ -83,21 +83,23 @@ export default function AtendimentoIA() {
     <div className="fixed inset-0 z-[200] flex flex-col bg-gray-50">
       {/* Header */}
       <div
-        className="flex items-center gap-3 px-4 shrink-0"
+        className="relative overflow-hidden flex items-center gap-3 px-4 shrink-0"
         style={{
           background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)',
           paddingTop: 'max(16px, env(safe-area-inset-top))',
           paddingBottom: '12px',
         }}
       >
+        <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white opacity-5 pointer-events-none" />
+        <div className="absolute bottom-0 left-12 w-16 h-16 rounded-full bg-white opacity-5 pointer-events-none" />
         <button
           onClick={() => navigate(`/ordens/${id}`)}
           aria-label="Voltar"
-          className="text-white p-2 -ml-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
+          className="relative text-white p-2 -ml-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
         >
           <BackIcon className="w-5 h-5" />
         </button>
-        <div className="flex-1 min-w-0">
+        <div className="relative flex-1 min-w-0">
           <p className="text-white font-bold text-sm leading-tight truncate">
             Atendimento · {osResumo?.clientes?.nome || '...'}
           </p>
@@ -109,7 +111,7 @@ export default function AtendimentoIA() {
         <button
           onClick={() => setShowTimeline(v => !v)}
           aria-label="Linha do tempo"
-          className={`p-2 rounded-full transition-colors ${showTimeline ? 'bg-white/25' : 'hover:bg-white/10'}`}
+          className={`relative p-2 rounded-full transition-colors ${showTimeline ? 'bg-white/25' : 'hover:bg-white/10'}`}
         >
           <TimelineIcon className="w-5 h-5 text-white" />
         </button>

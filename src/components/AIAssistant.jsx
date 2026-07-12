@@ -53,24 +53,26 @@ export default function AIAssistant() {
         <div className="fixed inset-0 z-[200] flex flex-col bg-gray-50">
           {/* Header */}
           <div
-            className="flex items-center gap-3 px-4 shrink-0"
+            className="relative overflow-hidden flex items-center gap-3 px-4 shrink-0"
             style={{
               background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)',
               paddingTop: 'max(16px, env(safe-area-inset-top))',
               paddingBottom: '12px',
             }}
           >
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+            <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white opacity-5 pointer-events-none" />
+            <div className="absolute bottom-0 left-12 w-16 h-16 rounded-full bg-white opacity-5 pointer-events-none" />
+            <div className="relative w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
               <SparklesIcon className="w-5 h-5 text-white" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0">
               <p className="text-white font-bold text-sm leading-tight">ClimaPro IA</p>
               <p className="text-white/70 text-xs">Técnico · Financeiro</p>
             </div>
             <button
               onClick={clear}
               aria-label="Limpar conversa"
-              className="text-white/70 p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
+              className="relative text-white/70 p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
             >
               <svg className="w-4.5 h-4.5" width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -79,7 +81,7 @@ export default function AIAssistant() {
             <button
               onClick={() => setOpen(false)}
               aria-label="Fechar"
-              className="text-white p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
+              className="relative text-white p-2 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

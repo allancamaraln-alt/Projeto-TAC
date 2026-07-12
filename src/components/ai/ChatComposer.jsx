@@ -240,8 +240,8 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
           <button
             onClick={handleSend}
             aria-label="Enviar"
-            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
-            style={{ background: 'rgb(var(--ac))' }}
+            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform ac-shadow"
+            style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' }}
           >
             <SendIcon className="w-4 h-4" />
           </button>

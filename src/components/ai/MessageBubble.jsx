@@ -35,9 +35,9 @@ function MessageBubble({ msg }) {
   }, [displayContent])
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3 group`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3 group animate-fade-up`}>
       {!isUser && (
-        <div className="w-7 h-7 rounded-full flex items-center justify-center mr-2 shrink-0 mt-0.5 shadow-sm"
+        <div className="w-7 h-7 rounded-full flex items-center justify-center mr-2 shrink-0 mt-0.5 shadow-sm ring-2 ring-white"
           style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' }}>
           <SparklesIcon className="w-3.5 h-3.5 text-white" />
         </div>
@@ -46,10 +46,10 @@ function MessageBubble({ msg }) {
         <div
           className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
             isUser
-              ? 'text-white rounded-br-sm'
+              ? 'text-white rounded-br-sm shadow-md'
               : 'bg-white text-gray-800 rounded-bl-sm shadow-sm border border-gray-100'
           }`}
-          style={isUser ? { background: 'rgb(var(--ac))' } : {}}
+          style={isUser ? { background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' } : {}}
         >
           {imageUrl && (
             <img
