@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getTracking } from '../lib/tracking'
+import { openWhatsApp } from '../lib/whatsapp'
 
 const EMAIL_KEY = 'climapro_email'
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY
@@ -901,6 +902,14 @@ export default function Login() {
             {modo === 'login' ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entrar'}
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => openWhatsApp('Olá! Estou na tela de login do ClimaPro e preciso de ajuda.')}
+          className="w-full text-center text-gray-400 text-sm mt-1 py-2"
+        >
+          Precisa de ajuda? Fale com nosso suporte.
+        </button>
       </div>
     </div>
   )

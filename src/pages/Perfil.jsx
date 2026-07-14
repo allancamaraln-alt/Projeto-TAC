@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useTheme } from '../hooks/useTheme'
 import { supabase } from '../lib/supabase'
+import { openWhatsApp } from '../lib/whatsapp'
 import SignaturePad from '../components/SignaturePad'
 
 function CameraIcon({ className = 'w-4 h-4' }) {
@@ -358,6 +359,27 @@ export default function Perfil() {
             </div>
           </div>
           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => openWhatsApp('Olá! Sou usuário do ClimaPro e preciso de suporte.')}
+          className="w-full flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 active:opacity-80"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#25D366">
+                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15h-.01c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 01-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 012.41 5.83c0 4.55-3.7 8.24-8.24 8.24z"/>
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-gray-700">Suporte</p>
+              <p className="text-xs text-gray-400">Fale com a gente pelo WhatsApp</p>
+            </div>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </button>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SocialProofToast from '../components/SocialProofToast'
+import WhatsAppFloatButton from '../components/WhatsAppFloatButton'
 import { captureTracking, getSessionKey } from '../lib/tracking'
 import { supabase } from '../lib/supabase'
 
@@ -574,6 +575,8 @@ export default function Landing() {
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
       <SocialProofToast />
+
+      <WhatsAppFloatButton message="Olá! Vim pelo site do ClimaPro e preciso de ajuda." />
 
       {/* Header */}
       <header style={{ background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 50 }}>

@@ -1,3 +1,15 @@
+// Número oficial do WhatsApp de Suporte do ClimaPro (DDI+DDD+número, sem símbolos)
+export const SUPPORT_PHONE = '64993010651'
+
+/**
+ * Abre o WhatsApp (app no celular ou WhatsApp Web no desktop) com o número de
+ * suporte do ClimaPro e uma mensagem pré-preenchida.
+ */
+export function openWhatsApp(message) {
+  const url = `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(message)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 /**
  * Gera um link wa.me com mensagem de orçamento pré-formatada
  */
