@@ -3,7 +3,9 @@ import { useLocation } from 'react-router-dom'
 import { useAI } from '../hooks/useAI'
 import { useAuth } from '../hooks/useAuth'
 import GreetingHero from './ai/GreetingHero'
-import QuickActionChips from './ai/QuickActionChips'
+import SectionLabel from './ai/SectionLabel'
+import QuickActionsGrid from './ai/QuickActionsGrid'
+import SuggestionsRow from './ai/SuggestionsRow'
 import ChatMessageList from './ai/ChatMessageList'
 import ChatComposer from './ai/ChatComposer'
 import AddonUpsell from './ai/AddonUpsell'
@@ -69,6 +71,10 @@ export default function AIAssistant() {
               <p className="text-white font-bold text-sm leading-tight">ClimaPro IA</p>
               <p className="text-white/70 text-xs">Técnico · Financeiro</p>
             </div>
+            <span className="relative shrink-0 inline-flex items-center gap-1.5 text-[10px] font-semibold text-white/90 bg-white/15 rounded-full px-2 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Online
+            </span>
             <button
               onClick={clear}
               aria-label="Limpar conversa"
@@ -94,7 +100,16 @@ export default function AIAssistant() {
             {messages.length === 0 ? (
               <>
                 <GreetingHero firstName={firstName} />
-                <QuickActionChips variant="grid" onQuickAction={handleQuickAction} />
+                <div className="mb-6">
+                  <SectionLabel>Ações rápidas</SectionLabel>
+                  <QuickActionsGrid onQuickAction={handleQuickAction} />
+                </div>
+                <div className="mb-4">
+                  <SectionLabel>Sugestões rápidas</SectionLabel>
+                  <div className="overflow-x-auto pb-1 -mx-4 px-4">
+                    <SuggestionsRow onQuickAction={handleQuickAction} />
+                  </div>
+                </div>
               </>
             ) : (
               <ChatMessageList messages={messages} loading={loading} phase={phase} error={error} />
@@ -104,7 +119,7 @@ export default function AIAssistant() {
           {/* Quick actions strip */}
           {messages.length > 0 && !loading && (
             <div className="shrink-0 px-3 pb-2 overflow-x-auto">
-              <QuickActionChips variant="strip" onQuickAction={handleQuickAction} />
+              <SuggestionsRow onQuickAction={handleQuickAction} />
             </div>
           )}
 

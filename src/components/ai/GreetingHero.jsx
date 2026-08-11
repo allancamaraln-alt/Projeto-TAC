@@ -1,105 +1,38 @@
-import { useEffect, useState } from 'react'
-import { useAuth } from '../../hooks/useAuth'
-import { fetchDashboardStats, getGreeting, formatCompact } from '../../lib/ai/dashboardStats'
+import { getGreeting } from '../../lib/ai/dashboardStats'
+import { SnowflakeIcon } from './icons'
 
-function StatChip({ icon, label, value, loading }) {
-  return (
-    <div className="flex-1 min-w-0 bg-white rounded-2xl p-3 border border-gray-100 shadow-sm">
-      {loading ? (
-        <div className="h-5 w-10 bg-gray-100 rounded-md animate-pulse mb-1.5" />
-      ) : (
-        <p className="text-[15px] font-bold text-gray-900 leading-none tabular-nums truncate">{value}</p>
-      )}
-      <p className="text-[11px] text-gray-400 mt-1.5 leading-tight flex items-center gap-1">
-        <span className="text-xs">{icon}</span>{label}
-      </p>
-    </div>
-  )
-}
-
-// Saudação + estatísticas ao vivo + insight proativo — extraído da
-// antiga SmartEmptyState em AIAssistant.jsx. Reutilizado tanto por
-// ChatHome.jsx (tela cheia) quanto pelo modal do AIAssistant.
+// GreetingHeroCard — ver especificação técnica, seção 4.2. Gradiente
+// #0D2F5E → #1E63C9 (135°), radius 28-32px, padding ~20-24px.
+//
+// Sem mascote — foi removido a pedido (nenhuma das tentativas de robô
+// ilustrado ficou com acabamento à altura do resto do card).
 export default function GreetingHero({ firstName }) {
-  const { user } = useAuth()
-  const [stats, setStats] = useState(null)
-  const [loadingStats, setLoadingStats] = useState(true)
-
-  useEffect(() => {
-    if (!user?.id) return
-    setLoadingStats(true)
-    fetchDashboardStats(user.id)
-      .then(setStats)
-      .catch(() => setStats(null))
-      .finally(() => setLoadingStats(false))
-  }, [user?.id])
-
   const greeting = getGreeting()
-  const now = new Date()
-  const dayName = now.toLocaleDateString('pt-BR', { weekday: 'long' })
-  const dateLabel = `${dayName.charAt(0).toUpperCase()}${dayName.slice(1)}, ${now.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}`
-
-  let insight = null
-  if (stats && !loadingStats) {
-    if (stats.osHoje > 0) {
-      insight = {
-        icon: '📅',
-        text: stats.osHoje === 1 ? '1 OS agendada para hoje' : `${stats.osHoje} OS agendadas para hoje`,
-        isAccent: true,
-      }
-    } else if (stats.pendentes > 0) {
-      insight = {
-        icon: '💳',
-        text: `${formatCompact(stats.aReceber)} a receber — ${stats.pendentes} OS pendente${stats.pendentes !== 1 ? 's' : ''}`,
-        isAccent: false,
-      }
-    }
-  }
 
   return (
-    <div className="relative">
-      {/* Orbe decorativo — mesma linguagem visual do gradiente do header */}
-      <div
-        className="absolute -top-8 -right-10 w-40 h-40 rounded-full pointer-events-none"
-        style={{ background: 'rgb(var(--ac) / 0.10)', filter: 'blur(28px)' }}
-      />
+    <div
+      className="relative overflow-hidden rounded-[30px] mb-4 animate-fade-up"
+      style={{ background: 'linear-gradient(135deg, #0D2F5E 0%, #1E63C9 100%)' }}
+    >
+      <SnowflakeIcon className="absolute -top-6 right-2 w-40 h-40 text-white opacity-[0.06] pointer-events-none rotate-12" />
 
-      <div className="relative mb-4 animate-fade-up">
-        <h2 className="text-[24px] font-bold text-gray-900 leading-tight tracking-tight">
-          {greeting}{firstName ? `, ${firstName}` : ''} <span className="inline-block">👋</span>
+      <div className="relative px-6 pt-6 pb-6">
+        <h2 className="text-2xl font-extrabold leading-[1.15] tracking-tight text-white">
+          {greeting}, <span className="text-[#7DD3FC]">{firstName || 'técnico'}</span>! <span className="inline-block">👋</span>
         </h2>
-        <p className="text-sm text-gray-400 mt-1">{dateLabel}</p>
+        {/* Duas linhas separadas (em vez de um parágrafo que quebra sozinho) para
+            garantir que a quebra fique sempre entre "Assistente IA" e "especialista",
+            sem risco de cortar no meio de "ar-condicionado". */}
+        <p className="text-[17px] font-bold leading-[1.3] text-white mt-2">
+          Sou seu <span className="text-[#7DD3FC]">Assistente IA</span>
+        </p>
+        <p className="text-[17px] font-bold leading-[1.3] text-white">
+          especialista em ar-condicionado.
+        </p>
+        <p className="text-[13px] leading-[1.4] text-white/70 mt-3">
+          Descreva o problema ou envie uma foto que eu te ajudo.
+        </p>
       </div>
-
-      <div className="relative flex gap-2 mb-4 animate-fade-up" style={{ animationDelay: '60ms' }}>
-        <StatChip icon="📅" label="OS hoje" value={String(stats?.osHoje ?? 0)} loading={loadingStats} />
-        <StatChip icon="💳" label="A receber" value={stats ? formatCompact(stats.aReceber) : '—'} loading={loadingStats} />
-        <StatChip icon="📈" label="No mês" value={stats ? formatCompact(stats.receitaMes) : '—'} loading={loadingStats} />
-      </div>
-
-      {insight && (
-        <div
-          className="relative flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5 mb-4 border animate-fade-up"
-          style={{
-            animationDelay: '120ms',
-            ...(insight.isAccent ? {
-              backgroundColor: 'rgb(var(--ac) / 0.07)',
-              borderColor: 'rgb(var(--ac) / 0.2)',
-            } : {
-              backgroundColor: '#fffbeb',
-              borderColor: '#fde68a',
-            }),
-          }}
-        >
-          <span className="text-sm">{insight.icon}</span>
-          <p
-            className="text-sm font-medium leading-snug"
-            style={{ color: insight.isAccent ? 'rgb(var(--ac-dk))' : '#92400e' }}
-          >
-            {insight.text}
-          </p>
-        </div>
-      )}
     </div>
   )
 }

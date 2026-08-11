@@ -1,8 +1,11 @@
 import { useCallback, useRef } from 'react'
 import { useAI } from '../hooks/useAI'
 import { useAuth } from '../hooks/useAuth'
+import AiHeader from '../components/ai/AiHeader'
 import GreetingHero from '../components/ai/GreetingHero'
-import QuickActionChips from '../components/ai/QuickActionChips'
+import SectionLabel from '../components/ai/SectionLabel'
+import QuickActionsGrid from '../components/ai/QuickActionsGrid'
+import SuggestionsRow from '../components/ai/SuggestionsRow'
 import ChatMessageList from '../components/ai/ChatMessageList'
 import ChatComposer from '../components/ai/ChatComposer'
 import AddonUpsell from '../components/ai/AddonUpsell'
@@ -33,11 +36,21 @@ export default function ChatHome() {
 
   return (
     <div style={{ height: '100%' }} className="max-w-md mx-auto bg-slate-50 flex flex-col">
-      <div className="flex-1 overflow-y-auto px-4 pt-6">
+      <AiHeader />
+      <div className="flex-1 overflow-y-auto px-4 pt-3">
         {messages.length === 0 ? (
           <>
             <GreetingHero firstName={firstName} />
-            <QuickActionChips variant="grid" onQuickAction={handleQuickAction} />
+            <div className="mb-6">
+              <SectionLabel>Ações rápidas</SectionLabel>
+              <QuickActionsGrid onQuickAction={handleQuickAction} />
+            </div>
+            <div className="mb-4">
+              <SectionLabel>Sugestões rápidas</SectionLabel>
+              <div className="overflow-x-auto pb-1 -mx-4 px-4">
+                <SuggestionsRow onQuickAction={handleQuickAction} />
+              </div>
+            </div>
           </>
         ) : (
           <ChatMessageList messages={messages} loading={loading} phase={phase} error={error} />
@@ -47,7 +60,7 @@ export default function ChatHome() {
       <div className="shrink-0">
         {messages.length > 0 && !loading && (
           <div className="px-3 pb-2 overflow-x-auto">
-            <QuickActionChips variant="strip" onQuickAction={handleQuickAction} />
+            <SuggestionsRow onQuickAction={handleQuickAction} />
           </div>
         )}
         <div className="px-3 pt-2 pb-24">

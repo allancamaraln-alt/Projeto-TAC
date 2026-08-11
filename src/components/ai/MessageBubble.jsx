@@ -1,6 +1,7 @@
 import { memo, useState, useCallback } from 'react'
 import { SparklesIcon, CopyIcon } from './icons'
 import ActionResultCard from './ActionResultCard'
+import MarkdownLite from './MarkdownLite'
 
 function getTextContent(content) {
   if (typeof content === 'string') return content
@@ -44,9 +45,9 @@ function MessageBubble({ msg }) {
       )}
       <div className="max-w-[82%] relative">
         <div
-          className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+          className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words ${
             isUser
-              ? 'text-white rounded-br-sm shadow-md'
+              ? 'text-white rounded-br-sm shadow-md whitespace-pre-wrap'
               : 'bg-white text-gray-800 rounded-bl-sm shadow-sm border border-gray-100'
           }`}
           style={isUser ? { background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' } : {}}
@@ -58,7 +59,7 @@ function MessageBubble({ msg }) {
               className="rounded-xl mb-2 max-h-56 w-auto object-cover"
             />
           )}
-          {displayContent && <span>{displayContent}</span>}
+          {displayContent && (isUser ? <span>{displayContent}</span> : <MarkdownLite text={displayContent} />)}
           {!isUser && <ActionResultCard actions={msg.actions} />}
         </div>
         {!isUser && (

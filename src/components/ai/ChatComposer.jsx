@@ -1,7 +1,9 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useAI } from '../../hooks/useAI'
 import { QUICK_ACTIONS } from '../../lib/openai'
-import { SparklesIcon, MicIcon, SendIcon, PlusIcon, CameraIcon } from './icons'
+import { MicIcon, PlusIcon, CameraIcon } from './icons'
+import ToolbarIconButton from './ToolbarIconButton'
+import SendButton from './SendButton'
 
 async function compressImage(file) {
   return new Promise((resolve) => {
@@ -164,11 +166,13 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
     },
   }), [listening, toggleVoice])
 
+  const canSend = (input.trim() || pendingImage) && !loading
+
   return (
     <div>
       {pendingImage && (
         <div className="relative mb-2 inline-block">
-          <img src={pendingImage} alt="preview" className="h-20 w-auto rounded-xl object-cover border border-gray-200" />
+          <img src={pendingImage} alt="preview" className="h-20 w-auto rounded-xl object-cover border border-white/20" />
           <button
             onClick={() => setPendingImage(null)}
             className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gray-700 text-white flex items-center justify-center shadow"
@@ -181,91 +185,53 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
         </div>
       )}
 
-      <div className="flex items-end gap-1.5">
-        {/* + Galeria */}
-        <button
-          onClick={() => galleryInputRef.current?.click()}
-          aria-label="Enviar da galeria"
-          className="shrink-0 w-9 h-9 flex items-center justify-center text-gray-500 active:scale-90 transition-transform"
-        >
-          <PlusIcon className="w-6 h-6" />
-        </button>
+      <div className="relative rounded-[30px] px-6 pt-5 pb-5 bg-[#122A4E]">
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={listening}
+          placeholder={
+            listening
+              ? '🎙️ Ouvindo...'
+              : pendingImage
+                ? 'Adicione uma pergunta sobre a imagem...'
+                : QUICK_ACTIONS.find(a => a.type === 'prompt' && input.startsWith(a.prompt))?.placeholder
+                  ?? 'Descreva o problema ou envie uma foto...'
+          }
+          rows={1}
+          className="w-full bg-transparent text-sm text-white placeholder-white/60 resize-none outline-none leading-[1.4]"
+          style={{ maxHeight: '120px' }}
+        />
 
-        {/* Input pill */}
-        <div className="flex-1 bg-gray-100 rounded-full px-4 py-2 flex items-end gap-2 min-h-[42px]">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={listening}
-            placeholder={
-              listening
-                ? '🎙️ Ouvindo...'
-                : pendingImage
-                  ? 'Adicione uma pergunta sobre a imagem...'
-                  : QUICK_ACTIONS.find(a => a.type === 'prompt' && input.startsWith(a.prompt))?.placeholder
-                    ?? 'Pergunte qualquer coisa ou descreva seu atendimento...'
-            }
-            rows={1}
-            className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 resize-none outline-none leading-[1.4] py-0.5"
-            style={{ maxHeight: '120px' }}
-          />
-          <button aria-label="Emoji" className="shrink-0 text-gray-400 opacity-60 pb-0.5" tabIndex={-1}>
-            <SparklesIcon className="w-5 h-5" />
-          </button>
+        <div className="flex items-center justify-between mt-5">
+          <div className="flex items-center gap-3">
+            <ToolbarIconButton icon={PlusIcon} label="Enviar da galeria" onPress={() => galleryInputRef.current?.click()} />
+            <ToolbarIconButton icon={CameraIcon} label="Tirar foto" onPress={() => cameraInputRef.current?.click()} />
+            <ToolbarIconButton icon={MicIcon} label={listening ? 'Parar gravação' : 'Gravar voz'} onPress={toggleVoice} active={listening} />
+          </div>
+
+          {loading ? (
+            <button
+              onClick={cancel}
+              aria-label="Cancelar"
+              className="shrink-0 w-14 h-14 rounded-full flex items-center justify-center bg-white/20 text-white active:scale-90 transition-transform"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            </button>
+          ) : (
+            <SendButton onPress={handleSend} disabled={!canSend} />
+          )}
         </div>
-
-        {/* Câmera */}
-        <button
-          onClick={() => cameraInputRef.current?.click()}
-          aria-label="Tirar foto"
-          className="shrink-0 w-9 h-9 flex items-center justify-center text-gray-500 active:scale-90 transition-transform"
-        >
-          <CameraIcon className="w-5 h-5" />
-        </button>
-
-        {/* Mic / Send / Stop */}
-        {loading ? (
-          <button
-            onClick={cancel}
-            aria-label="Cancelar"
-            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-200 text-gray-500 active:scale-90 transition-transform"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-          </button>
-        ) : input.trim() || pendingImage ? (
-          <button
-            onClick={handleSend}
-            aria-label="Enviar"
-            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform ac-shadow"
-            style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' }}
-          >
-            <SendIcon className="w-4 h-4" />
-          </button>
-        ) : (
-          <button
-            onClick={toggleVoice}
-            aria-label={listening ? 'Parar gravação' : 'Gravar voz'}
-            className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 ${
-              listening
-                ? 'bg-red-500 text-white animate-pulse'
-                : supportsVoice
-                  ? 'bg-white text-gray-700'
-                  : 'bg-white text-gray-300'
-            }`}
-          >
-            <MicIcon active={listening} className="w-5 h-5" />
-          </button>
-        )}
       </div>
 
       {voiceError ? (
         <p className="text-center text-[11px] text-red-500 mt-1.5">{voiceError}</p>
       ) : (
-        <p className="text-center text-[10px] text-gray-300 mt-1.5">
+        <p className="text-center text-[10px] text-gray-400 mt-1.5">
           IA pode cometer erros — confirme informações críticas
         </p>
       )}
