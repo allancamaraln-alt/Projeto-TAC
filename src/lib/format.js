@@ -9,6 +9,19 @@ export const formatBRL = (valor) =>
 export const formatDate = (iso) =>
   iso ? new Date(iso.includes('T') ? iso : iso + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
 
+// Calculado manualmente (em vez de toLocaleDateString com weekday: 'long')
+// porque alguns navegadores/WebViews de celular têm dados de localização
+// (ICU) incompletos para pt-BR e ignoram a opção 'weekday' silenciosamente,
+// mostrando só a data.
+const DIAS_SEMANA = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+
+/** 20/04/2026 - Segunda-feira */
+export const formatDateWeekday = (iso) => {
+  if (!iso) return '—'
+  const data = new Date(iso.includes('T') ? iso : iso + 'T12:00:00')
+  return `${data.toLocaleDateString('pt-BR')} - ${DIAS_SEMANA[data.getDay()]}`
+}
+
 /** 08:30 */
 export const formatTime = (time) =>
   time ? time.slice(0, 5) : ''
@@ -23,4 +36,19 @@ export const formatGarantia = (valor, unidade) => {
   const singular = { dias: 'dia', meses: 'mês', anos: 'ano' }
   const label = n === 1 ? (singular[unidade] ?? unidade) : unidade
   return `${n} ${label}`
+}
+
+// Uma OS pode ter sido paga em mais de uma forma (ex: parte no Pix, parte em
+// dinheiro) e pode não ter sido paga por completo — nesse caso fica um saldo
+// a receber, com uma previsão de quando será quitado. `ordem.pagamentos` é a
+// fonte de verdade quando existe; OS antigas (antes dessa funcionalidade) só
+// têm `forma_pagamento`, e são tratadas como pagas integralmente naquela forma.
+export function resumoPagamento(ordem) {
+  const pagamentos = Array.isArray(ordem?.pagamentos) && ordem.pagamentos.length > 0
+    ? ordem.pagamentos
+    : (ordem?.forma_pagamento ? [{ forma: ordem.forma_pagamento, valor: Number(ordem?.valor) || 0 }] : [])
+  const valorPago = pagamentos.reduce((soma, p) => soma + (Number(p.valor) || 0), 0)
+  const valorTotal = Number(ordem?.valor) || 0
+  const saldo = Math.max(0, valorTotal - valorPago)
+  return { pagamentos, valorPago, valorTotal, saldo, quitado: saldo <= 0.005 }
 }

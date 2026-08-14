@@ -250,6 +250,19 @@ alter table public.ordens_servico add column if not exists garantia_valor intege
 alter table public.ordens_servico add column if not exists garantia_unidade text;
 alter table public.ordens_servico add column if not exists garantia_vencimento date;
 alter table public.ordens_servico add column if not exists garantia_obs text;
+
+-- ============================================
+-- MIGRATION: Pagamento parcial / múltiplas formas de pagamento
+-- ============================================
+-- `pagamentos`: array de { forma, valor } — cobre o caso de pagamento
+-- dividido (ex: parte no Pix, parte em dinheiro). Quando presente, é a fonte
+-- de verdade sobre o que foi recebido; `forma_pagamento` continua sendo
+-- gravado com a primeira forma só por compatibilidade com código antigo.
+-- `data_pagamento_pendente`: previsão de quando o saldo restante (valor da
+-- OS menos a soma de `pagamentos`) será pago, quando o pagamento não foi
+-- recebido por completo na conclusão do serviço.
+alter table public.ordens_servico add column if not exists pagamentos jsonb;
+alter table public.ordens_servico add column if not exists data_pagamento_pendente date;
 alter table public.ordens_servico add column if not exists data_conclusao date;
 
 -- Novos usuários: trigger inclui trial_starts_at = now()

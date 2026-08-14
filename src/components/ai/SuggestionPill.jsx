@@ -8,10 +8,10 @@ export default function SuggestionPill({ icon, iconColor, label, onPress }) {
   return (
     <button
       onClick={onPress}
-      className="shrink-0 snap-start w-[104px] flex items-center gap-1.5 px-4 py-3 bg-white border border-gray-200 rounded-full shadow-sm active:scale-95 active:shadow-md transition-all"
+      className="shrink-0 snap-start w-[152px] flex items-center gap-1.5 px-3.5 py-3 bg-white border border-gray-200 rounded-[22px] shadow-sm active:scale-95 active:shadow-md transition-all"
     >
       <Icon className={`w-5 h-5 shrink-0 ${iconColor}`} />
-      <span className="text-[11.5px] font-semibold leading-tight text-gray-700 text-left">{label}</span>
+      <span className="text-[11.5px] font-semibold leading-tight text-gray-700 text-left break-words">{label}</span>
     </button>
   )
 }

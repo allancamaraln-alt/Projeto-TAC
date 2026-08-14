@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, formatDate } from '../lib/format'
+import { formatOS, formatBRL, formatDateWeekday } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 
 const FILTROS = [
@@ -130,7 +130,7 @@ export default function OrdensList() {
               </div>
               {os.data_agendamento && (
                 <p className="text-xs text-gray-400">
-                  📅 {formatDate(os.data_agendamento)}
+                  📅 {formatDateWeekday(os.data_agendamento)}
                 </p>
               )}
             </button>

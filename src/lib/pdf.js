@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import { formatOS, formatBRL, formatDate, formatTime, formatGarantia } from './format'
+import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento } from './format'
 import { extractPalette } from './palette'
 
 async function loadImageAsBase64(url) {
@@ -46,6 +46,8 @@ const WHITE  = [255, 255, 255]
 const SLATE8 = [30, 41, 59]
 const SLATE5 = [100, 116, 139]
 const SLATE2 = [226, 232, 240]
+const AMBER    = [217, 119, 6]
+const AMBER_LT = [254, 243, 199]
 
 const STATUS_LABEL = {
   orcamento:    'ORÇAMENTO',
@@ -476,6 +478,7 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
   // ── PAGAMENTO ──────────────────────────────────────────────
   y = rcHeader(doc, 'PAGAMENTO', y, margin, contentW, ACCENT)
 
+  y = rcRow(doc, 'Valor do serviço:', formatBRL(ordem.valor), y, margin)
   if (ordem.forma_pagamento) {
     y = rcRow(doc, 'Forma:', FORMA_PAGAMENTO_LABEL[ordem.forma_pagamento] || 'Outros', y, margin)
   }
@@ -501,26 +504,111 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
     y += 5
   }
 
-  // ── VALOR BOX ──────────────────────────────────────────────
-  const boxY = y + 6
-  const boxH = 20
+  // ── CONFIRMAÇÃO DE PAGAMENTO ──────────────────────────────
+  // Não basta mostrar o valor: o recibo precisa declarar, sem ambiguidade,
+  // quanto foi recebido, se cobre o valor total ou não e, quando sobra
+  // saldo (pagamento parcial, ou dividido entre Pix/dinheiro/cartão), até
+  // quando esse saldo será quitado — é o que dá ao documento valor como
+  // comprovante perante o cliente, sem prestar informação falsa.
+  const pag = resumoPagamento(ordem)
+  const quitado = pag.quitado
+  const COR = quitado ? ACCENT : AMBER
+  const COR_LT = quitado ? ACCENT_LT : AMBER_LT
 
-  doc.setFillColor(...ACCENT_LT)
+  const breakdownStr = pag.pagamentos.length > 1
+    ? pag.pagamentos.map(p => `${FORMA_PAGAMENTO_LABEL[p.forma] || p.forma}: ${formatBRL(p.valor)}`).join('   ·   ')
+    : null
+  const breakdownLines = breakdownStr ? doc.splitTextToSize(breakdownStr, contentW - 22) : []
+
+  const saldoStr = !quitado
+    ? `Saldo pendente: ${formatBRL(pag.saldo)}` + (ordem.data_pagamento_pendente
+      ? `  ·  previsão de pagamento em ${formatDate(ordem.data_pagamento_pendente)}`
+      : '  ·  data de pagamento a combinar')
+    : null
+
+  const declaracao = quitado
+    ? `Declaramos, para os devidos fins, que o valor de ${formatBRL(pag.valorPago)} foi integralmente recebido em ${dataConclusao}, ` +
+      `referente aos serviços descritos neste documento, dando-se plena, geral e irrevogável quitação. Nada mais é devido a este título.`
+    : `Declaramos ter recebido o valor de ${formatBRL(pag.valorPago)} em ${dataConclusao}, referente aos serviços descritos neste ` +
+      `documento. Este recibo não representa quitação total do valor devido — o saldo restante segue em aberto até seu pagamento.`
+  const declLines = doc.splitTextToSize(declaracao, contentW - 22)
+
+  const boxPadTop = 11
+  const valorRowH = 13
+  const breakdownH = breakdownLines.length * 4.3 + (breakdownLines.length > 0 ? 3 : 0)
+  const saldoH = saldoStr ? 6.5 : 0
+  const boxH = boxPadTop + valorRowH + breakdownH + 3 + saldoH + declLines.length * 4.3 + 7
+
+  // evita que o selo de pagamento seja cortado entre páginas
+  if (y + 6 + boxH > 297 - 18) {
+    doc.addPage()
+    y = 22
+  }
+
+  const boxY = y + 6
+
+  doc.setFillColor(...COR_LT)
   doc.roundedRect(margin, boxY, contentW, boxH, 3, 3, 'F')
 
-  doc.setFillColor(...ACCENT)
+  doc.setFillColor(...COR)
   doc.roundedRect(margin, boxY, 5, boxH, 3, 3, 'F')
   doc.rect(margin + 2, boxY, 3, boxH, 'F')
 
+  // Selo: ✓ pago integralmente, ou ! pagamento parcial
+  const selHR = 3.6
+  const selCX = margin + 15
+  const selCY = boxY + 9.5
+  doc.setFillColor(...COR)
+  doc.circle(selCX, selCY, selHR, 'F')
+  if (quitado) {
+    doc.setDrawColor(...WHITE)
+    doc.setLineWidth(0.8)
+    doc.setLineCap('round')
+    doc.setLineJoin('round')
+    doc.lines([[1.5, 1.5], [3, -3]], selCX - 2, selCY + 0.2)
+  } else {
+    doc.setTextColor(...WHITE)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.text('!', selCX, selCY + 1.2, { align: 'center' })
+  }
+
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...ACCENT_DK)
-  doc.text('VALOR PAGO', margin + 11, boxY + 12)
+  doc.setTextColor(...COR)
+  doc.text(quitado ? 'PAGAMENTO CONFIRMADO' : 'PAGAMENTO PARCIAL', margin + 21, boxY + 11)
 
-  doc.setFontSize(20)
+  doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...ACCENT_DK)
-  doc.text(formatBRL(ordem.valor), W - margin - 6, boxY + 13, { align: 'right' })
+  doc.setTextColor(...COR)
+  doc.text(formatBRL(pag.valorPago), W - margin - 6, boxY + 11.5, { align: 'right' })
+
+  let cy = boxY + boxPadTop + valorRowH
+
+  if (breakdownLines.length > 0) {
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...COR)
+    doc.text(breakdownLines, margin + 8, cy - 8)
+    cy += breakdownH
+  }
+
+  doc.setDrawColor(...COR)
+  doc.setLineWidth(0.3)
+  doc.line(margin + 8, cy - 6, W - margin - 8, cy - 6)
+
+  if (saldoStr) {
+    doc.setFontSize(9.5)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...COR)
+    doc.text(saldoStr, margin + 8, cy - 0.5)
+    cy += saldoH
+  }
+
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...COR)
+  doc.text(declLines, margin + 8, cy + 1)
 
   // ── ASSINATURAS ────────────────────────────────────────────
   const sigW = 72

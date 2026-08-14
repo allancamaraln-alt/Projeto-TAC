@@ -600,7 +600,7 @@ export default function Landing() {
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 48, flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
           <div style={{ flex: 1, minWidth: 280, maxWidth: 560 }}>
             <div style={{ display: 'inline-block', background: 'rgba(255,255,255,0.15)', borderRadius: 100, padding: '6px 16px', fontSize: 13, color: 'white', fontWeight: 600, marginBottom: 20 }}>
-              A partir de R$ 19,90/mês — cancele quando quiser
+              Pague 19,99 por mês — cancele quando quiser
             </div>
             <h1 style={{ fontSize: 'clamp(28px, 5vw, 46px)', fontWeight: 800, color: 'white', lineHeight: 1.15, margin: '0 0 20px' }}>
               O app feito para técnicos de ar-condicionado
@@ -730,42 +730,6 @@ export default function Landing() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, alignItems: 'start' }}>
 
-            {/* Básico */}
-            <div style={{ border: '1.5px solid #e2e8f0', borderRadius: 20, padding: 28, textAlign: 'left' }}>
-              <p style={{ fontWeight: 700, fontSize: 18, color: '#0f172a', margin: '0 0 4px' }}>Plano Básico</p>
-              <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 16px' }}>Para técnicos começando a se organizar</p>
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through', display: 'block', marginBottom: 2 }}>De R$ 29,90/mês</span>
-                <div>
-                  <span style={{ fontSize: 36, fontWeight: 800, color: '#0f172a' }}>R$ 19,90</span>
-                  <span style={{ color: '#94a3b8', fontSize: 14 }}>/mês</span>
-                </div>
-              </div>
-              <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none' }}>
-                {[
-                  'Criação de ordens de serviço',
-                  'Cadastro de clientes',
-                  'Histórico básico de atendimentos',
-                  'Organização em um só lugar',
-                  'Lembretes simples de atendimentos',
-                ].map(b => (
-                  <li key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 9 }}>
-                    <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✓</span>
-                    <span style={{ fontSize: 13.5, color: '#475569', lineHeight: 1.45 }}>{b}</span>
-                  </li>
-                ))}
-              </ul>
-              <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 20px', fontStyle: 'italic', lineHeight: 1.5 }}>
-                Ideal para quem ainda usa papel, bloco ou WhatsApp para se organizar
-              </p>
-              <button
-                onClick={() => navigate('/entrar?modo=cadastro&plano=monthly')}
-                style={{ width: '100%', background: 'white', color: ACCENT, fontWeight: 700, fontSize: 15, padding: '13px', borderRadius: 12, border: `1.5px solid ${ACCENT}`, cursor: 'pointer' }}
-              >
-                Assinar agora
-              </button>
-            </div>
-
             {/* Profissional - Destaque */}
             <div style={{ border: `2px solid ${ACCENT}`, borderRadius: 20, padding: 28, position: 'relative', boxShadow: '0 4px 24px rgba(2,132,199,0.15)', textAlign: 'left' }}>
               <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: ACCENT, color: 'white', fontWeight: 700, fontSize: 12, padding: '4px 14px', borderRadius: 100, whiteSpace: 'nowrap' }}>
@@ -782,12 +746,14 @@ export default function Landing() {
               </div>
               <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none' }}>
                 {[
-                  'Tudo do plano Básico',
                   'Relatório de faturamento',
                   'Mais organização para clientes e OS',
                   'Lembretes e notificações com som',
                   'Histórico completo dos serviços',
                   'Melhor controle dos atendimentos',
+                  'Laudos em PDF prontos para enviar pelo WhatsApp',
+                  'Assistente de IA para agilizar o dia a dia',
+                  'Acesso offline em campo, sem depender de sinal',
                 ].map(b => (
                   <li key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 9 }}>
                     <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✓</span>
@@ -810,23 +776,25 @@ export default function Landing() {
             {/* Premium */}
             <div style={{ border: '1.5px solid #e2e8f0', borderRadius: 20, padding: 28, textAlign: 'left' }}>
               <p style={{ fontWeight: 700, fontSize: 18, color: '#0f172a', margin: '0 0 4px' }}>Plano Premium</p>
-              <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 16px' }}>Para alto volume ou pequenas equipes</p>
+              <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 16px' }}>Mesmo plano Profissional, com desconto no pagamento anual</p>
               <div style={{ marginBottom: 4 }}>
-                <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through', display: 'block', marginBottom: 2 }}>De R$ 239,80/ano</span>
+                <span style={{ fontSize: 13, color: '#94a3b8', textDecoration: 'line-through', display: 'block', marginBottom: 2 }}>De R$ 478,80/ano</span>
                 <div>
-                  <span style={{ fontSize: 36, fontWeight: 800, color: '#0f172a' }}>R$ 149,90</span>
+                  <span style={{ fontSize: 36, fontWeight: 800, color: '#0f172a' }}>R$ 239,90</span>
                   <span style={{ color: '#94a3b8', fontSize: 14 }}>/ano</span>
                 </div>
               </div>
-              <p style={{ color: ACCENT, fontWeight: 600, fontSize: 13, margin: '0 0 16px' }}>R$ 12,49/mês — economize 37%</p>
+              <p style={{ color: ACCENT, fontWeight: 600, fontSize: 13, margin: '0 0 16px' }}>R$ 19,99/mês — economize 50%</p>
               <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none' }}>
                 {[
-                  'Tudo do plano Profissional',
-                  'Relatório de faturamento avançado',
-                  'Controle completo da operação',
-                  'Organização avançada de histórico',
-                  'Recursos para alto volume de clientes',
-                  'Prioridade em suporte',
+                  'Relatório de faturamento',
+                  'Mais organização para clientes e OS',
+                  'Lembretes e notificações com som',
+                  'Histórico completo dos serviços',
+                  'Melhor controle dos atendimentos',
+                  'Laudos em PDF prontos para enviar pelo WhatsApp',
+                  'Assistente de IA para agilizar o dia a dia',
+                  'Acesso offline em campo, sem depender de sinal',
                 ].map(b => (
                   <li key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 9 }}>
                     <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✓</span>

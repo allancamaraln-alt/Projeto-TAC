@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, formatDate } from '../lib/format'
+import { formatOS, formatBRL, formatDate, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
+import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
 import { useAuth } from '../hooks/useAuth'
 
 const PERIODOS = [
@@ -36,6 +37,7 @@ export default function Relatorio() {
   const [periodo, setPeriodo] = useState('mes')
   const [ordens, setOrdens] = useState([])
   const [loading, setLoading] = useState(true)
+  const [pagamentosOrdens, setPagamentosOrdens] = useState([])
 
   useEffect(() => {
     async function load() {
@@ -56,10 +58,47 @@ export default function Relatorio() {
     load()
   }, [periodo])
 
+  // Pendências e recebimentos não seguem o filtro de período acima: uma
+  // dívida de uma OS antiga continua valendo hoje mesmo que ela tenha sido
+  // criada fora do período selecionado. Busca independente, com todas as
+  // OS concluídas, para calcular pendente/vencido/recebido corretamente.
+  useEffect(() => {
+    async function loadPagamentos() {
+      const { data } = await supabase
+        .from('ordens_servico')
+        .select('id, numero, valor, pagamentos, forma_pagamento, data_conclusao, data_pagamento_pendente, tipo_servico, clientes(nome, telefone)')
+        .eq('status', 'concluido')
+      setPagamentosOrdens(data ?? [])
+    }
+    loadPagamentos()
+  }, [])
+
   const concluidas = ordens.filter(os => os.status === 'concluido')
   const totalFaturado = concluidas.reduce((acc, os) => acc + Number(os.valor), 0)
   const totalOrcamentos = ordens.filter(os => os.status === 'orcamento').length
   const totalEmAndamento = ordens.filter(os => os.status === 'em_andamento').length
+
+  // Cobranças: pendente/vencido são o estado atual (não olham o período
+  // selecionado); recebido hoje/semana/mês somam cada pagamento pela data
+  // em que ele foi de fato recebido (não pela data de criação da OS).
+  const hojeISO = new Date().toISOString().split('T')[0]
+  const inicioSemanaISO = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
+  const inicioMesISO = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+
+  const resumosPagamento = pagamentosOrdens.map(os => ({ os, pag: resumoPagamento(os) }))
+  const pendentes = resumosPagamento.filter(r => r.pag.saldo > 0.004)
+  const totalPendente = pendentes.reduce((s, r) => s + r.pag.saldo, 0)
+  const vencidos = pendentes.filter(r => r.os.data_pagamento_pendente && r.os.data_pagamento_pendente < hojeISO)
+  const totalVencido = vencidos.reduce((s, r) => s + r.pag.saldo, 0)
+
+  const todosPagamentos = resumosPagamento.flatMap(r =>
+    r.pag.pagamentos.map(p => ({ valor: Number(p.valor) || 0, data: p.data || r.os.data_conclusao }))
+  )
+  const somaPagamentosDesde = (desde) =>
+    todosPagamentos.filter(p => p.data && p.data >= desde).reduce((s, p) => s + p.valor, 0)
+  const recebidoHoje = somaPagamentosDesde(hojeISO)
+  const recebidoSemana = somaPagamentosDesde(inicioSemanaISO)
+  const recebidoMes = somaPagamentosDesde(inicioMesISO)
 
   const ticketMedio = concluidas.length > 0 ? totalFaturado / concluidas.length : 0
 
@@ -169,6 +208,33 @@ export default function Relatorio() {
                 text="text-purple-600"
               />
             </div>
+
+            {/* Cobranças — estado atual, independente do período selecionado acima */}
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide pt-1">
+              Cobranças
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCard label="Pendente" value={formatBRL(totalPendente)} bg="bg-amber-50" text="text-amber-600" />
+              <MetricCard label="Vencido" value={formatBRL(totalVencido)} bg="bg-red-50" text="text-red-600" />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <MetricCard label="Recebido hoje" value={formatBRL(recebidoHoje)} bg="bg-green-50" text="text-green-600" />
+              <MetricCard label="Recebido semana" value={formatBRL(recebidoSemana)} bg="bg-green-50" text="text-green-600" />
+              <MetricCard label="Recebido mês" value={formatBRL(recebidoMes)} bg="bg-green-50" text="text-green-600" />
+            </div>
+
+            {vencidos.length > 0 && (
+              <>
+                <h2 className="text-sm font-semibold text-red-500 uppercase tracking-wide pt-1">
+                  Pagamentos vencidos
+                </h2>
+                <div className="space-y-3">
+                  {vencidos.map(({ os }) => (
+                    <CobrancaPendenteCard key={os.id} os={os} onAtualizado={() => setPagamentosOrdens(prev => prev.filter(o => o.id !== os.id))} />
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Lista de OS concluídas */}
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide pt-1">

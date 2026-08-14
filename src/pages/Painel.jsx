@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatBRL } from '../lib/format'
+import { formatBRL, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
+import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
 
 function diasParaData(dataIso) {
   const hoje = new Date()
@@ -21,14 +22,17 @@ export default function Painel() {
   const [stats, setStats] = useState({ orcamento: 0, aprovado: 0, em_andamento: 0, concluido: 0 })
   const [recentes, setRecentes] = useState([])
   const [lembretes, setLembretes] = useState([])
+  const [cobrancasHoje, setCobrancasHoje] = useState([])
+  const [mostrarCobrancas, setMostrarCobrancas] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       const inicioSemana = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
       const em30dias = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+      const hoje = new Date().toISOString().split('T')[0]
 
-      const [{ data: todas }, { data: ultimas }, { data: avisos }] = await Promise.all([
+      const [{ data: todas }, { data: ultimas }, { data: avisos }, { data: cobrancas }] = await Promise.all([
         supabase.from('ordens_servico').select('status').gte('created_at', `${inicioSemana}T00:00:00`),
         supabase.from('ordens_servico')
           .select('*, clientes(nome)')
@@ -40,6 +44,10 @@ export default function Painel() {
           .lte('data_prevista', em30dias)
           .order('data_prevista', { ascending: true })
           .limit(3),
+        supabase.from('ordens_servico')
+          .select('*, clientes(nome, telefone)')
+          .eq('status', 'concluido')
+          .eq('data_pagamento_pendente', hoje),
       ])
 
       const contagem = { orcamento: 0, aprovado: 0, em_andamento: 0, concluido: 0 }
@@ -48,10 +56,23 @@ export default function Painel() {
       setStats(contagem)
       setRecentes(ultimas ?? [])
       setLembretes(avisos ?? [])
+      setCobrancasHoje(cobrancas ?? [])
       setLoading(false)
     }
     load()
   }, [])
+
+  const totalCobrancasHoje = cobrancasHoje.reduce((soma, os) => soma + resumoPagamento(os).saldo, 0)
+
+  // Trava o scroll de fundo enquanto a lista de cobranças do dia está aberta
+  useEffect(() => {
+    if (mostrarCobrancas) document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [mostrarCobrancas])
+
+  function removerCobrancaResolvida(osId) {
+    setCobrancasHoje(prev => prev.filter(os => os.id !== osId))
+  }
 
   const saudacao = () => {
     const h = new Date().getHours()
@@ -89,6 +110,30 @@ export default function Painel() {
       </div>
 
       <div className="px-4 -mt-5 animate-fade-up">
+        {/* A receber hoje */}
+        {cobrancasHoje.length > 0 && (
+          <button
+            onClick={() => setMostrarCobrancas(true)}
+            className="w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 flex items-center gap-3 active:scale-[0.98] transition-all shadow-sm"
+          >
+            <div className="w-11 h-11 bg-amber-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-200">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 10v2m9-8a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-wide">A receber hoje</p>
+              <p className="text-xl font-extrabold text-amber-700">{formatBRL(totalCobrancasHoje)}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-xs text-amber-600 font-semibold">{cobrancasHoje.length} pendente{cobrancasHoje.length !== 1 ? 's' : ''}</p>
+              <svg className="w-4 h-4 text-amber-400 ml-auto mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </button>
+        )}
+
         {/* Botões de ação principais */}
         <div className="grid grid-cols-2 gap-3 mb-5">
           <button
@@ -207,6 +252,43 @@ export default function Painel() {
           ))}
         </div>
       </div>
+
+      {/* Bottom sheet: cobranças do dia */}
+      {mostrarCobrancas && (
+        <div
+          className="fixed inset-0 z-[110] bg-black/50 flex items-end"
+          onClick={e => { if (e.target === e.currentTarget) setMostrarCobrancas(false) }}
+        >
+          <div className="bg-white w-full rounded-t-3xl px-5 pt-6 pb-8 space-y-3 max-h-[85vh] overflow-y-auto">
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto -mt-1 mb-1" />
+
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">A receber hoje</h2>
+                <p className="text-sm text-gray-400">{formatBRL(totalCobrancasHoje)} em {cobrancasHoje.length} OS</p>
+              </div>
+              <button
+                onClick={() => setMostrarCobrancas(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200"
+              >
+                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {cobrancasHoje.length === 0 ? (
+              <p className="text-center text-gray-400 py-8">Tudo certo por aqui! 🎉</p>
+            ) : (
+              <div className="space-y-3">
+                {cobrancasHoje.map(os => (
+                  <CobrancaPendenteCard key={os.id} os={os} onAtualizado={removerCobrancaResolvida} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

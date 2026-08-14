@@ -41,3 +41,23 @@ Para aprovar, responda *SIM*.
   const mensagemEncoded = encodeURIComponent(mensagem)
   return `https://wa.me/${numeroComDDI}?text=${mensagemEncoded}`
 }
+
+/**
+ * Gera um link wa.me com mensagem pronta para cobrar um saldo pendente
+ * (pagamento parcial de uma OS já concluída).
+ */
+export function gerarLinkCobranca({ cliente, ordem, saldo }) {
+  const numero = (cliente?.telefone || '').replace(/\D/g, '')
+  const numeroComDDI = numero.startsWith('55') ? numero : `55${numero}`
+
+  const mensagem = `Olá ${cliente?.nome}! 👋
+
+Passando para lembrar sobre o saldo pendente do serviço *${ordem.tipo_servico}* (OS #${String(ordem.numero).padStart(3, '0')}).
+
+💰 Valor pendente: R$ ${Number(saldo).toFixed(2).replace('.', ',')}
+
+Fico à disposição para combinarmos o pagamento. Obrigado!`
+
+  const mensagemEncoded = encodeURIComponent(mensagem)
+  return `https://wa.me/${numeroComDDI}?text=${mensagemEncoded}`
+}
