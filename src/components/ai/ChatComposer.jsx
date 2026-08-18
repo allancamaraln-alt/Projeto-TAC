@@ -72,6 +72,16 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   // getUserMedia duas vezes — o que o WebKit costuma abortar. Um ref
   // muda na hora, sem esperar re-render.
   const recordingBusyRef = useRef(false)
+  // true assim que o usuário pede pra PARAR a gravação de propósito — usado
+  // pra diferenciar isso de rec.onerror disparando 'aborted' sozinho (a
+  // própria SpeechRecognition falhando ao iniciar, sem o usuário ter feito
+  // nada). Alguns iPhones expõem window.webkitSpeechRecognition mas a API
+  // não funciona de verdade — existe, mas aborta sozinha assim que chamada.
+  const userAbortedRef = useRef(false)
+  // Uma vez que a gente descobre que a SpeechRecognition nativa não
+  // funciona neste aparelho, para de tentar de novo nos próximos toques —
+  // vai direto pro MediaRecorder.
+  const nativeRecognitionBrokenRef = useRef(false)
   const sendRef = useRef(send)
   const galleryInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -204,8 +214,9 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   const toggleVoice = useCallback(() => {
     if (transcribing) return
 
-    if (supportsSpeechRecognition) {
+    if (supportsSpeechRecognition && !nativeRecognitionBrokenRef.current) {
       if (listening) {
+        userAbortedRef.current = true
         recognitionRef.current?.abort()
         setListening(false)
         return
@@ -228,6 +239,21 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
 
       rec.onerror = (e) => {
         setListening(false)
+
+        // Alguns iPhones expõem SpeechRecognition mas ela não funciona de
+        // verdade — falha sozinha com 'aborted' (ou 'service-not-allowed')
+        // assim que chamada, sem o usuário ter feito nada. Nesse caso cai
+        // pro MediaRecorder em vez de mostrar erro, e não tenta mais o
+        // caminho nativo nesta sessão.
+        const brokenNative = !userAbortedRef.current && (e.error === 'aborted' || e.error === 'service-not-allowed')
+        userAbortedRef.current = false
+
+        if (brokenNative && supportsMediaRecorder) {
+          nativeRecognitionBrokenRef.current = true
+          startRecording()
+          return
+        }
+
         const msgs = {
           'not-allowed': 'Permissão de microfone negada. Habilite nas configurações do navegador.',
           'no-speech':   'Nenhuma fala detectada. Tente novamente.',
@@ -245,6 +271,11 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
         setListening(true)
         setVoiceError(null)
       } catch {
+        if (supportsMediaRecorder) {
+          nativeRecognitionBrokenRef.current = true
+          startRecording()
+          return
+        }
         setVoiceError('Não foi possível acessar o microfone.')
         setTimeout(() => setVoiceError(null), 3000)
       }
