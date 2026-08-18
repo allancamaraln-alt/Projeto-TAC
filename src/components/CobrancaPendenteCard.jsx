@@ -4,19 +4,34 @@ import { formatOS, formatBRL, resumoPagamento } from '../lib/format'
 import { gerarLinkCobranca } from '../lib/whatsapp'
 import { useToast } from '../hooks/useToast'
 
+const FORMAS_PAGAMENTO = [
+  { value: 'pix',            label: 'Pix' },
+  { value: 'dinheiro',       label: 'Dinheiro / Espécie' },
+  { value: 'cartao_credito', label: 'Cartão de Crédito' },
+  { value: 'cartao_debito',  label: 'Cartão de Débito' },
+  { value: 'outros',         label: 'Outros' },
+]
+
+const hojeISO = () => new Date().toISOString().split('T')[0]
+
 // Card de uma OS com saldo pendente — usado no card "A receber hoje" do
-// Início e na lista de vencidos do Relatório. Reúne as duas ações que
-// fecham o ciclo da cobrança: mandar lembrete pelo WhatsApp com um clique,
-// e marcar o saldo como recebido quando o cliente pagar.
+// Início, na lista de vencidos do Relatório e nos filtros "A receber"/"Em
+// atraso" de Ordens (OrdensList.jsx). Reúne as duas ações que fecham o
+// ciclo da cobrança: mandar lembrete pelo WhatsApp com um clique, e marcar
+// o saldo como recebido (com data e forma de pagamento) quando o cliente
+// pagar.
 export default function CobrancaPendenteCard({ os, onAtualizado }) {
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [data, setData] = useState(hojeISO)
+  const [forma, setForma] = useState('')
   const [marcando, setMarcando] = useState(false)
   const toast = useToast()
   const pag = resumoPagamento(os)
 
   async function marcarRecebido() {
+    if (!forma) return
     setMarcando(true)
-    const hoje = new Date().toISOString().split('T')[0]
-    const novosPagamentos = [...pag.pagamentos, { forma: 'outros', valor: pag.saldo, data: hoje }]
+    const novosPagamentos = [...pag.pagamentos, { forma, valor: pag.saldo, data }]
     const { error } = await supabase
       .from('ordens_servico')
       .update({ pagamentos: novosPagamentos, data_pagamento_pendente: null })
@@ -53,13 +68,58 @@ export default function CobrancaPendenteCard({ os, onAtualizado }) {
           Cobrar
         </a>
         <button
-          onClick={marcarRecebido}
-          disabled={marcando}
-          className="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60"
+          onClick={() => setMostrarForm(v => !v)}
+          className={`flex-1 text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all ${
+            mostrarForm ? 'ac-bg-lt ac-text' : 'bg-gray-100 text-gray-700'
+          }`}
         >
-          {marcando ? 'Salvando...' : '✓ Recebido'}
+          ✓ Recebido
         </button>
       </div>
+
+      {mostrarForm && (
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-2.5">
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Data do pagamento</label>
+            <input
+              type="date"
+              value={data}
+              max={hojeISO()}
+              onChange={e => setData(e.target.value)}
+              className="input-field !py-2.5 !text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1">Forma de pagamento</label>
+            <select
+              value={forma}
+              onChange={e => setForma(e.target.value)}
+              className="input-field !py-2.5 !text-sm"
+            >
+              <option value="">Selecione...</option>
+              {FORMAS_PAGAMENTO.map(f => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2 pt-0.5">
+            <button
+              onClick={() => setMostrarForm(false)}
+              disabled={marcando}
+              className="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={marcarRecebido}
+              disabled={!forma || marcando}
+              className="flex-1 bg-emerald-500 text-white text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60"
+            >
+              {marcando ? 'Salvando...' : 'Confirmar'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

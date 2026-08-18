@@ -504,6 +504,12 @@ export default function OrdemDetalhe() {
 
   const proximo = PROXIMOS_STATUS[os.status]
   const pagamentoOS = resumoPagamento(os)
+  // Data do pagamento que zerou o saldo — último registro com `data` (nem
+  // todo pagamento tem: o registrado na conclusão da OS antes desta
+  // funcionalidade, por exemplo, não tinha). Fica só como confirmação
+  // visual de quando foi quitado; não afeta o cálculo do saldo.
+  const datasPagamento = pagamentoOS.pagamentos.map(p => p.data).filter(Boolean).sort()
+  const dataQuitacao = datasPagamento[datasPagamento.length - 1]
   const totalPagoForm = conclusaoForm.pagamentos.reduce((soma, p) => soma + (parseFloat(p.valor) || 0), 0)
   const saldoDevedorForm = Math.max(0, (Number(os.valor) || 0) - totalPagoForm)
 
@@ -691,20 +697,22 @@ export default function OrdemDetalhe() {
           {pagamentoOS.pagamentos.length > 0 && (
             <div>
               <p className="text-xs text-gray-400">Pagamento</p>
-              {pagamentoOS.pagamentos.length === 1 ? (
-                <p className="text-sm font-medium text-gray-800">
-                  {FORMA_LABEL[pagamentoOS.pagamentos[0].forma] || pagamentoOS.pagamentos[0].forma}
+              <div className="space-y-0.5">
+                {pagamentoOS.pagamentos.map((p, i) => (
+                  <p key={i} className="text-sm font-medium text-gray-800">
+                    {FORMA_LABEL[p.forma] || p.forma}
+                    {pagamentoOS.pagamentos.length > 1 && (
+                      <span className="text-gray-500 font-normal"> — {formatBRL(p.valor)}</span>
+                    )}
+                    {p.data && <span className="text-gray-400 font-normal"> · {formatDate(p.data)}</span>}
+                  </p>
+                ))}
+              </div>
+              {pagamentoOS.quitado ? (
+                <p className="text-sm text-emerald-600 font-semibold mt-1">
+                  ✓ Pago integralmente{dataQuitacao && ` em ${formatDate(dataQuitacao)}`}
                 </p>
               ) : (
-                <div className="space-y-0.5">
-                  {pagamentoOS.pagamentos.map((p, i) => (
-                    <p key={i} className="text-sm font-medium text-gray-800">
-                      {FORMA_LABEL[p.forma] || p.forma} <span className="text-gray-500 font-normal">— {formatBRL(p.valor)}</span>
-                    </p>
-                  ))}
-                </div>
-              )}
-              {!pagamentoOS.quitado && (
                 <p className="text-sm text-amber-600 font-semibold mt-1">
                   Saldo pendente: {formatBRL(pagamentoOS.saldo)}
                   {os.data_pagamento_pendente && ` · previsão ${formatDate(os.data_pagamento_pendente)}`}

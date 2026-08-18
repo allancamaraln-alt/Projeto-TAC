@@ -89,15 +89,29 @@ export function DollarIcon({ className }) {
   )
 }
 
-// Floco de neve — logo do ClimaPro (mesmo motivo do favicon) e ícone das
-// sugestões rápidas. strokeLinecap redondo para ficar consistente com o
-// resto do set de ícones.
+// Floco de neve "cristal" — logo do ClimaPro (mesmo motivo do favicon) e
+// ícone das sugestões rápidas. Versão tecnológica: 3 eixos (0/60/120°, cada
+// um cobrindo duas pontas opostas) com pontas em losango facetado e núcleo
+// hexagonal vazado, no lugar do floco orgânico original.
 export function SnowflakeIcon({ className }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
-      <path d="M12 3v18M12 3l-2.3 2.3M12 3l2.3 2.3M12 21l-2.3-2.3M12 21l2.3-2.3" />
-      <path d="M4.5 7.5l15 9M4.5 7.5l1 3.2M4.5 7.5l3.2-1M19.5 16.5l-1-3.2M19.5 16.5l-3.2 1" />
-      <path d="M19.5 7.5l-15 9M19.5 7.5l-3.2-1M19.5 7.5l1 3.2M4.5 16.5l3.2 1M4.5 16.5l-1-3.2" />
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round">
+      <g transform="rotate(0 12 12)">
+        <line x1="12" y1="3" x2="12" y2="21" />
+        <rect x="11" y="2" width="2" height="2" transform="rotate(45 12 3)" fill="currentColor" stroke="none" />
+        <rect x="11" y="20" width="2" height="2" transform="rotate(45 12 21)" fill="currentColor" stroke="none" />
+      </g>
+      <g transform="rotate(60 12 12)">
+        <line x1="12" y1="3" x2="12" y2="21" />
+        <rect x="11" y="2" width="2" height="2" transform="rotate(45 12 3)" fill="currentColor" stroke="none" />
+        <rect x="11" y="20" width="2" height="2" transform="rotate(45 12 21)" fill="currentColor" stroke="none" />
+      </g>
+      <g transform="rotate(120 12 12)">
+        <line x1="12" y1="3" x2="12" y2="21" />
+        <rect x="11" y="2" width="2" height="2" transform="rotate(45 12 3)" fill="currentColor" stroke="none" />
+        <rect x="11" y="20" width="2" height="2" transform="rotate(45 12 21)" fill="currentColor" stroke="none" />
+      </g>
+      <polygon points="12,9.2 9.575,10.6 9.575,13.4 12,14.8 14.425,13.4 14.425,10.6" fill="none" />
     </svg>
   )
 }
@@ -136,10 +150,26 @@ export function EllipsisIcon({ className }) {
   )
 }
 
-export function BellIcon({ className }) {
+export function ClockIcon({ className }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}
+
+export function TrashIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  )
+}
+
+export function CloseIcon({ className }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   )
 }

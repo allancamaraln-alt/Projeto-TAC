@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDateWeekday, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
+import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
 
 const FILTROS = [
   { value: '', label: 'Todas' },
@@ -68,6 +69,12 @@ export default function OrdensList() {
     }
     load()
   }, [filtroStatus, filtroPagamento])
+
+  // Some se marcada como recebida (CobrancaPendenteCard) ou paga em atraso —
+  // deixa de pertencer ao filtro atual sem precisar recarregar a lista toda.
+  function removerCobrancaResolvida(osId) {
+    setOrdens(prev => prev.filter(os => os.id !== osId))
+  }
 
   const buscaLower = busca.toLowerCase()
   const filtradas = ordens.filter(os =>
@@ -160,6 +167,14 @@ export default function OrdensList() {
 
         <div className="space-y-3">
           {filtradas.map(os => {
+            // "A receber" e "Em atraso" já mostram as ações de cobrança
+            // (Cobrar por WhatsApp / marcar Recebido) direto no card — mesmo
+            // componente usado na lista de vencidos do Relatório e no bottom
+            // sheet "A receber hoje" do Painel.
+            if (filtroPagamento === 'pendente' || filtroPagamento === 'vencido') {
+              return <CobrancaPendenteCard key={os.id} os={os} onAtualizado={removerCobrancaResolvida} />
+            }
+
             const pag = filtroPagamento ? resumoPagamento(os) : null
             return (
               <button
@@ -182,8 +197,7 @@ export default function OrdensList() {
                 </div>
                 {pag && (
                   <p className="text-xs font-semibold" style={{ color: PAGAMENTO_INFO[filtroPagamento]?.color }}>
-                    {filtroPagamento === 'recebido' ? `Recebido: ${formatBRL(pag.valorPago)}` : `Saldo: ${formatBRL(pag.saldo)}`}
-                    {filtroPagamento !== 'recebido' && os.data_pagamento_pendente && ` · previsão ${formatDateWeekday(os.data_pagamento_pendente).split(' - ')[0]}`}
+                    {`Recebido: ${formatBRL(pag.valorPago)}`}
                   </p>
                 )}
                 {os.data_agendamento && (
