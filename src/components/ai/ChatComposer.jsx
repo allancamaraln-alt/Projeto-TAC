@@ -152,7 +152,11 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
       mediaStreamRef.current = stream
 
       const mimeType = pickRecorderMimeType()
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+      // 32kbps é suficiente pra voz (é o que apps de mensagem usam) — o
+      // iPhone por padrão grava bem mais alto que isso, deixando o upload
+      // (e a espera pra transcrever) maior do que precisa.
+      const recorderOptions = { audioBitsPerSecond: 32_000, ...(mimeType ? { mimeType } : {}) }
+      const recorder = new MediaRecorder(stream, recorderOptions)
       audioChunksRef.current = []
 
       recorder.ondataavailable = (e) => {
