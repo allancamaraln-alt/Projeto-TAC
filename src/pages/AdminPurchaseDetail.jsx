@@ -117,7 +117,7 @@ export default function AdminPurchaseDetail() {
               {reenviando ? 'Reenviando...' : 'Reenviar Purchase (Utmify + Meta CAPI)'}
             </button>
 
-            <Secao titulo="Pagamento (Mercado Pago)">
+            <Secao titulo="Pagamento">
               <Campo label="Payment ID" valor={dados.log.payment_id} mono />
               <Campo label="Plano" valor={dados.log.plan} />
               <Campo label="Valor" valor={formatBRL(dados.log.value)} />

@@ -13,6 +13,11 @@ const MP_METHOD_MAP: Record<string, string> = {
   debit_card: 'credit_card',
   bank_transfer: 'pix',
   account_money: 'pix',
+  // billingType do Asaas (asaas-webhook usa este mesmo mapa)
+  PIX: 'pix',
+  CREDIT_CARD: 'credit_card',
+  BOLETO: 'boleto',
+  UNDEFINED: 'credit_card',
 }
 
 export const PROFILE_TRACKING_FIELDS = 'nome, email, telefone, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, src, sck, signup_ip, signup_user_agent, signup_page_url, entry_url, referrer'

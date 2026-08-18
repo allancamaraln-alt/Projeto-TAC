@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDate } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import { useAuth } from '../hooks/useAuth'
+import MapaEndereco from '../components/MapaEndereco'
 
 const HISTORICO_BASICO_LIMIT = 3
 
@@ -88,6 +89,8 @@ export default function ClienteDetalhe() {
             Cliente desde {formatDate(cliente.created_at)}
           </p>
         </div>
+
+        {cliente.endereco && <MapaEndereco endereco={cliente.endereco} />}
 
         {/* Resumo */}
         <div className="grid grid-cols-3 gap-3">

@@ -10,6 +10,7 @@ import ConfirmModal from '../components/ConfirmModal'
 import SignaturePad from '../components/SignaturePad'
 import { useToast } from '../hooks/useToast'
 import { Capacitor } from '@capacitor/core'
+import MapaEndereco from '../components/MapaEndereco'
 
 const PROXIMOS_STATUS = {
   orcamento:    { label: '✅ Marcar como Aprovado', next: 'aprovado' },
@@ -679,6 +680,8 @@ export default function OrdemDetalhe() {
             <p className="text-sm text-gray-500 mt-0.5">📍 {os.clientes?.endereco}</p>
           )}
         </div>
+
+        {os.clientes?.endereco && <MapaEndereco endereco={os.clientes.endereco} />}
 
         {/* Dados da OS */}
         <div className="card space-y-3">

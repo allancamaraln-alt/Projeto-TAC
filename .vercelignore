@@ -1,3 +1,7 @@
 _opensquad/
 .playwright-mcp/
 android/
+.env
+.env.*
+!.env.example
+scripts/

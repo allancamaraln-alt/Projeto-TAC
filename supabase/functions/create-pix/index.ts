@@ -11,7 +11,7 @@ const PLANOS = {
   monthly_saida50: { description: 'ClimaPro Mensal — Oferta', amount: 9.95,   days: 30  },
   plus:            { description: 'ClimaPro Técnico Plus',    amount: 29.90,  days: 30  },
   professional:    { description: 'ClimaPro Profissional',    amount: 39.90,  days: 30  },
-  annual:          { description: 'ClimaPro Premium Anual',   amount: 149.90, days: 365 },
+  annual:          { description: 'ClimaPro Premium Anual',   amount: 239.90, days: 365 },
 }
 
 serve(async (req) => {

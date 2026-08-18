@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const PLANOS = {
   monthly: { reason: 'ClimaPro Mensal', frequency: 1,  amount: 19.90 },
-  annual:  { reason: 'ClimaPro Anual',  frequency: 12, amount: 149.90 },
+  annual:  { reason: 'ClimaPro Anual',  frequency: 12, amount: 239.90 },
 }
 
 serve(async (req) => {

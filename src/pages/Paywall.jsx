@@ -44,12 +44,12 @@ const PLANOS = [
     id: 'annual',
     label: 'Anual',
     destaque: false,
-    preco: 'R$ 149,90',
+    preco: 'R$ 239,90',
     periodo: '/ano',
-    equivalente: 'R$ 12,49/mês',
-    economia: 'Economize 37%',
+    equivalente: 'R$ 19,99/mês',
+    economia: 'Economize 50%',
     descricao: 'Melhor custo-benefício',
-    amount: 149.90,
+    amount: 239.90,
   },
 ]
 

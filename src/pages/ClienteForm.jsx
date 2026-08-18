@@ -4,6 +4,24 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../hooks/useToast'
+import { buscarCep } from '../lib/pmocCep'
+
+function maskCep(v) {
+  const d = v.replace(/\D/g, '').slice(0, 8)
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d
+}
+
+function montarEndereco({ rua, numero, complemento, bairro, cidade, estado }) {
+  const linha1 = [rua, numero].filter(Boolean).join(', ')
+  const linha2 = [complemento, bairro].filter(Boolean).join(' - ')
+  const linha3 = [cidade, estado].filter(Boolean).join('/')
+  return [linha1, linha2, linha3].filter(Boolean).join(', ')
+}
+
+const FORM_INICIAL = {
+  nome: '', telefone: '',
+  cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+}
 
 export default function ClienteForm() {
   const navigate = useNavigate()
@@ -12,9 +30,10 @@ export default function ClienteForm() {
   const isEdit = Boolean(id && id !== 'novo')
 
   const toast = useToast()
-  const [form, setForm] = useState({ nome: '', telefone: '', endereco: '' })
+  const [form, setForm] = useState(FORM_INICIAL)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [buscandoCep, setBuscandoCep] = useState(false)
   const [erro, setErro] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -26,10 +45,41 @@ export default function ClienteForm() {
     supabase.from('clientes').select('*').eq('id', id).single()
       .then(({ data, error }) => {
         if (error) setErro('Erro ao carregar cliente.')
-        else if (data) setForm({ nome: data.nome, telefone: data.telefone, endereco: data.endereco || '' })
+        else if (data) setForm({
+          nome: data.nome,
+          telefone: data.telefone,
+          cep: data.cep || '',
+          rua: data.rua || '',
+          numero: data.numero || '',
+          complemento: data.complemento || '',
+          bairro: data.bairro || '',
+          cidade: data.cidade || '',
+          estado: data.estado || '',
+        })
         setLoading(false)
       })
   }, [id, isEdit])
+
+  async function handleCepChange(e) {
+    const cep = maskCep(e.target.value)
+    setForm(f => ({ ...f, cep }))
+    const digits = cep.replace(/\D/g, '')
+    if (digits.length === 8) {
+      setBuscandoCep(true)
+      const resultado = await buscarCep(digits)
+      setBuscandoCep(false)
+      if (resultado) {
+        setForm(f => ({
+          ...f,
+          cep,
+          rua: resultado.rua || f.rua,
+          bairro: resultado.bairro || f.bairro,
+          cidade: resultado.cidade || f.cidade,
+          estado: resultado.estado || f.estado,
+        }))
+      }
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -38,11 +88,12 @@ export default function ClienteForm() {
     if (!form.telefone.trim()) { setErro('Telefone é obrigatório.'); return }
 
     setSaving(true)
+    const payload = { ...form, endereco: montarEndereco(form) }
     let error
     if (isEdit) {
-      ({ error } = await supabase.from('clientes').update(form).eq('id', id))
+      ({ error } = await supabase.from('clientes').update(payload).eq('id', id))
     } else {
-      ({ error } = await supabase.from('clientes').insert({ ...form, tecnico_id: user.id }))
+      ({ error } = await supabase.from('clientes').insert({ ...payload, tecnico_id: user.id }))
     }
 
     if (error) { setErro('Erro ao salvar. Tente novamente.'); setSaving(false); return }
@@ -95,14 +146,54 @@ export default function ClienteForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
-          <textarea
-            className="input-field resize-none"
-            placeholder="Rua, número, bairro, cidade..."
-            rows={3}
-            value={form.endereco}
-            onChange={set('endereco')}
+          <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+          <input
+            type="text"
+            className="input-field"
+            inputMode="numeric"
+            placeholder="00000-000"
+            value={form.cep}
+            onChange={handleCepChange}
           />
+          {buscandoCep && <p className="text-xs text-gray-400 mt-1">Buscando endereço...</p>}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rua</label>
+            <input type="text" className="input-field" value={form.rua} onChange={set('rua')} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Número</label>
+            <input type="text" className="input-field" value={form.numero} onChange={set('numero')} />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+          <input type="text" className="input-field" placeholder="Opcional" value={form.complemento} onChange={set('complemento')} />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bairro</label>
+            <input type="text" className="input-field" value={form.bairro} onChange={set('bairro')} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">UF</label>
+            <input
+              type="text"
+              className="input-field"
+              maxLength={2}
+              value={form.estado}
+              onChange={e => setForm(f => ({ ...f, estado: e.target.value.toUpperCase() }))}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+          <input type="text" className="input-field" value={form.cidade} onChange={set('cidade')} />
         </div>
 
         {erro && <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{erro}</p>}

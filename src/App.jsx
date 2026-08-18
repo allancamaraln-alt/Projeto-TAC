@@ -43,6 +43,11 @@ const Afiliados    = lazy(() => import('./pages/Afiliados'))
 const AdminTrackingDebug = lazy(() => import('./pages/AdminTrackingDebug'))
 const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'))
 const AdminPurchaseDetail = lazy(() => import('./pages/AdminPurchaseDetail'))
+const PmocList             = lazy(() => import('./pages/PmocList'))
+const PmocNovo             = lazy(() => import('./pages/PmocNovo'))
+const PmocDetalhe          = lazy(() => import('./pages/PmocDetalhe'))
+const PmocExecucaoForm     = lazy(() => import('./pages/PmocExecucaoForm'))
+const PmocHistorico        = lazy(() => import('./pages/PmocHistorico'))
 
 function PageLoader() {
   return (
@@ -169,6 +174,11 @@ function AppContent() {
           <Route path="/perfil"                 element={<Perfil />} />
           <Route path="/privacidade"            element={<Privacidade />} />
           <Route path="/afiliados"              element={<Afiliados />} />
+          <Route path="/pmoc"                    element={<PmocList />} />
+          <Route path="/pmoc/novo"               element={<PmocNovo />} />
+          <Route path="/pmoc/:id"                element={<PmocDetalhe />} />
+          <Route path="/pmoc/:id/execucao/nova"  element={<PmocExecucaoForm />} />
+          <Route path="/pmoc/:id/historico"      element={<PmocHistorico />} />
           <Route path="*"                       element={<Navigate to="/" />} />
         </Routes>
       </Suspense>

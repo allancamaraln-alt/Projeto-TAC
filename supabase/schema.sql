@@ -381,6 +381,15 @@ alter table public.profiles add column if not exists mp_card_last_four text defa
 alter table public.profiles add column if not exists mp_card_brand text default null;
 alter table public.profiles add column if not exists auto_renew boolean default false;
 
+-- ============================================
+-- MIGRATION: Asaas (substitui o Mercado Pago) — colunas mp_* acima ficam só
+-- como histórico, não são mais escritas por código novo.
+-- ============================================
+alter table public.profiles add column if not exists cpf_cnpj text default null;
+alter table public.profiles add column if not exists asaas_customer_id text default null;
+alter table public.profiles add column if not exists asaas_subscription_id text default null;
+alter table public.profiles add column if not exists asaas_addon_subscription_id text default null;
+
 drop policy if exists "Afiliado gerencia seus dados" on public.afiliados;
 create policy "Afiliado gerencia seus dados"
   on public.afiliados for all
@@ -395,28 +404,28 @@ create policy "Afiliado vê suas comissões"
   );
 
 -- ============================================
--- CRON: Renovação automática de assinaturas mensais
--- Pré-requisitos:
---   1. Habilitar extensões no Supabase Dashboard → Database → Extensions:
---      • pg_cron
---      • pg_net
---   2. Definir CRON_SECRET nas env vars da Edge Function (Dashboard → Edge Functions → auto-renew-subscriptions → Secrets)
---   3. Substituir <SUPABASE_URL> e <CRON_SECRET> pelos valores reais antes de executar
+-- CRON: Renovação automática de assinaturas mensais (Mercado Pago) — DESATIVADO.
+-- Migração para Asaas usa assinaturas nativas (POST /v3/subscriptions), que cobram
+-- o cliente a cada ciclo sozinhas e avisam via asaas-webhook — não precisa mais de
+-- um cron re-tokenizando cartão todo dia.
 -- ============================================
-select cron.schedule(
-  'auto-renew-monthly',
-  '0 8 * * *',   -- Todo dia às 08:00 UTC
-  $$
-  select net.http_post(
-    url     := '<SUPABASE_URL>/functions/v1/auto-renew-subscriptions',
-    headers := jsonb_build_object(
-      'Content-Type',   'application/json',
-      'x-cron-secret',  '<CRON_SECRET>'
-    ),
-    body    := '{}'::jsonb
-  )
-  $$
-);
+select cron.unschedule('auto-renew-monthly');
+
+-- Bloco antigo mantido apenas como referência histórica (não executar de novo):
+-- select cron.schedule(
+--   'auto-renew-monthly',
+--   '0 8 * * *',   -- Todo dia às 08:00 UTC
+--   $$
+--   select net.http_post(
+--     url     := '<SUPABASE_URL>/functions/v1/auto-renew-subscriptions',
+--     headers := jsonb_build_object(
+--       'Content-Type',   'application/json',
+--       'x-cron-secret',  '<CRON_SECRET>'
+--     ),
+--     body    := '{}'::jsonb
+--   )
+--   $$
+-- );
 
 -- ============================================
 -- MIGRATION: Rastreamento de origem (Meta Ads / UTMify)
@@ -915,3 +924,422 @@ drop policy if exists "Técnico gerencia eventos de atendimento" on public.atend
 create policy "Técnico gerencia eventos de atendimento"
   on public.atendimento_eventos for all
   using (auth.uid() = tecnico_id);
+
+-- ============================================
+-- MIGRATION: RLS por entitlement em receitas/gastos
+-- ============================================
+-- Contexto: `hasFaturamento` e `hasAiAssistant` (src/hooks/useAuth.jsx) hoje só
+-- escondem a UI (Relatorio.jsx bloqueia a tela; a Assistente de IA financeira
+-- exige o add-on). O RLS de `receitas`/`gastos` liberava por tecnico_id apenas,
+-- então um usuário Básico sem add-on de IA conseguia ler/gravar essas tabelas
+-- direto pela API do Supabase, contornando os dois gates de UI. Esta migration
+-- replica a mesma regra de entitlement no banco, para os dois únicos fluxos
+-- legítimos de acesso: o Relatório de Faturamento (planos não-Básico, ou
+-- Básico "grandfathered" sem plan_locked_at) e o Assistente de IA Financeiro
+-- (add-on ai_addon_until ativo, independente do plano).
+--
+-- Não mexe em `ordens_servico` nem no limite de histórico completo por
+-- cliente (`historico_liberado`) — isso depende de várias telas que listam OS
+-- do técnico sem filtro por cliente (agenda, dashboard, painel, IA) e exigiria
+-- uma view/função dedicada para não arriscar quebrar essas telas.
+
+create or replace function public.has_faturamento(uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select not (
+    coalesce(p.subscribed_until, 'epoch'::timestamptz) > now()
+    and p.plan_locked_at is not null
+    and p.plan = 'monthly'
+  )
+  from public.profiles p
+  where p.id = uid;
+$$;
+
+create or replace function public.has_ai_assistant(uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(p.ai_addon_until, 'epoch'::timestamptz) > now()
+  from public.profiles p
+  where p.id = uid;
+$$;
+
+-- receitas
+drop policy if exists "Técnico vê suas receitas" on public.receitas;
+
+create policy "Técnico lê receitas com entitlement"
+  on public.receitas for select
+  using (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+create policy "Técnico grava receitas com add-on de IA"
+  on public.receitas for insert
+  with check (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()));
+
+create policy "Técnico atualiza/remove suas receitas com add-on de IA"
+  on public.receitas for update
+  using (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()))
+  with check (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()));
+
+create policy "Técnico remove suas receitas com add-on de IA"
+  on public.receitas for delete
+  using (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()));
+
+-- gastos
+drop policy if exists "Técnico vê seus gastos" on public.gastos;
+
+create policy "Técnico lê gastos com entitlement"
+  on public.gastos for select
+  using (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+create policy "Técnico grava gastos com add-on de IA"
+  on public.gastos for insert
+  with check (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()));
+
+create policy "Técnico atualiza suas gastos com add-on de IA"
+  on public.gastos for update
+  using (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()))
+  with check (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()));
+
+create policy "Técnico remove seus gastos com add-on de IA"
+  on public.gastos for delete
+  using (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()));
+
+-- ============================================
+-- MIGRATION: PMOC (Plano de Manutenção, Operação e Controle)
+-- Módulo novo e independente: atende Portaria GM/MS nº 3.523/1998,
+-- RE ANVISA 09/2003 e NBR 13971. Cadastro persistente de ambientes
+-- climatizados e equipamentos por PMOC (distinto dos campos equipamento_*
+-- efêmeros de ordens_servico/laudos), plano de manutenção com periodicidade
+-- por item (copiado de um template em src/lib/pmocTemplates.js na criação
+-- do equipamento, editável depois) e histórico de execuções — uma linha
+-- por visita (pmoc_execucoes) + uma linha por item marcado (pmoc_execucao_itens),
+-- com snapshot de descrição/periodicidade/data para o histórico não mudar
+-- se o plano for editado depois. "Próxima data" nunca é armazenada — é
+-- sempre calculada em runtime (última execução + periodicidade) em
+-- src/lib/pmoc.js. Referencia clientes/ordens_servico só como leitura,
+-- sem alterar nenhuma dessas tabelas.
+-- ============================================
+
+create table if not exists public.pmoc_planos (
+  id uuid default uuid_generate_v4() primary key,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  cliente_id uuid references public.clientes(id) on delete cascade not null unique,
+  responsavel_tecnico text not null default '',
+  responsavel_documento text not null default '',
+  data_inicio date not null default current_date,
+  observacoes text not null default '',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_pmoc_planos_tecnico on public.pmoc_planos(tecnico_id);
+drop trigger if exists set_updated_at on public.pmoc_planos;
+create trigger set_updated_at before update on public.pmoc_planos
+  for each row execute procedure public.update_updated_at();
+
+create table if not exists public.pmoc_ambientes (
+  id uuid default uuid_generate_v4() primary key,
+  pmoc_id uuid references public.pmoc_planos(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  nome text not null,
+  area_m2 numeric(8,2),
+  observacoes text not null default '',
+  created_at timestamptz default now()
+);
+create index if not exists idx_pmoc_ambientes_pmoc on public.pmoc_ambientes(pmoc_id);
+create index if not exists idx_pmoc_ambientes_tecnico on public.pmoc_ambientes(tecnico_id);
+
+create table if not exists public.pmoc_equipamentos (
+  id uuid default uuid_generate_v4() primary key,
+  pmoc_id uuid references public.pmoc_planos(id) on delete cascade not null,
+  ambiente_id uuid references public.pmoc_ambientes(id) on delete set null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  tag text not null default '',
+  tipo text not null default '',
+  marca text not null default '',
+  modelo text not null default '',
+  capacidade text not null default '',
+  fluido text not null default '',
+  numero_serie text not null default '',
+  ativo boolean not null default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_pmoc_equipamentos_pmoc on public.pmoc_equipamentos(pmoc_id);
+create index if not exists idx_pmoc_equipamentos_ambiente on public.pmoc_equipamentos(ambiente_id);
+create index if not exists idx_pmoc_equipamentos_tecnico on public.pmoc_equipamentos(tecnico_id);
+drop trigger if exists set_updated_at on public.pmoc_equipamentos;
+create trigger set_updated_at before update on public.pmoc_equipamentos
+  for each row execute procedure public.update_updated_at();
+
+create table if not exists public.pmoc_plano_itens (
+  id uuid default uuid_generate_v4() primary key,
+  equipamento_id uuid references public.pmoc_equipamentos(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  descricao text not null,
+  periodicidade text not null
+    check (periodicidade in ('diaria', 'semanal', 'mensal', 'trimestral', 'semestral', 'anual')),
+  ativo boolean not null default true,
+  ordem int not null default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_pmoc_plano_itens_equipamento on public.pmoc_plano_itens(equipamento_id);
+create index if not exists idx_pmoc_plano_itens_tecnico on public.pmoc_plano_itens(tecnico_id);
+drop trigger if exists set_updated_at on public.pmoc_plano_itens;
+create trigger set_updated_at before update on public.pmoc_plano_itens
+  for each row execute procedure public.update_updated_at();
+
+create table if not exists public.pmoc_execucoes (
+  id uuid default uuid_generate_v4() primary key,
+  pmoc_id uuid references public.pmoc_planos(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  ordem_id uuid references public.ordens_servico(id) on delete set null,
+  data date not null default current_date,
+  observacoes text not null default '',
+  created_at timestamptz default now()
+);
+create index if not exists idx_pmoc_execucoes_pmoc on public.pmoc_execucoes(pmoc_id, data);
+create index if not exists idx_pmoc_execucoes_tecnico on public.pmoc_execucoes(tecnico_id);
+
+create table if not exists public.pmoc_execucao_itens (
+  id uuid default uuid_generate_v4() primary key,
+  execucao_id uuid references public.pmoc_execucoes(id) on delete cascade not null,
+  pmoc_id uuid references public.pmoc_planos(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  equipamento_id uuid references public.pmoc_equipamentos(id) on delete set null,
+  plano_item_id uuid references public.pmoc_plano_itens(id) on delete set null,
+  descricao text not null,
+  periodicidade text not null
+    check (periodicidade in ('diaria', 'semanal', 'mensal', 'trimestral', 'semestral', 'anual')),
+  situacao text not null default 'ok'
+    check (situacao in ('ok', 'nao_ok', 'nao_aplicavel')),
+  observacao text not null default '',
+  data date not null,
+  created_at timestamptz default now()
+);
+create index if not exists idx_pmoc_execucao_itens_execucao on public.pmoc_execucao_itens(execucao_id);
+create index if not exists idx_pmoc_execucao_itens_pmoc_item on public.pmoc_execucao_itens(pmoc_id, plano_item_id, data);
+create index if not exists idx_pmoc_execucao_itens_tecnico on public.pmoc_execucao_itens(tecnico_id);
+
+alter table public.pmoc_planos enable row level security;
+alter table public.pmoc_ambientes enable row level security;
+alter table public.pmoc_equipamentos enable row level security;
+alter table public.pmoc_plano_itens enable row level security;
+alter table public.pmoc_execucoes enable row level security;
+alter table public.pmoc_execucao_itens enable row level security;
+
+drop policy if exists "Técnico gerencia seus PMOCs" on public.pmoc_planos;
+create policy "Técnico gerencia seus PMOCs" on public.pmoc_planos for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+drop policy if exists "Técnico gerencia ambientes de seus PMOCs" on public.pmoc_ambientes;
+create policy "Técnico gerencia ambientes de seus PMOCs" on public.pmoc_ambientes for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+drop policy if exists "Técnico gerencia equipamentos de seus PMOCs" on public.pmoc_equipamentos;
+create policy "Técnico gerencia equipamentos de seus PMOCs" on public.pmoc_equipamentos for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+drop policy if exists "Técnico gerencia itens de plano de seus PMOCs" on public.pmoc_plano_itens;
+create policy "Técnico gerencia itens de plano de seus PMOCs" on public.pmoc_plano_itens for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+drop policy if exists "Técnico gerencia execuções de seus PMOCs" on public.pmoc_execucoes;
+create policy "Técnico gerencia execuções de seus PMOCs" on public.pmoc_execucoes for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+drop policy if exists "Técnico gerencia itens de execução de seus PMOCs" on public.pmoc_execucao_itens;
+create policy "Técnico gerencia itens de execução de seus PMOCs" on public.pmoc_execucao_itens for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+
+-- ============================================
+-- MIGRATION: PMOC v2 — Estabelecimento como entidade própria, wizard de
+-- criação em 5 etapas, plano de manutenção expandido (periodicidade
+-- personalizada, responsável por atividade, override da 1ª data
+-- prevista), execução com campos de detalhe + evidência fotográfica,
+-- documentos anexos ao plano e status do plano (ativo/encerrado).
+-- pmoc_ambientes e pmoc_equipamentos.ambiente_id ficam intactos no banco,
+-- não usados pela UI nova (Ambientes saiu do fluxo). Todas as tabelas
+-- pmoc_* estavam com 0 linhas em produção, então os ALTERs abaixo trocam
+-- colunas diretamente (drop+add), sem necessidade de migrar dados.
+-- ============================================
+
+-- pmoc_planos: um cliente pode ter vários PMOCs; registro profissional
+-- estruturado (tipo + número) no lugar do texto único; ART/TRT; status
+-- do plano (ativo/encerrado — soft close, não é exclusão).
+alter table public.pmoc_planos drop constraint if exists pmoc_planos_cliente_id_key;
+
+alter table public.pmoc_planos add column if not exists registro_tipo text
+  check (registro_tipo in ('crea', 'cau', 'cft', 'crt', 'outro'));
+alter table public.pmoc_planos add column if not exists registro_numero text not null default '';
+alter table public.pmoc_planos add column if not exists art_trt text not null default '';
+alter table public.pmoc_planos add column if not exists status text not null default 'ativo'
+  check (status in ('ativo', 'encerrado'));
+alter table public.pmoc_planos drop column if exists responsavel_documento;
+
+create index if not exists idx_pmoc_planos_status on public.pmoc_planos(status);
+
+-- pmoc_estabelecimentos: dados do local climatizado (1:1 com o plano,
+-- separado por decisão explícita do usuário mesmo sendo 1:1).
+create table if not exists public.pmoc_estabelecimentos (
+  id uuid default uuid_generate_v4() primary key,
+  pmoc_id uuid references public.pmoc_planos(id) on delete cascade not null unique,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  nome text not null default '',
+  cnpj_cpf text not null default '',
+  cep text not null default '',
+  rua text not null default '',
+  numero text not null default '',
+  complemento text not null default '',
+  bairro text not null default '',
+  cidade text not null default '',
+  estado text not null default '',
+  tipo_estabelecimento text not null default ''
+    check (tipo_estabelecimento in (
+      '', 'comercio', 'escritorio', 'clinica', 'hospital', 'escola',
+      'academia', 'restaurante', 'hotel', 'industria', 'igreja',
+      'residencia', 'outro'
+    )),
+  area_climatizada_m2 numeric(10, 2),
+  qtd_ambientes int,
+  observacoes text not null default '',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_pmoc_estabelecimentos_tecnico on public.pmoc_estabelecimentos(tecnico_id);
+drop trigger if exists set_updated_at on public.pmoc_estabelecimentos;
+create trigger set_updated_at before update on public.pmoc_estabelecimentos
+  for each row execute procedure public.update_updated_at();
+
+-- pmoc_equipamentos: campos estruturados no lugar de capacidade (texto
+-- livre) e ativo (boolean); fabricante substitui marca; ambiente_id
+-- mantido na tabela, não usado pela UI nova.
+alter table public.pmoc_equipamentos add column if not exists codigo_interno text not null default '';
+alter table public.pmoc_equipamentos add column if not exists localizacao text not null default '';
+alter table public.pmoc_equipamentos add column if not exists capacidade_valor numeric(10, 2);
+alter table public.pmoc_equipamentos add column if not exists capacidade_unidade text
+  check (capacidade_unidade in ('btu', 'tr', 'kw'));
+alter table public.pmoc_equipamentos add column if not exists status text not null default 'ativo'
+  check (status in ('ativo', 'inativo', 'manutencao'));
+alter table public.pmoc_equipamentos add column if not exists observacoes text not null default '';
+alter table public.pmoc_equipamentos add column if not exists fabricante text not null default '';
+alter table public.pmoc_equipamentos drop column if exists ativo;
+alter table public.pmoc_equipamentos drop column if exists capacidade;
+alter table public.pmoc_equipamentos drop column if exists marca;
+
+create index if not exists idx_pmoc_equipamentos_status on public.pmoc_equipamentos(status);
+
+-- pmoc_plano_itens: periodicidade conforme lista pedida (substitui a
+-- lista v1), periodicidade personalizada em dias, override da 1ª data
+-- prevista, responsável e observações por atividade.
+alter table public.pmoc_plano_itens drop constraint if exists pmoc_plano_itens_periodicidade_check;
+alter table public.pmoc_plano_itens add constraint pmoc_plano_itens_periodicidade_check
+  check (periodicidade in ('semanal', 'quinzenal', 'mensal', 'bimestral', 'trimestral', 'semestral', 'anual', 'personalizada'));
+alter table public.pmoc_plano_itens add column if not exists periodicidade_dias int;
+alter table public.pmoc_plano_itens add column if not exists proxima_execucao_override date;
+alter table public.pmoc_plano_itens add column if not exists responsavel text not null default '';
+alter table public.pmoc_plano_itens add column if not exists observacoes text not null default '';
+
+-- pmoc_execucao_itens: campos de detalhe opcionais (colapsados por
+-- padrão na UI — o fluxo rápido OK/Não OK/N-A continua funcionando sem
+-- preenchê-los) + override manual da próxima manutenção desta ocorrência.
+alter table public.pmoc_execucao_itens add column if not exists situacao_encontrada text not null default '';
+alter table public.pmoc_execucao_itens add column if not exists servico_executado text not null default '';
+alter table public.pmoc_execucao_itens add column if not exists materiais_utilizados text not null default '';
+alter table public.pmoc_execucao_itens add column if not exists proxima_manutencao_override date;
+
+-- pmoc_execucao_fotos: evidência fotográfica por item de execução.
+create table if not exists public.pmoc_execucao_fotos (
+  id uuid default uuid_generate_v4() primary key,
+  execucao_item_id uuid references public.pmoc_execucao_itens(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  url text not null,
+  created_at timestamptz default now()
+);
+create index if not exists idx_pmoc_execucao_fotos_item on public.pmoc_execucao_fotos(execucao_item_id);
+
+-- pmoc_documentos: anexos livres do plano (manuais, certificados
+-- anteriores, notas fiscais etc).
+create table if not exists public.pmoc_documentos (
+  id uuid default uuid_generate_v4() primary key,
+  pmoc_id uuid references public.pmoc_planos(id) on delete cascade not null,
+  tecnico_id uuid references public.profiles(id) on delete cascade not null,
+  nome text not null default '',
+  url text not null,
+  tipo text not null default '',
+  created_at timestamptz default now()
+);
+create index if not exists idx_pmoc_documentos_pmoc on public.pmoc_documentos(pmoc_id);
+
+alter table public.pmoc_estabelecimentos enable row level security;
+alter table public.pmoc_execucao_fotos enable row level security;
+alter table public.pmoc_documentos enable row level security;
+
+drop policy if exists "Técnico gerencia estabelecimentos de seus PMOCs" on public.pmoc_estabelecimentos;
+create policy "Técnico gerencia estabelecimentos de seus PMOCs" on public.pmoc_estabelecimentos for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+
+drop policy if exists "Técnico gerencia fotos de execução de seus PMOCs" on public.pmoc_execucao_fotos;
+create policy "Técnico gerencia fotos de execução de seus PMOCs" on public.pmoc_execucao_fotos for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+
+drop policy if exists "Técnico gerencia documentos de seus PMOCs" on public.pmoc_documentos;
+create policy "Técnico gerencia documentos de seus PMOCs" on public.pmoc_documentos for all
+  using (auth.uid() = tecnico_id) with check (auth.uid() = tecnico_id);
+
+insert into storage.buckets (id, name, public)
+values ('pmoc-evidencias', 'pmoc-evidencias', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Técnico envia evidências de PMOC" on storage.objects;
+create policy "Técnico envia evidências de PMOC"
+  on storage.objects for insert
+  with check (bucket_id = 'pmoc-evidencias' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Técnico remove evidências de PMOC" on storage.objects;
+create policy "Técnico remove evidências de PMOC"
+  on storage.objects for delete
+  using (bucket_id = 'pmoc-evidencias' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Evidências de PMOC são públicas para leitura" on storage.objects;
+create policy "Evidências de PMOC são públicas para leitura"
+  on storage.objects for select
+  using (bucket_id = 'pmoc-evidencias');
+
+insert into storage.buckets (id, name, public)
+values ('pmoc-documentos', 'pmoc-documentos', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Técnico envia documentos de PMOC" on storage.objects;
+create policy "Técnico envia documentos de PMOC"
+  on storage.objects for insert
+  with check (bucket_id = 'pmoc-documentos' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Técnico remove documentos de PMOC" on storage.objects;
+create policy "Técnico remove documentos de PMOC"
+  on storage.objects for delete
+  using (bucket_id = 'pmoc-documentos' and auth.uid()::text = (storage.foldername(name))[1]);
+
+drop policy if exists "Documentos de PMOC são públicos para leitura" on storage.objects;
+create policy "Documentos de PMOC são públicos para leitura"
+  on storage.objects for select
+  using (bucket_id = 'pmoc-documentos');
+
+-- ============================================
+-- CLIENTES: endereço estruturado (CEP/ViaCEP)
+-- ============================================
+alter table public.clientes add column if not exists cep text default '';
+alter table public.clientes add column if not exists rua text default '';
+alter table public.clientes add column if not exists numero text default '';
+alter table public.clientes add column if not exists complemento text default '';
+alter table public.clientes add column if not exists bairro text default '';
+alter table public.clientes add column if not exists cidade text default '';
+alter table public.clientes add column if not exists estado text default '';

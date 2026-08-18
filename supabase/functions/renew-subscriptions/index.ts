@@ -6,7 +6,7 @@ const COMISSAO_PERC = 0.20
 
 const PLANOS = {
   monthly: { amount: 19.90, days: 30, description: 'ClimaPro Mensal — Renovação' },
-  annual:  { amount: 149.90, days: 365, description: 'ClimaPro Anual — Renovação' },
+  annual:  { amount: 239.90, days: 365, description: 'ClimaPro Anual — Renovação' },
 }
 
 async function registrarComissao(supabase: any, userId: string, amount: number, paymentRef: string) {

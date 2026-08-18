@@ -5,7 +5,7 @@
       "args": [
         "@playwright/mcp@latest",
         "--config",
-        "C:\\Users\\Cliente Microsoft\\OneDrive\\VibeCode\\Teste\\_opensquad\\config\\playwright.config.json"
+        "C:\\Users\\Cliente Microsoft\\OneDrive\\VibeCode\\ClimaPro Oficial\\_opensquad\\config\\playwright.config.json"
       ]
     }
   }

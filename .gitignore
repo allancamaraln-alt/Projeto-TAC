@@ -27,3 +27,15 @@ dist-ssr
 *.sw?
 
 .vercel
+.env*
+
+# Ferramentas locais / dados sensíveis — não fazem parte do app ClimaPro
+.claude/
+.agents/
+.agent/
+.playwright-mcp/
+_opensquad/
+dashboard/
+skills/
+squads/
+response.json
