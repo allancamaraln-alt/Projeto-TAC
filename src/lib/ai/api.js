@@ -29,11 +29,15 @@ export async function fetchWithTools(messages, signal, tools) {
   return fetchCompletion(messages, signal, { tools, tool_choice: 'auto' })
 }
 
-// Transcrição de voz — usada pelo ChatComposer no Safari/iOS, onde a Web
-// Speech API não existe (ver supabase/functions/transcribe-audio).
-export async function transcribeAudio(base64Audio, mimeType) {
+// Transcrição de voz — usada pelo ChatComposer no iOS, onde a Web Speech
+// API não funciona de forma confiável (ver supabase/functions/transcribe-audio).
+// Manda o blob em binário puro (não base64) — mais rápido, sem o overhead
+// de codificar/decodificar; o mimeType vai num header já que o corpo não é
+// mais JSON.
+export async function transcribeAudio(audioBlob) {
   const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-    body: { audio: base64Audio, mimeType },
+    body: audioBlob,
+    headers: { 'x-audio-mime-type': audioBlob.type },
   })
 
   if (error) {

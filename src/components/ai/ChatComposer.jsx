@@ -24,15 +24,6 @@ async function compressImage(file) {
   })
 }
 
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => resolve(reader.result.split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-}
-
 // Safari/iOS não implementa SpeechRecognition — só MediaRecorder. Prioriza
 // mp4/aac (o que o Safari grava) e cai pra webm/opus nos outros browsers.
 function pickRecorderMimeType() {
@@ -187,8 +178,7 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
 
         setTranscribing(true)
         try {
-          const base64 = await blobToBase64(blob)
-          const text = await transcribeAudio(base64, blob.type)
+          const text = await transcribeAudio(blob)
           if (text?.trim()) {
             sendRef.current(text.trim())
           } else {

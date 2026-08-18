@@ -3,12 +3,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-audio-mime-type',
 }
 
 const OPENAI_URL = 'https://api.openai.com/v1/audio/transcriptions'
+const MODEL = 'gpt-4o-mini-transcribe' // mais rápido que whisper-1 pra clipes curtos
 
-function extensionFor(mimeType: string | undefined) {
+function extensionFor(mimeType: string | null) {
   if (mimeType?.includes('mp4')) return 'mp4'
   if (mimeType?.includes('webm')) return 'webm'
   if (mimeType?.includes('wav')) return 'wav'
@@ -17,12 +18,12 @@ function extensionFor(mimeType: string | undefined) {
 }
 
 // Transcrição de voz do ClimaPro IA — usada pelo composer (ChatComposer.jsx)
-// como alternativa à Web Speech API, que não existe no Safari/iOS. O
-// cliente grava áudio com MediaRecorder (suportado no Safari, diferente de
-// SpeechRecognition) e manda o blob em base64; aqui a gente decodifica,
-// monta um multipart/form-data e chama o Whisper da OpenAI. Mesmo padrão
-// de auth/gate de assinatura de ai-chat/index.ts — a chave da OpenAI nunca
-// sai do servidor.
+// como alternativa à Web Speech API, que não funciona de forma confiável no
+// iOS. O cliente grava áudio com MediaRecorder e manda o blob em binário
+// puro no corpo da requisição (mimeType vai num header — ver
+// src/lib/ai/api.js), sem base64: evita ~33% de overhead de payload e o
+// custo de decodificar dos dois lados. Mesmo padrão de auth/gate de
+// assinatura de ai-chat/index.ts — a chave da OpenAI nunca sai do servidor.
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -55,15 +56,15 @@ serve(async (req) => {
       })
     }
 
-    const { audio, mimeType } = await req.json()
-    if (!audio) throw new Error('audio é obrigatório')
+    const mimeType = req.headers.get('x-audio-mime-type')
+    const audioBuffer = await req.arrayBuffer()
+    if (audioBuffer.byteLength === 0) throw new Error('audio é obrigatório')
 
-    const bytes = Uint8Array.from(atob(audio), c => c.charCodeAt(0))
-    const blob = new Blob([bytes], { type: mimeType || 'audio/webm' })
+    const blob = new Blob([audioBuffer], { type: mimeType || 'audio/webm' })
 
     const form = new FormData()
     form.append('file', blob, `audio.${extensionFor(mimeType)}`)
-    form.append('model', 'whisper-1')
+    form.append('model', MODEL)
     form.append('language', 'pt')
 
     const openaiRes = await fetch(OPENAI_URL, {
