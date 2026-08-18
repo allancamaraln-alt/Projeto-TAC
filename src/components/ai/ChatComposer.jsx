@@ -75,7 +75,6 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   // com MediaRecorder e transcreve no servidor (ver toggleVoice/startRecording
   // e supabase/functions/transcribe-audio).
   const supportsMediaRecorder = typeof window.MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
-  const supportsVoice = supportsSpeechRecognition || supportsMediaRecorder
 
   useEffect(() => { sendRef.current = send }, [send])
 
@@ -91,10 +90,14 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   }, [])
 
   // Solicita permissão de mic assim que o composer aparece em tela — só
-  // quando o navegador realmente suporta reconhecimento de voz (Safari não
-  // suporta, então não faz sentido pedir a permissão à toa).
+  // pro caminho de SpeechRecognition, que precisa da permissão já resolvida
+  // antes de rec.start(). NÃO faz isso pro caminho de MediaRecorder
+  // (Safari/iOS): esquentar e soltar o stream aqui e pedir de novo no tap
+  // do usuário é duas chamadas de getUserMedia em sequência rápida, e o
+  // WebKit do iOS costuma abortar a segunda (AbortError) — startRecording
+  // já pede a permissão sozinho, na hora que precisa.
   useEffect(() => {
-    if (!supportsVoice) return
+    if (!supportsSpeechRecognition) return
     const request = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
@@ -106,7 +109,7 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
     navigator.permissions?.query({ name: 'microphone' })
       .then(p => { if (p.state === 'prompt') request() })
       .catch(() => request()) // fallback: tenta pedir direto se a API não suportar query
-  }, [supportsVoice])
+  }, [supportsSpeechRecognition])
 
   useEffect(() => {
     const ta = inputRef.current
@@ -128,6 +131,14 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      recorder.onerror = () => {
+        mediaStreamRef.current?.getTracks().forEach(t => t.stop())
+        clearTimeout(recordTimeoutRef.current)
+        setListening(false)
+        setVoiceError('Erro ao gravar áudio. Tente novamente.')
+        setTimeout(() => setVoiceError(null), 4000)
       }
 
       recorder.onstop = async () => {
@@ -162,8 +173,13 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
       setVoiceError(null)
 
       recordTimeoutRef.current = setTimeout(() => recorder.stop(), MAX_RECORDING_MS)
-    } catch {
-      setVoiceError('Permissão de microfone negada. Habilite nas configurações do navegador.')
+    } catch (err) {
+      const msgs = {
+        NotAllowedError: 'Permissão de microfone negada. Habilite nas configurações do navegador.',
+        NotFoundError: 'Microfone não encontrado.',
+        AbortError: 'Não foi possível acessar o microfone agora. Toque novamente.',
+      }
+      setVoiceError(msgs[err?.name] || 'Não foi possível acessar o microfone. Tente novamente.')
       setTimeout(() => setVoiceError(null), 4000)
     }
   }, [])
