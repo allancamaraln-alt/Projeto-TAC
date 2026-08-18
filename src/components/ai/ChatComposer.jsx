@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { useAI } from '../../hooks/useAI'
 import { QUICK_ACTIONS } from '../../lib/openai'
+import { transcribeAudio } from '../../lib/ai/api'
 import { MicIcon, PlusIcon, CameraIcon } from './icons'
 import ToolbarIconButton from './ToolbarIconButton'
 import SendButton from './SendButton'
@@ -23,6 +24,25 @@ async function compressImage(file) {
   })
 }
 
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result.split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+// Safari/iOS não implementa SpeechRecognition — só MediaRecorder. Prioriza
+// mp4/aac (o que o Safari grava) e cai pra webm/opus nos outros browsers.
+function pickRecorderMimeType() {
+  if (typeof MediaRecorder === 'undefined') return ''
+  const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']
+  return candidates.find(t => MediaRecorder.isTypeSupported?.(t)) || ''
+}
+
+const MAX_RECORDING_MS = 60_000
+
 // Barra de entrada do ClimaPro IA (texto/foto/voz) — usada em ChatHome.jsx,
 // no modal do AIAssistant e no Modo Atendimento IA (AtendimentoIA.jsx).
 // Por padrão usa o chat global (useAI()); passe send/loading/cancel como
@@ -37,17 +57,33 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   const cancel = cancelProp ?? globalAI.cancel
   const [input, setInput] = useState('')
   const [listening, setListening] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
   const [voiceError, setVoiceError] = useState(null)
   const [pendingImage, setPendingImage] = useState(null)
   const inputRef = useRef(null)
   const recognitionRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
+  const mediaStreamRef = useRef(null)
+  const recordTimeoutRef = useRef(null)
   const sendRef = useRef(send)
   const galleryInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  const supportsVoice = !!SpeechRecognition
+  const supportsSpeechRecognition = !!SpeechRecognition
+  // Fallback pro Safari/iOS, que não implementa SpeechRecognition: grava
+  // com MediaRecorder e transcreve no servidor (ver toggleVoice/startRecording
+  // e supabase/functions/transcribe-audio).
+  const supportsMediaRecorder = typeof window.MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
+  const supportsVoice = supportsSpeechRecognition || supportsMediaRecorder
 
   useEffect(() => { sendRef.current = send }, [send])
+
+  // Solta o microfone se o componente desmontar no meio de uma gravação.
+  useEffect(() => () => {
+    clearTimeout(recordTimeoutRef.current)
+    mediaStreamRef.current?.getTracks().forEach(t => t.stop())
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => inputRef.current?.focus(), 350)
@@ -79,57 +115,121 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
     ta.style.height = Math.min(ta.scrollHeight, 128) + 'px'
   }, [input])
 
-  const toggleVoice = useCallback(() => {
-    if (!SpeechRecognition) {
-      setVoiceError('Reconhecimento de voz não é suportado neste navegador. No iPhone, o Safari não suporta — tente pelo Chrome no Android ou digite a mensagem.')
-      setTimeout(() => setVoiceError(null), 6000)
-      return
-    }
-
-    if (listening) {
-      recognitionRef.current?.abort()
-      setListening(false)
-      return
-    }
-
-    // Cria nova instância a cada gravação (evita bugs de reutilização)
-    const rec = new SpeechRecognition()
-    rec.lang = 'pt-BR'
-    rec.continuous = false
-    rec.interimResults = false
-
-    rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript
-      setListening(false)
-      setVoiceError(null)
-      if (transcript.trim()) sendRef.current(transcript.trim())
-    }
-
-    rec.onend = () => setListening(false)
-
-    rec.onerror = (e) => {
-      setListening(false)
-      const msgs = {
-        'not-allowed': 'Permissão de microfone negada. Habilite nas configurações do navegador.',
-        'no-speech':   'Nenhuma fala detectada. Tente novamente.',
-        'audio-capture': 'Microfone não encontrado.',
-        'network':     'Erro de rede ao processar voz.',
-      }
-      setVoiceError(msgs[e.error] || `Erro: ${e.error}`)
-      setTimeout(() => setVoiceError(null), 4000)
-    }
-
-    recognitionRef.current = rec
-
+  // Grava com MediaRecorder e manda pro transcribe-audio (Edge Function) —
+  // caminho usado quando não há SpeechRecognition (Safari/iOS).
+  const startRecording = useCallback(async () => {
     try {
-      rec.start()
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+
+      const mimeType = pickRecorderMimeType()
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
+      audioChunksRef.current = []
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+
+      recorder.onstop = async () => {
+        mediaStreamRef.current?.getTracks().forEach(t => t.stop())
+        clearTimeout(recordTimeoutRef.current)
+        setListening(false)
+
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || mimeType || 'audio/webm' })
+        if (blob.size === 0) return
+
+        setTranscribing(true)
+        try {
+          const base64 = await blobToBase64(blob)
+          const text = await transcribeAudio(base64, blob.type)
+          if (text?.trim()) {
+            sendRef.current(text.trim())
+          } else {
+            setVoiceError('Não entendi o áudio. Tente novamente.')
+            setTimeout(() => setVoiceError(null), 4000)
+          }
+        } catch (err) {
+          setVoiceError(err.message === 'addon_required' ? 'Assine o Assistente IA para usar voz.' : (err.message || 'Erro ao transcrever áudio.'))
+          setTimeout(() => setVoiceError(null), 4000)
+        } finally {
+          setTranscribing(false)
+        }
+      }
+
+      mediaRecorderRef.current = recorder
+      recorder.start()
       setListening(true)
       setVoiceError(null)
+
+      recordTimeoutRef.current = setTimeout(() => recorder.stop(), MAX_RECORDING_MS)
     } catch {
-      setVoiceError('Não foi possível acessar o microfone.')
-      setTimeout(() => setVoiceError(null), 3000)
+      setVoiceError('Permissão de microfone negada. Habilite nas configurações do navegador.')
+      setTimeout(() => setVoiceError(null), 4000)
     }
-  }, [listening, SpeechRecognition])
+  }, [])
+
+  const toggleVoice = useCallback(() => {
+    if (transcribing) return
+
+    if (supportsSpeechRecognition) {
+      if (listening) {
+        recognitionRef.current?.abort()
+        setListening(false)
+        return
+      }
+
+      // Cria nova instância a cada gravação (evita bugs de reutilização)
+      const rec = new SpeechRecognition()
+      rec.lang = 'pt-BR'
+      rec.continuous = false
+      rec.interimResults = false
+
+      rec.onresult = (e) => {
+        const transcript = e.results[0][0].transcript
+        setListening(false)
+        setVoiceError(null)
+        if (transcript.trim()) sendRef.current(transcript.trim())
+      }
+
+      rec.onend = () => setListening(false)
+
+      rec.onerror = (e) => {
+        setListening(false)
+        const msgs = {
+          'not-allowed': 'Permissão de microfone negada. Habilite nas configurações do navegador.',
+          'no-speech':   'Nenhuma fala detectada. Tente novamente.',
+          'audio-capture': 'Microfone não encontrado.',
+          'network':     'Erro de rede ao processar voz.',
+        }
+        setVoiceError(msgs[e.error] || `Erro: ${e.error}`)
+        setTimeout(() => setVoiceError(null), 4000)
+      }
+
+      recognitionRef.current = rec
+
+      try {
+        rec.start()
+        setListening(true)
+        setVoiceError(null)
+      } catch {
+        setVoiceError('Não foi possível acessar o microfone.')
+        setTimeout(() => setVoiceError(null), 3000)
+      }
+      return
+    }
+
+    if (supportsMediaRecorder) {
+      if (listening) {
+        mediaRecorderRef.current?.stop()
+        return
+      }
+      startRecording()
+      return
+    }
+
+    setVoiceError('Reconhecimento de voz não é suportado neste navegador. Tente digitar a mensagem.')
+    setTimeout(() => setVoiceError(null), 6000)
+  }, [listening, transcribing, supportsSpeechRecognition, supportsMediaRecorder, SpeechRecognition, startRecording])
 
   const handleImageFile = useCallback(async (file) => {
     if (!file || !file.type.startsWith('image/')) return
@@ -154,7 +254,7 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   useImperativeHandle(ref, () => ({
     openGallery: () => galleryInputRef.current?.click(),
     openCamera: () => cameraInputRef.current?.click(),
-    startVoice: () => { if (!listening) toggleVoice() },
+    startVoice: () => { if (!listening && !transcribing) toggleVoice() },
     prefill: (text) => {
       setInput(text)
       setTimeout(() => {
@@ -164,7 +264,7 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
         ta.setSelectionRange(ta.value.length, ta.value.length)
       }, 50)
     },
-  }), [listening, toggleVoice])
+  }), [listening, transcribing, toggleVoice])
 
   const canSend = (input.trim() || pendingImage) && !loading
 
@@ -191,14 +291,16 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={listening}
+          disabled={listening || transcribing}
           placeholder={
             listening
               ? '🎙️ Ouvindo...'
-              : pendingImage
-                ? 'Adicione uma pergunta sobre a imagem...'
-                : QUICK_ACTIONS.find(a => a.type === 'prompt' && input.startsWith(a.prompt))?.placeholder
-                  ?? 'Descreva o problema ou envie uma foto...'
+              : transcribing
+                ? 'Transcrevendo áudio...'
+                : pendingImage
+                  ? 'Adicione uma pergunta sobre a imagem...'
+                  : QUICK_ACTIONS.find(a => a.type === 'prompt' && input.startsWith(a.prompt))?.placeholder
+                    ?? 'Descreva o problema ou envie uma foto...'
           }
           rows={1}
           className="w-full bg-transparent text-sm text-white placeholder-white/60 resize-none outline-none leading-[1.4]"
@@ -209,7 +311,13 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
           <div className="flex items-center gap-3">
             <ToolbarIconButton icon={PlusIcon} label="Enviar da galeria" onPress={() => galleryInputRef.current?.click()} />
             <ToolbarIconButton icon={CameraIcon} label="Tirar foto" onPress={() => cameraInputRef.current?.click()} />
-            <ToolbarIconButton icon={MicIcon} label={listening ? 'Parar gravação' : 'Gravar voz'} onPress={toggleVoice} active={listening} />
+            <ToolbarIconButton
+              icon={MicIcon}
+              label={listening ? 'Parar gravação' : transcribing ? 'Transcrevendo' : 'Gravar voz'}
+              onPress={toggleVoice}
+              active={listening || transcribing}
+              activeClassName={listening ? 'text-red-400 animate-pulse' : 'text-white/40 animate-pulse'}
+            />
           </div>
 
           {loading ? (

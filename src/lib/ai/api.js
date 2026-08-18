@@ -28,3 +28,22 @@ export async function fetchText(messages, signal) {
 export async function fetchWithTools(messages, signal, tools) {
   return fetchCompletion(messages, signal, { tools, tool_choice: 'auto' })
 }
+
+// Transcrição de voz — usada pelo ChatComposer no Safari/iOS, onde a Web
+// Speech API não existe (ver supabase/functions/transcribe-audio).
+export async function transcribeAudio(base64Audio, mimeType) {
+  const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+    body: { audio: base64Audio, mimeType },
+  })
+
+  if (error) {
+    const status = error.context?.status
+    if (status === 401) throw new Error('Não autorizado.')
+    if (status === 403) throw new Error('addon_required')
+    if (status >= 500) throw new Error('Serviço de transcrição indisponível. Tente novamente.')
+    throw new Error(data?.error || error.message || 'Erro ao transcrever áudio.')
+  }
+  if (data?.error) throw new Error(data.error)
+
+  return data.text
+}
