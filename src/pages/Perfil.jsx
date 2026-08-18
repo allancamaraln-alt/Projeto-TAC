@@ -1,10 +1,17 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useTheme } from '../hooks/useTheme'
 import { supabase } from '../lib/supabase'
-import { openWhatsApp } from '../lib/whatsapp'
 import SignaturePad from '../components/SignaturePad'
+import { Card, CardTitle, IconTile } from '../components/ui/kit'
+
+function IconArrowLeft({ className = 'w-5 h-5' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+    </svg>
+  )
+}
 
 function CameraIcon({ className = 'w-4 h-4' }) {
   return (
@@ -12,6 +19,50 @@ function CameraIcon({ className = 'w-4 h-4' }) {
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
+  )
+}
+
+function IconUser({ className = 'w-[18px] h-[18px]' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  )
+}
+
+function IconWhatsAppFilled({ className = 'w-[18px] h-[18px]' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="#25D366">
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15h-.01c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 01-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 012.41 5.83c0 4.55-3.7 8.24-8.24 8.24z"/>
+    </svg>
+  )
+}
+
+function IconBuilding({ className = 'w-[18px] h-[18px]' }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1" />
+    </svg>
+  )
+}
+
+function IconSnowflake({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" d="M12 2v20M4.2 6l15.6 12M4.2 18L19.8 6M9.5 3.2l2.5 2 2.5-2M9.5 20.8l2.5-2 2.5 2M4.6 8.6l3-.6.6-2.8M3.4 16l3.2.4 1.2 2.8M19.4 8l-3 .6-.4-2.8M20.6 16l-3.2.4-1.4 2.8" />
+    </svg>
+  )
+}
+
+function Campo({ icon, tileClassName, label, children }) {
+  return (
+    <div className="flex items-center gap-3">
+      <IconTile size={44} radius={16} className={tileClassName} icon={icon} />
+      <div className="min-w-0 flex-1">
+        <label className="block text-xs font-semibold text-gray-400 mb-1">{label}</label>
+        {children}
+      </div>
+    </div>
   )
 }
 
@@ -62,8 +113,7 @@ function resizeCover(file) {
 }
 
 export default function Perfil() {
-  const { user, profile, updateProfile, signOut } = useAuth()
-  const { isDark, toggle: toggleTheme } = useTheme()
+  const { user, profile, updateProfile } = useAuth()
   const navigate = useNavigate()
   const avatarInputRef = useRef()
   const coverInputRef = useRef()
@@ -171,12 +221,27 @@ export default function Perfil() {
     <div className="page-container">
 
       {/* Capa / tema de cores */}
-      <div className="relative h-44 overflow-hidden">
+      <div className="relative h-52 overflow-hidden rounded-b-[32px]">
         {coverUrl
           ? <img src={coverUrl} alt="Capa" className="absolute inset-0 w-full h-full object-cover" />
-          : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #0284c7 60%, #0369a1 100%)' }} />
+          : <div className="absolute inset-0" style={{ background: 'linear-gradient(150deg, #38bdf8 0%, #0284c7 55%, #0369a1 100%)' }} />
         }
+        {!coverUrl && (
+          <>
+            <IconSnowflake className="pointer-events-none absolute -left-6 top-4 h-24 w-24 text-white/[0.08]" />
+            <IconSnowflake className="pointer-events-none absolute -right-8 bottom-2 h-32 w-32 text-white/[0.06]" />
+          </>
+        )}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="Voltar"
+          className="absolute top-12 left-4 z-20 grid h-9 w-9 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition active:bg-black/45"
+        >
+          <IconArrowLeft className="h-5 w-5" />
+        </button>
 
         <button
           type="button"
@@ -199,44 +264,44 @@ export default function Perfil() {
       </div>
 
       {/* Avatar + info — avatar sobrepõe a capa */}
-      <div className="flex flex-col items-center -mt-11 relative z-10 pb-5">
+      <div className="flex flex-col items-center -mt-14 relative z-10 pb-5">
         <button
           type="button"
           onClick={() => avatarInputRef.current?.click()}
           disabled={uploadingAvatar}
           className="relative active:scale-95 transition-transform"
-          style={{ width: 88, height: 88 }}
+          style={{ width: 108, height: 108 }}
         >
           <div className="w-full h-full rounded-full overflow-hidden border-4 border-white shadow-lg">
             {avatarUrl
               ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               : (
                 <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #38bdf8, #0284c7)' }}>
-                  <span className="text-3xl font-extrabold text-white">
+                  <span className="text-4xl font-extrabold text-white">
                     {(profile?.nome || 'C').charAt(0).toUpperCase()}
                   </span>
                 </div>
               )
             }
           </div>
-          <div className="absolute bottom-0.5 right-0.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow border border-gray-100">
+          <div className="absolute bottom-0.5 right-0.5 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow border border-gray-100">
             {uploadingAvatar
               ? <span className="w-3 h-3 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
-              : <CameraIcon className="w-3 h-3 ac-text" />
+              : <CameraIcon className="w-3.5 h-3.5 ac-text" />
             }
           </div>
         </button>
 
-        <h1 className="mt-3 text-xl font-bold text-gray-800">{profile?.nome || 'Técnico'}</h1>
+        <h1 className="mt-3.5 text-[26px] font-extrabold text-gray-800 leading-tight">{profile?.nome || 'Técnico'}</h1>
         {profile?.empresa && (
-          <p className="text-gray-400 text-sm mt-0.5">{profile.empresa}</p>
+          <p className="text-gray-400 text-[15px] mt-0.5">{profile.empresa}</p>
         )}
 
-        <div className="mt-3 inline-flex items-center gap-1.5 bg-sky-50 border border-sky-100 rounded-full px-3 py-1">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-sky-500" viewBox="0 0 24 24" fill="currentColor">
+        <div className="mt-3.5 inline-flex items-center gap-1.5 bg-sky-50 border border-sky-100 rounded-full px-4 py-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-sky-500" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2a1 1 0 011 1v1.586l1.293-1.293a1 1 0 111.414 1.414L14.414 6H17a1 1 0 110 2h-4V9.586l3.293 3.293-3.293 3.293V17h4a1 1 0 110 2h-2.586l1.293 1.293a1 1 0 11-1.414 1.414L13 20.414V22a1 1 0 11-2 0v-1.586l-1.293 1.293a1 1 0 01-1.414-1.414L9.586 19H7a1 1 0 110-2h4v-1.121L7.707 12.5 11 9.207V8H7a1 1 0 110-2h2.586L8.293 4.707a1 1 0 011.414-1.414L11 4.586V3a1 1 0 011-1z"/>
           </svg>
-          <span className="text-sky-600 text-xs font-semibold">ClimaPro</span>
+          <span className="text-sky-600 text-[13px] font-semibold">ClimaPro</span>
         </div>
 
         {erro && (
@@ -250,39 +315,39 @@ export default function Perfil() {
       <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
       <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
 
-      {/* Formulário */}
-      <form onSubmit={handleSubmit} className="px-4 pt-5 space-y-4">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Dados do técnico</h2>
+      <div className="px-4 pt-1 pb-2 space-y-4">
+        {/* Dados do técnico */}
+        <Card className="p-4">
+          <CardTitle>Dados do técnico</CardTitle>
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            <Campo icon={<IconUser />} tileClassName="ac-bg-lt ac-text" label="Nome">
+              <input type="text" className="input-field" value={form.nome} onChange={set('nome')} placeholder="Seu nome" />
+            </Campo>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">Nome</label>
-          <input type="text" className="input-field" value={form.nome} onChange={set('nome')} placeholder="Seu nome" />
-        </div>
+            <Campo icon={<IconWhatsAppFilled />} tileClassName="bg-emerald-50 text-emerald-600" label="WhatsApp">
+              <input type="tel" className="input-field" value={form.telefone} onChange={set('telefone')} placeholder="(11) 99999-9999" />
+            </Campo>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">WhatsApp</label>
-          <input type="tel" className="input-field" value={form.telefone} onChange={set('telefone')} placeholder="(11) 99999-9999" />
-        </div>
+            <Campo icon={<IconBuilding />} tileClassName="bg-violet-50 text-violet-600" label="Empresa / MEI">
+              <input type="text" className="input-field" value={form.empresa} onChange={set('empresa')} placeholder="Ex: Gelo Fácil Refrigeração" />
+            </Campo>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-600 mb-1.5">Nome da empresa / MEI</label>
-          <input type="text" className="input-field" value={form.empresa} onChange={set('empresa')} placeholder="Ex: Gelo Fácil Refrigeração" />
-        </div>
+            {sucesso && (
+              <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-xl text-center font-medium">
+                ✅ Perfil atualizado!
+              </p>
+            )}
 
-        {sucesso && (
-          <p className="text-sm text-emerald-700 bg-emerald-50 p-3 rounded-xl text-center font-medium">
-            ✅ Perfil atualizado!
-          </p>
-        )}
-
-        <button type="submit" className="btn-primary" disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar perfil'}
-        </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar perfil'}
+            </button>
+          </form>
+        </Card>
 
         {/* Minha Assinatura */}
-        <div className="pt-4 border-t border-gray-100 space-y-2">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Minha assinatura</h2>
-          <p className="text-xs text-gray-400">Salve uma vez e ela será aplicada automaticamente nos recibos.</p>
+        <Card className="p-4 space-y-2">
+          <CardTitle>Minha assinatura</CardTitle>
+          <p className="text-xs text-gray-400 -mt-2">Salve uma vez e ela será aplicada automaticamente nos recibos.</p>
           {profile?.assinatura_url ? (
             <div className="relative border border-gray-100 rounded-xl overflow-hidden bg-gray-50">
               <img src={profile.assinatura_url} alt="Minha assinatura" className="w-full h-20 object-contain" />
@@ -319,85 +384,8 @@ export default function Perfil() {
               Alterar assinatura
             </button>
           )}
-        </div>
-
-        {/* Toggle de tema */}
-        <div className="flex items-center justify-between py-4 border-t border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">{isDark ? '🌙' : '☀️'}</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-700">Tema escuro</p>
-              <p className="text-xs text-gray-400">{isDark ? 'Ativado' : 'Desativado'}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isDark}
-            onClick={toggleTheme}
-            className={`relative w-12 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${isDark ? 'ac-bg' : 'bg-gray-200'}`}
-          >
-            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${isDark ? 'translate-x-6' : 'translate-x-0'}`} />
-          </button>
-        </div>
-
-        {/* Indique e Ganhe */}
-        <button
-          type="button"
-          onClick={() => navigate('/afiliados')}
-          className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 active:opacity-80"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">💸</span>
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold text-green-800">Indique e Ganhe</p>
-              <p className="text-xs text-green-600">20% de comissão por indicado ativo</p>
-            </div>
-          </div>
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => openWhatsApp('Olá! Sou usuário do ClimaPro e preciso de suporte.')}
-          className="w-full flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 active:opacity-80"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="#25D366">
-                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 18.15h-.01c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 01-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 012.41 5.83c0 4.55-3.7 8.24-8.24 8.24z"/>
-              </svg>
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold text-gray-700">Suporte</p>
-              <p className="text-xs text-gray-400">Fale com a gente pelo WhatsApp</p>
-            </div>
-          </div>
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigate('/privacidade')}
-          className="w-full text-center text-gray-400 text-sm py-2 mt-1"
-        >
-          Política de Privacidade
-        </button>
-
-        <p className="text-center text-xs text-gray-300 pb-1">ClimaPro v1.0.0</p>
-
-        <button type="button" onClick={signOut} className="w-full text-center text-red-400 font-semibold py-3">
-          Sair da conta
-        </button>
-      </form>
+        </Card>
+      </div>
 
     {mostrarPadAssinatura && (
       <SignaturePad

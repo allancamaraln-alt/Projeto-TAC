@@ -41,6 +41,11 @@
     --ac-lt: 186 230 253; /* accent claro    — sky-200 */
     --ac-tx: 255 255 255; /* texto sobre accent (branco em fundos escuros) */
     --ac-sf: 186 230 253; /* texto suave sobre accent */
+    /* accent usado como texto/ícone sobre superfície neutra (card, fundo da
+       página) — igual a --ac no claro; no escuro é clareado (ver DARK MODE)
+       porque o accent do usuário pode ser uma cor escura de propósito
+       (extraída de foto de capa) e ficar ilegível num card quase preto. */
+    --ac-fg: rgb(var(--ac));
   }
   html {
     height: 100%;
@@ -65,7 +70,7 @@
   .ac-bg      { background-color: rgb(var(--ac)); }
   .ac-bg-lt   { background-color: rgb(var(--ac-lt) / 0.15); }  /* tint muito suave, estilo sky-50 */
   .ac-bg-md   { background-color: rgb(var(--ac-lt)); }          /* tint médio, estilo sky-200 */
-  .ac-text    { color: rgb(var(--ac)); }
+  .ac-text    { color: var(--ac-fg); }
   .ac-text-tx { color: rgb(var(--ac-tx)); }
   .ac-text-sf { color: rgb(var(--ac-sf)); }
   .ac-text-lt { color: rgb(var(--ac-lt)); }
@@ -151,6 +156,14 @@ html.dark body {
   color: rgb(226 232 240);
 }
 
+/* — Accent como texto/ícone — */
+/* O accent (--ac) do usuário pode ser uma cor escura de propósito (extraída
+   de foto de capa em Perfil). Usada direto como texto num card quase preto
+   ela fica ilegível — clareia misturando com branco só para esse uso. */
+html.dark {
+  --ac-fg: color-mix(in srgb, rgb(var(--ac)) 45%, white 55%);
+}
+
 /* — Backgrounds — */
 html.dark .bg-slate-50  { background-color: rgb(15 23 42)  !important; }
 html.dark .bg-white     { background-color: rgb(30 41 59)  !important; }
@@ -179,6 +192,8 @@ html.dark .bg-red-50     { background-color: rgb(127 29 29 / 0.25)  !important; 
 html.dark .bg-yellow-50  { background-color: rgb(113 63 18 / 0.25)  !important; }
 html.dark .bg-purple-50  { background-color: rgb(88  28 135 / 0.25) !important; }
 html.dark .bg-blue-50    { background-color: rgb(30  58 138 / 0.25) !important; }
+html.dark .bg-rose-50    { background-color: rgb(136 19  55  / 0.25) !important; }
+html.dark .bg-orange-50  { background-color: rgb(124 45  18  / 0.25) !important; }
 
 /* — Inputs — */
 html.dark .input-field::placeholder { color: rgb(71 85 105); }

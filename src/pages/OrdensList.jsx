@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, formatDateWeekday } from '../lib/format'
+import { formatOS, formatBRL, formatDateWeekday, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 
 const FILTROS = [
@@ -12,6 +12,14 @@ const FILTROS = [
   { value: 'concluido', label: 'Concluído' },
 ]
 
+// Mesmas 3 categorias do card "Financeiro" do Painel — aqui viram um filtro
+// sobre as OS concluídas, usando a mesma lógica de src/pages/Relatorio.jsx.
+const PAGAMENTO_INFO = {
+  recebido: { label: 'Recebidas', bg: '#ecfdf5', color: '#059669' },
+  pendente: { label: 'A receber', bg: '#fffbeb', color: '#d97706' },
+  vencido:  { label: 'Em atraso', bg: '#fef2f2', color: '#dc2626' },
+}
+
 export default function OrdensList() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -20,10 +28,33 @@ export default function OrdensList() {
   const [loading, setLoading] = useState(true)
 
   const filtroStatus = searchParams.get('status') || ''
+  const filtroPagamento = searchParams.get('pagamento') || ''
 
   useEffect(() => {
     async function load() {
       setLoading(true)
+
+      if (filtroPagamento) {
+        const { data } = await supabase
+          .from('ordens_servico')
+          .select('*, clientes(nome, telefone)')
+          .eq('status', 'concluido')
+          .order('created_at', { ascending: false })
+
+        const hojeISO = new Date().toISOString().split('T')[0]
+        const filtradas = (data ?? []).filter(os => {
+          const pag = resumoPagamento(os)
+          const vencida = pag.saldo > 0.004 && os.data_pagamento_pendente && os.data_pagamento_pendente < hojeISO
+          if (filtroPagamento === 'recebido') return pag.quitado
+          if (filtroPagamento === 'vencido') return vencida
+          if (filtroPagamento === 'pendente') return pag.saldo > 0.004 && !vencida
+          return true
+        })
+        setOrdens(filtradas)
+        setLoading(false)
+        return
+      }
+
       let query = supabase
         .from('ordens_servico')
         .select('*, clientes(nome, telefone)')
@@ -36,7 +67,7 @@ export default function OrdensList() {
       setLoading(false)
     }
     load()
-  }, [filtroStatus])
+  }, [filtroStatus, filtroPagamento])
 
   const buscaLower = busca.toLowerCase()
   const filtradas = ordens.filter(os =>
@@ -71,22 +102,39 @@ export default function OrdensList() {
           onChange={e => setBusca(e.target.value)}
         />
 
-        {/* Filtro de status */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {FILTROS.map(f => (
+        {/* Filtro de status, ou banner do filtro financeiro vindo do Painel */}
+        {filtroPagamento ? (
+          <div
+            className="flex items-center justify-between rounded-xl px-3.5 py-2.5"
+            style={{ background: PAGAMENTO_INFO[filtroPagamento]?.bg }}
+          >
+            <span className="text-sm font-semibold" style={{ color: PAGAMENTO_INFO[filtroPagamento]?.color }}>
+              {PAGAMENTO_INFO[filtroPagamento]?.label}
+            </span>
             <button
-              key={f.value}
-              onClick={() => setSearchParams(f.value ? { status: f.value } : {})}
-              className={`flex-shrink-0 text-sm px-3 py-1.5 rounded-full font-medium transition-colors ${
-                filtroStatus === f.value
-                  ? 'ac-bg ac-text-tx'
-                  : 'bg-gray-100 text-gray-600'
-              }`}
+              onClick={() => setSearchParams({})}
+              className="text-xs font-medium text-gray-500"
             >
-              {f.label}
+              ✕ Limpar filtro
             </button>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {FILTROS.map(f => (
+              <button
+                key={f.value}
+                onClick={() => setSearchParams(f.value ? { status: f.value } : {})}
+                className={`flex-shrink-0 text-sm px-3 py-1.5 rounded-full font-medium transition-colors ${
+                  filtroStatus === f.value
+                    ? 'ac-bg ac-text-tx'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="px-4 pt-3">
@@ -99,8 +147,10 @@ export default function OrdensList() {
         {!loading && filtradas.length === 0 && (
           <div className="text-center text-gray-400 py-12">
             <p className="text-4xl mb-3">📋</p>
-            <p className="font-medium">{busca || filtroStatus ? 'Nenhuma OS encontrada.' : 'Nenhuma OS cadastrada.'}</p>
-            {!busca && !filtroStatus && (
+            <p className="font-medium">
+              {busca || filtroStatus || filtroPagamento ? 'Nenhuma OS encontrada.' : 'Nenhuma OS cadastrada.'}
+            </p>
+            {!busca && !filtroStatus && !filtroPagamento && (
               <button onClick={() => navigate('/ordens/nova')} className="mt-4 ac-text font-medium">
                 + Criar primeira OS
               </button>
@@ -109,32 +159,41 @@ export default function OrdensList() {
         )}
 
         <div className="space-y-3">
-          {filtradas.map(os => (
-            <button
-              key={os.id}
-              onClick={() => navigate(`/ordens/${os.id}`)}
-              className="card w-full text-left active:bg-gray-50 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <span className="text-xs text-gray-400 font-mono">{formatOS(os.numero)}</span>
-                  <p className="font-semibold text-gray-800">{os.clientes?.nome}</p>
-                  <p className="text-sm text-gray-500">{os.tipo_servico}</p>
+          {filtradas.map(os => {
+            const pag = filtroPagamento ? resumoPagamento(os) : null
+            return (
+              <button
+                key={os.id}
+                onClick={() => navigate(`/ordens/${os.id}`)}
+                className="card w-full text-left active:bg-gray-50 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <span className="text-xs text-gray-400 font-mono">{formatOS(os.numero)}</span>
+                    <p className="font-semibold text-gray-800">{os.clientes?.nome}</p>
+                    <p className="text-sm text-gray-500">{os.tipo_servico}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <StatusBadge status={os.status} />
+                    <p className="text-sm font-bold text-gray-700 mt-1">
+                      {formatBRL(os.valor)}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-2">
-                  <StatusBadge status={os.status} />
-                  <p className="text-sm font-bold text-gray-700 mt-1">
-                    {formatBRL(os.valor)}
+                {pag && (
+                  <p className="text-xs font-semibold" style={{ color: PAGAMENTO_INFO[filtroPagamento]?.color }}>
+                    {filtroPagamento === 'recebido' ? `Recebido: ${formatBRL(pag.valorPago)}` : `Saldo: ${formatBRL(pag.saldo)}`}
+                    {filtroPagamento !== 'recebido' && os.data_pagamento_pendente && ` · previsão ${formatDateWeekday(os.data_pagamento_pendente).split(' - ')[0]}`}
                   </p>
-                </div>
-              </div>
-              {os.data_agendamento && (
-                <p className="text-xs text-gray-400">
-                  📅 {formatDateWeekday(os.data_agendamento)}
-                </p>
-              )}
-            </button>
-          ))}
+                )}
+                {os.data_agendamento && (
+                  <p className="text-xs text-gray-400">
+                    📅 {formatDateWeekday(os.data_agendamento)}
+                  </p>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>

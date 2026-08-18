@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatDate } from '../lib/format'
+import { formatOS, formatDate, somaItens, itensPreenchidos } from '../lib/format'
 import { useToast } from '../hooks/useToast'
+import ItensServico from '../components/ItensServico'
 
 const FORMAS_PAGAMENTO = [
   { value: '', label: 'Não informada' },
@@ -46,6 +47,7 @@ export default function OrdemEdit() {
   const toast = useToast()
   const [os, setOs] = useState(null)
   const [form, setForm] = useState(null)
+  const [itens, setItens] = useState(null)
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -78,6 +80,7 @@ export default function OrdemEdit() {
           equipamento_fluido: data.equipamento_fluido || '',
           equipamento_numero_serie: data.equipamento_numero_serie || '',
         })
+        setItens(Array.isArray(data.itens) && data.itens.length > 0 ? data.itens : [{ descricao: '', valor: '' }])
       })
   }, [id])
 
@@ -88,12 +91,17 @@ export default function OrdemEdit() {
 
     const gValor = parseInt(form.garantia_valor) || null
     const base = os.data_conclusao || null
+    const usaItensAoSalvar = itensPreenchidos(itens)
+    const itensParaSalvar = usaItensAoSalvar
+      ? itens.filter(it => it.descricao.trim() !== '' || it.valor !== '')
+      : null
     const { error } = await supabase
       .from('ordens_servico')
       .update({
         tipo_servico: form.tipo_servico,
         descricao: form.descricao,
-        valor: parseFloat(form.valor) || 0,
+        valor: usaItensAoSalvar ? somaItens(itens) : (parseFloat(form.valor) || 0),
+        itens: itensParaSalvar,
         data_agendamento: form.data_agendamento || null,
         hora_agendamento: form.hora_agendamento || null,
         observacoes: form.observacoes,
@@ -117,11 +125,16 @@ export default function OrdemEdit() {
     navigate(`/ordens/${id}`)
   }
 
-  if (!form) return (
+  if (!form || !itens) return (
     <div className="page-container flex items-center justify-center">
       <p className="text-gray-400">Carregando...</p>
     </div>
   )
+
+  // Enquanto o técnico usa a lista de itens, o Valor vira a soma deles —
+  // sem itens preenchidos, o campo continua livre pra digitar na mão.
+  const usaItens = itensPreenchidos(itens)
+  const valorFinal = usaItens ? somaItens(itens) : (parseFloat(form.valor) || 0)
 
   return (
     <div className="page-container">
@@ -166,6 +179,12 @@ export default function OrdemEdit() {
           <select className="input-field" value={form.tipo_servico} onChange={set('tipo_servico')}>
             {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
+        </div>
+
+        {/* Itens do orçamento */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Itens do orçamento</label>
+          <ItensServico itens={itens} onChange={setItens} />
         </div>
 
         {/* Descrição */}
@@ -243,13 +262,17 @@ export default function OrdemEdit() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
           <input
             type="number"
-            className="input-field"
+            className={`input-field ${usaItens ? 'bg-gray-50 text-gray-500' : ''}`}
             placeholder="0,00"
             min="0"
             step="0.01"
-            value={form.valor}
+            value={usaItens ? valorFinal : form.valor}
             onChange={set('valor')}
+            readOnly={usaItens}
           />
+          {usaItens && (
+            <p className="text-xs text-gray-400 mt-1">Calculado automaticamente pelos itens acima.</p>
+          )}
         </div>
 
         {/* Data e Hora */}

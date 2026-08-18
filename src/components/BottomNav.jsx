@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 
 const tabs = [
@@ -8,12 +8,15 @@ const tabs = [
   { to: '/clientes', label: 'Clientes', icon: UsersIcon },
   { to: '/lembretes', label: 'Revisões', icon: BellIcon },
   { to: '/pmoc', label: 'PMOC', icon: PmocIcon },
-  { to: '/perfil', label: 'Perfil', icon: UserIcon },
+  // "Mais" também fica aceso em /perfil, já que "Ver perfil" dentro de
+  // Mais.jsx é o único jeito de chegar lá agora.
+  { to: '/mais', label: 'Mais', icon: MoreIcon, extraActive: ['/perfil'] },
 ]
 
 export default function BottomNav() {
   const [minimized, setMinimized] = useState(false)
   const lastStableY = useRef(0)
+  const location = useLocation()
 
   useEffect(() => {
     function handleScroll(e) {
@@ -42,40 +45,47 @@ export default function BottomNav() {
       }}
     >
       <div className="max-w-md mx-auto flex">
-        {tabs.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center transition-colors relative ${
-                minimized ? 'py-2' : 'py-2'
-              } ${isActive ? 'ac-text' : 'text-gray-400'}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 ac-bg rounded-b-full" />
-                )}
-                <div
-                  className={`rounded-xl transition-all duration-200 ${
-                    isActive ? 'ac-bg-lt scale-105' : ''
-                  } ${minimized ? 'p-1.5' : 'p-1.5'}`}
-                >
-                  <Icon minimized={minimized} />
-                </div>
-                <span
-                  className={`text-xs font-medium overflow-hidden transition-all duration-300 ease-in-out ${
-                    isActive ? 'font-bold' : ''
-                  } ${minimized ? 'max-h-0 opacity-0 mt-0' : 'max-h-4 opacity-100 mt-0.5'}`}
-                >
-                  {label}
-                </span>
-              </>
-            )}
-          </NavLink>
-        ))}
+        {tabs.map((tab) => {
+          const { to, label, extraActive } = tab
+          const forcedActive = extraActive?.some(p => location.pathname.startsWith(p)) ?? false
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `flex-1 flex flex-col items-center transition-colors relative ${
+                  minimized ? 'py-2' : 'py-2'
+                } ${isActive || forcedActive ? 'ac-text' : 'text-gray-400'}`
+              }
+            >
+              {({ isActive: navActive }) => {
+                const isActive = navActive || forcedActive
+                return (
+                  <>
+                    {isActive && (
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 ac-bg rounded-b-full" />
+                    )}
+                    <div
+                      className={`rounded-xl transition-all duration-200 ${
+                        isActive ? 'ac-bg-lt scale-105' : ''
+                      } ${minimized ? 'p-1.5' : 'p-1.5'}`}
+                    >
+                      <tab.icon minimized={minimized} />
+                    </div>
+                    <span
+                      className={`text-xs font-medium overflow-hidden transition-all duration-300 ease-in-out ${
+                        isActive ? 'font-bold' : ''
+                      } ${minimized ? 'max-h-0 opacity-0 mt-0' : 'max-h-4 opacity-100 mt-0.5'}`}
+                    >
+                      {label}
+                    </span>
+                  </>
+                )
+              }}
+            </NavLink>
+          )
+        })}
       </div>
     </nav>
   )
@@ -129,10 +139,10 @@ function PmocIcon({ minimized }) {
   )
 }
 
-function UserIcon({ minimized }) {
+function MoreIcon({ minimized }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" className={`transition-all duration-300 ${minimized ? 'w-5 h-5' : 'w-6 h-6'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
     </svg>
   )
 }

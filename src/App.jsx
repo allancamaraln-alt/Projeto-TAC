@@ -35,6 +35,7 @@ const OrdemDetalhe = lazy(() => import('./pages/OrdemDetalhe'))
 const OrdemEdit    = lazy(() => import('./pages/OrdemEdit'))
 const AtendimentoIA = lazy(() => import('./pages/AtendimentoIA'))
 const Perfil       = lazy(() => import('./pages/Perfil'))
+const Mais         = lazy(() => import('./pages/Mais'))
 const Relatorio    = lazy(() => import('./pages/Relatorio'))
 const Lembretes    = lazy(() => import('./pages/Lembretes'))
 const Privacidade  = lazy(() => import('./pages/Privacidade'))
@@ -172,6 +173,7 @@ function AppContent() {
           <Route path="/relatorio"              element={<Relatorio />} />
           <Route path="/lembretes"              element={<Lembretes />} />
           <Route path="/perfil"                 element={<Perfil />} />
+          <Route path="/mais"                   element={<Mais />} />
           <Route path="/privacidade"            element={<Privacidade />} />
           <Route path="/afiliados"              element={<Afiliados />} />
           <Route path="/pmoc"                    element={<PmocList />} />

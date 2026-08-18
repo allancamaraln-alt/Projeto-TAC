@@ -90,6 +90,9 @@ export default function Relatorio() {
   const totalPendente = pendentes.reduce((s, r) => s + r.pag.saldo, 0)
   const vencidos = pendentes.filter(r => r.os.data_pagamento_pendente && r.os.data_pagamento_pendente < hojeISO)
   const totalVencido = vencidos.reduce((s, r) => s + r.pag.saldo, 0)
+  // "A receber" exibido não inclui o que já está vencido — os dois cards
+  // ficam mutuamente exclusivos (dá pra somar e bater com o total pendente).
+  const totalAReceber = totalPendente - totalVencido
 
   const todosPagamentos = resumosPagamento.flatMap(r =>
     r.pag.pagamentos.map(p => ({ valor: Number(p.valor) || 0, data: p.data || r.os.data_conclusao }))
@@ -210,17 +213,27 @@ export default function Relatorio() {
             </div>
 
             {/* Cobranças — estado atual, independente do período selecionado acima */}
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide pt-1">
-              Cobranças
-            </h2>
+            <div className="pt-1">
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                Cobranças
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Situação atual de todas as OS — não muda com o período selecionado acima.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <MetricCard label="Pendente" value={formatBRL(totalPendente)} bg="bg-amber-50" text="text-amber-600" />
+              <MetricCard label="A receber" value={formatBRL(totalAReceber)} bg="bg-amber-50" text="text-amber-600" />
               <MetricCard label="Vencido" value={formatBRL(totalVencido)} bg="bg-red-50" text="text-red-600" />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <MetricCard label="Recebido hoje" value={formatBRL(recebidoHoje)} bg="bg-green-50" text="text-green-600" />
-              <MetricCard label="Recebido semana" value={formatBRL(recebidoSemana)} bg="bg-green-50" text="text-green-600" />
-              <MetricCard label="Recebido mês" value={formatBRL(recebidoMes)} bg="bg-green-50" text="text-green-600" />
+            <div>
+              <p className="text-xs text-gray-400 pt-2">
+                Recebido — soma pela data em que cada pagamento entrou, não pela data da OS:
+              </p>
+              <div className="grid grid-cols-3 gap-3 mt-2">
+                <MetricCard label="Hoje" value={formatBRL(recebidoHoje)} bg="bg-green-50" text="text-green-600" />
+                <MetricCard label="Esta semana" value={formatBRL(recebidoSemana)} bg="bg-green-50" text="text-green-600" />
+                <MetricCard label="Este mês" value={formatBRL(recebidoMes)} bg="bg-green-50" text="text-green-600" />
+              </div>
             </div>
 
             {vencidos.length > 0 && (

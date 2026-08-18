@@ -52,3 +52,13 @@ export function resumoPagamento(ordem) {
   const saldo = Math.max(0, valorTotal - valorPago)
   return { pagamentos, valorPago, valorTotal, saldo, quitado: saldo <= 0.005 }
 }
+
+/** Soma o valor de uma lista de itens de orçamento [{ descricao, valor }] */
+export function somaItens(itens) {
+  return (itens ?? []).reduce((soma, it) => soma + (parseFloat(it?.valor) || 0), 0)
+}
+
+/** true quando o usuário já preencheu algo nos itens (não é só a linha vazia inicial) */
+export function itensPreenchidos(itens) {
+  return (itens ?? []).some(it => (it?.descricao && it.descricao.trim() !== '') || (it?.valor !== '' && it?.valor != null))
+}

@@ -722,6 +722,19 @@ export default function OrdemDetalhe() {
             <Row label="Concluído em" value={formatDate(os.data_conclusao)} />
           )}
           {os.descricao && <Row label="Descrição" value={os.descricao} />}
+          {Array.isArray(os.itens) && os.itens.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-400 mb-1">Itens do orçamento</p>
+              <div className="space-y-1">
+                {os.itens.map((item, i) => (
+                  <div key={i} className="flex items-start justify-between gap-3 text-sm">
+                    <span className="text-gray-700">{String(i + 1).padStart(2, '0')}. {item.descricao}</span>
+                    <span className="flex-shrink-0 font-medium text-gray-800">{formatBRL(item.valor)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {os.observacoes && <Row label="Observações" value={os.observacoes} />}
           <div>
             <p className="text-xs text-gray-400">Criado em</p>

@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
+import { somaItens, itensPreenchidos } from '../lib/format'
+import ItensServico from '../components/ItensServico'
 
 const TIPOS = [
   'Instalação', 'Manutenção preventiva', 'Manutenção corretiva',
@@ -29,10 +31,16 @@ export default function OrdemForm() {
     observacoes: '',
     status: 'orcamento',
   })
+  const [itens, setItens] = useState([{ descricao: '', valor: '' }])
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
 
   const set = (campo) => (e) => setForm(f => ({ ...f, [campo]: e.target.value }))
+
+  // Enquanto o técnico usa a lista de itens, o Valor vira a soma deles —
+  // sem itens preenchidos, o campo continua livre pra digitar na mão.
+  const usaItens = itensPreenchidos(itens)
+  const valorFinal = usaItens ? somaItens(itens) : (parseFloat(form.valor) || 0)
 
   useEffect(() => {
     // Pré-selecionar cliente se veio da tela de clientes
@@ -60,12 +68,16 @@ export default function OrdemForm() {
     if (!form.tipo_servico) { setErro('Selecione o tipo de serviço.'); return }
 
     setSaving(true)
+    const itensParaSalvar = usaItens
+      ? itens.filter(it => it.descricao.trim() !== '' || it.valor !== '')
+      : null
     const { error } = await supabase.from('ordens_servico').insert({
       tecnico_id: user.id,
       cliente_id: clienteSelecionado.id,
       tipo_servico: form.tipo_servico,
       descricao: form.descricao,
-      valor: parseFloat(form.valor) || 0,
+      valor: valorFinal,
+      itens: itensParaSalvar,
       data_agendamento: form.data_agendamento || null,
       hora_agendamento: form.hora_agendamento || null,
       observacoes: form.observacoes,
@@ -149,6 +161,12 @@ export default function OrdemForm() {
           </select>
         </div>
 
+        {/* Itens do orçamento */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Itens do orçamento</label>
+          <ItensServico itens={itens} onChange={setItens} />
+        </div>
+
         {/* Descrição */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Descrição do problema</label>
@@ -166,13 +184,17 @@ export default function OrdemForm() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
           <input
             type="number"
-            className="input-field"
+            className={`input-field ${usaItens ? 'bg-gray-50 text-gray-500' : ''}`}
             placeholder="0,00"
             min="0"
             step="0.01"
-            value={form.valor}
+            value={usaItens ? valorFinal : form.valor}
             onChange={set('valor')}
+            readOnly={usaItens}
           />
+          {usaItens && (
+            <p className="text-xs text-gray-400 mt-1">Calculado automaticamente pelos itens acima.</p>
+          )}
         </div>
 
         {/* Data e Hora */}

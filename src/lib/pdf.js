@@ -241,6 +241,36 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
     y += descLines.length * 8.5 + 2
   }
 
+  // Itens do orçamento — lista numerada com o valor de cada um, alinhado
+  // à direita (mesmo padrão de um orçamento detalhado por linha).
+  if (Array.isArray(ordem.itens) && ordem.itens.length > 0) {
+    y += 4
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...SLATE5)
+    doc.text('Itens do orçamento:', margin, y)
+    y += 9
+
+    doc.setFontSize(13)
+    ordem.itens.forEach((item, i) => {
+      const numero = String(i + 1).padStart(2, '0')
+      const valorTexto = formatBRL(item.valor)
+
+      doc.setFont('helvetica', 'bold')
+      const valorW = doc.getTextWidth(valorTexto)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...SLATE8)
+      const linhas = doc.splitTextToSize(`${numero}. ${item.descricao}`, contentW - valorW - 10)
+      doc.text(linhas, margin, y)
+
+      doc.setFont('helvetica', 'bold')
+      doc.text(valorTexto, W - margin, y, { align: 'right' })
+
+      y += linhas.length * 7.5 + 3
+    })
+  }
+
   y += 10
 
   // ── VALOR BOX ──────────────────────────────────────────────
@@ -471,6 +501,29 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
     const descLines = doc.splitTextToSize(ordem.descricao, contentW)
     doc.text(descLines, margin, y)
     y += descLines.length * 7 + 2
+  }
+
+  if (Array.isArray(ordem.itens) && ordem.itens.length > 0) {
+    doc.setFontSize(10)
+    ordem.itens.forEach((item, i) => {
+      const numero = String(i + 1).padStart(2, '0')
+      const valorTexto = formatBRL(item.valor)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...SLATE8)
+      const valorW = doc.getTextWidth(valorTexto)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...SLATE5)
+      const linhas = doc.splitTextToSize(`${numero}. ${item.descricao}`, contentW - valorW - 8)
+      doc.text(linhas, margin, y)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...SLATE8)
+      doc.text(valorTexto, W - margin, y, { align: 'right' })
+
+      y += linhas.length * 6.5 + 2
+    })
   }
 
   y += 5

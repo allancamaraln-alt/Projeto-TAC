@@ -1348,3 +1348,14 @@ alter table public.clientes add column if not exists estado text default '';
 -- CLIENTES: origem do cliente (indicação, internet, panfleto...)
 -- ============================================
 alter table public.clientes add column if not exists origem text default '';
+
+-- ============================================
+-- ORDENS_SERVICO: itens do orçamento (linhas com descrição + valor)
+-- ============================================
+-- `itens`: array de { descricao, valor } — permite montar o orçamento por
+-- linhas (ex: "Refazer instalação: 300,00", "Reposição de gás: 100,00") em
+-- vez de um texto livre só. Quando presente, `valor` da OS é a soma dessas
+-- linhas; `descricao` continua sendo gravada (texto livre, gerado ou digitado)
+-- só por compatibilidade com código/relatórios antigos que ainda leem esse
+-- campo direto. OS antigas sem `itens` continuam funcionando normalmente.
+alter table public.ordens_servico add column if not exists itens jsonb;
