@@ -86,10 +86,17 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   const galleryInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  const supportsSpeechRecognition = !!SpeechRecognition
-  // Fallback pro Safari/iOS, que não implementa SpeechRecognition: grava
-  // com MediaRecorder e transcreve no servidor (ver toggleVoice/startRecording
-  // e supabase/functions/transcribe-audio).
+  // No iPhone/iPad, window.webkitSpeechRecognition EXISTE (então
+  // `!!SpeechRecognition` engana), mas não faz a transcrição de verdade —
+  // termina em silêncio, sem erro e sem resultado algum (já vimos isso
+  // acontecer: nem "aborted" nem qualquer outro erro, só nada). Não dá pra
+  // detectar isso de forma confiável reagindo a eventos, então nem tenta:
+  // no iOS vai direto pro MediaRecorder.
+  const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const supportsSpeechRecognition = !!SpeechRecognition && !isIOS
+  // Fallback pro Safari/iOS, que não implementa SpeechRecognition de forma
+  // confiável: grava com MediaRecorder e transcreve no servidor (ver
+  // toggleVoice/startRecording e supabase/functions/transcribe-audio).
   const supportsMediaRecorder = typeof window.MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
 
   useEffect(() => { sendRef.current = send }, [send])
