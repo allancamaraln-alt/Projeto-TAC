@@ -66,6 +66,12 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   const audioChunksRef = useRef([])
   const mediaStreamRef = useRef(null)
   const recordTimeoutRef = useRef(null)
+  // Trava síncrona contra double-tap/toque fantasma do iOS: React só
+  // atualiza `listening` no próximo render, então dois toques na mesma
+  // fração de segundo podem ver `listening` ainda false e disparar
+  // getUserMedia duas vezes — o que o WebKit costuma abortar. Um ref
+  // muda na hora, sem esperar re-render.
+  const recordingBusyRef = useRef(false)
   const sendRef = useRef(send)
   const galleryInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -121,6 +127,9 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
   // Grava com MediaRecorder e manda pro transcribe-audio (Edge Function) —
   // caminho usado quando não há SpeechRecognition (Safari/iOS).
   const startRecording = useCallback(async () => {
+    if (recordingBusyRef.current) return // já tem uma gravação em andamento
+    recordingBusyRef.current = true
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaStreamRef.current = stream
@@ -133,12 +142,13 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
         if (e.data.size > 0) audioChunksRef.current.push(e.data)
       }
 
-      recorder.onerror = () => {
+      recorder.onerror = (e) => {
         mediaStreamRef.current?.getTracks().forEach(t => t.stop())
         clearTimeout(recordTimeoutRef.current)
+        recordingBusyRef.current = false
         setListening(false)
-        setVoiceError('Erro ao gravar áudio. Tente novamente.')
-        setTimeout(() => setVoiceError(null), 4000)
+        setVoiceError(`Erro ao gravar áudio (${e?.error?.name || 'desconhecido'}). Tente novamente.`)
+        setTimeout(() => setVoiceError(null), 5000)
       }
 
       recorder.onstop = async () => {
@@ -147,7 +157,12 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
         setListening(false)
 
         const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || mimeType || 'audio/webm' })
-        if (blob.size === 0) return
+        if (blob.size === 0) {
+          recordingBusyRef.current = false
+          setVoiceError('Nenhum áudio foi captado. Tente novamente.')
+          setTimeout(() => setVoiceError(null), 4000)
+          return
+        }
 
         setTranscribing(true)
         try {
@@ -160,10 +175,12 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
             setTimeout(() => setVoiceError(null), 4000)
           }
         } catch (err) {
-          setVoiceError(err.message === 'addon_required' ? 'Assine o Assistente IA para usar voz.' : (err.message || 'Erro ao transcrever áudio.'))
-          setTimeout(() => setVoiceError(null), 4000)
+          const friendly = { addon_required: 'Assine o Assistente IA para usar voz.' }
+          setVoiceError(friendly[err.message] || `Erro ao transcrever (${err?.name || err?.message || 'falha de rede'}). Tente novamente.`)
+          setTimeout(() => setVoiceError(null), 5000)
         } finally {
           setTranscribing(false)
+          recordingBusyRef.current = false
         }
       }
 
@@ -174,13 +191,13 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
 
       recordTimeoutRef.current = setTimeout(() => recorder.stop(), MAX_RECORDING_MS)
     } catch (err) {
+      recordingBusyRef.current = false
       const msgs = {
         NotAllowedError: 'Permissão de microfone negada. Habilite nas configurações do navegador.',
         NotFoundError: 'Microfone não encontrado.',
-        AbortError: 'Não foi possível acessar o microfone agora. Toque novamente.',
       }
-      setVoiceError(msgs[err?.name] || 'Não foi possível acessar o microfone. Tente novamente.')
-      setTimeout(() => setVoiceError(null), 4000)
+      setVoiceError(msgs[err?.name] || `Não foi possível acessar o microfone (${err?.name || 'erro'}). Toque novamente.`)
+      setTimeout(() => setVoiceError(null), 5000)
     }
   }, [])
 
@@ -235,8 +252,8 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
     }
 
     if (supportsMediaRecorder) {
-      if (listening) {
-        mediaRecorderRef.current?.stop()
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop()
         return
       }
       startRecording()
