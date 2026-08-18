@@ -21,7 +21,10 @@ function montarEndereco({ rua, numero, complemento, bairro, cidade, estado }) {
 const FORM_INICIAL = {
   nome: '', telefone: '',
   cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+  origem: '',
 }
+
+const ORIGENS = ['Indicação', 'Internet / Google', 'Redes sociais', 'Panfleto', 'Placa / Fachada']
 
 export default function ClienteForm() {
   const navigate = useNavigate()
@@ -34,6 +37,7 @@ export default function ClienteForm() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [buscandoCep, setBuscandoCep] = useState(false)
+  const [origemOutro, setOrigemOutro] = useState(false)
   const [erro, setErro] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -45,17 +49,21 @@ export default function ClienteForm() {
     supabase.from('clientes').select('*').eq('id', id).single()
       .then(({ data, error }) => {
         if (error) setErro('Erro ao carregar cliente.')
-        else if (data) setForm({
-          nome: data.nome,
-          telefone: data.telefone,
-          cep: data.cep || '',
-          rua: data.rua || '',
-          numero: data.numero || '',
-          complemento: data.complemento || '',
-          bairro: data.bairro || '',
-          cidade: data.cidade || '',
-          estado: data.estado || '',
-        })
+        else if (data) {
+          setForm({
+            nome: data.nome,
+            telefone: data.telefone,
+            cep: data.cep || '',
+            rua: data.rua || '',
+            numero: data.numero || '',
+            complemento: data.complemento || '',
+            bairro: data.bairro || '',
+            cidade: data.cidade || '',
+            estado: data.estado || '',
+            origem: data.origem || '',
+          })
+          setOrigemOutro(Boolean(data.origem) && !ORIGENS.includes(data.origem))
+        }
         setLoading(false)
       })
   }, [id, isEdit])
@@ -78,6 +86,17 @@ export default function ClienteForm() {
           estado: resultado.estado || f.estado,
         }))
       }
+    }
+  }
+
+  function handleOrigemChange(e) {
+    const v = e.target.value
+    if (v === 'Outro') {
+      setOrigemOutro(true)
+      setForm(f => ({ ...f, origem: '' }))
+    } else {
+      setOrigemOutro(false)
+      setForm(f => ({ ...f, origem: v }))
     }
   }
 
@@ -143,6 +162,29 @@ export default function ClienteForm() {
             onChange={set('telefone')}
             required
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Como o cliente conheceu você?</label>
+          <select
+            className="input-field"
+            value={origemOutro ? 'Outro' : form.origem}
+            onChange={handleOrigemChange}
+          >
+            <option value="">Selecione (opcional)</option>
+            {ORIGENS.map(o => <option key={o} value={o}>{o}</option>)}
+            <option value="Outro">Outro</option>
+          </select>
+          {origemOutro && (
+            <input
+              type="text"
+              className="input-field mt-2"
+              placeholder="Qual?"
+              value={form.origem}
+              onChange={set('origem')}
+              autoFocus
+            />
+          )}
         </div>
 
         <div>

@@ -1343,3 +1343,8 @@ alter table public.clientes add column if not exists complemento text default ''
 alter table public.clientes add column if not exists bairro text default '';
 alter table public.clientes add column if not exists cidade text default '';
 alter table public.clientes add column if not exists estado text default '';
+
+-- ============================================
+-- CLIENTES: origem do cliente (indicação, internet, panfleto...)
+-- ============================================
+alter table public.clientes add column if not exists origem text default '';

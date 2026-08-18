@@ -85,6 +85,12 @@ export default function ClienteDetalhe() {
               <span>{cliente.endereco}</span>
             </p>
           )}
+          {cliente.origem && (
+            <p className="text-sm text-gray-600 flex gap-2">
+              <span>🔎</span>
+              <span>{cliente.origem}</span>
+            </p>
+          )}
           <p className="text-xs text-gray-400">
             Cliente desde {formatDate(cliente.created_at)}
           </p>
