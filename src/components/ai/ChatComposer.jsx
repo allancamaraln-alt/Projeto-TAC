@@ -216,9 +216,10 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
 
     if (supportsSpeechRecognition && !nativeRecognitionBrokenRef.current) {
       if (listening) {
-        userAbortedRef.current = true
-        recognitionRef.current?.abort()
-        setListening(false)
+        // .stop() processa o que já foi captado e dispara onresult com a
+        // transcrição; .abort() DESCARTA tudo sem processar — por isso
+        // parecia que nada tinha sido dito ao tocar pra parar.
+        recognitionRef.current?.stop()
         return
       }
 
