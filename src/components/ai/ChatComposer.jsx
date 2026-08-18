@@ -240,13 +240,20 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
       rec.onerror = (e) => {
         setListening(false)
 
-        // Alguns iPhones expõem SpeechRecognition mas ela não funciona de
-        // verdade — falha sozinha com 'aborted' (ou 'service-not-allowed')
-        // assim que chamada, sem o usuário ter feito nada. Nesse caso cai
-        // pro MediaRecorder em vez de mostrar erro, e não tenta mais o
-        // caminho nativo nesta sessão.
-        const brokenNative = !userAbortedRef.current && (e.error === 'aborted' || e.error === 'service-not-allowed')
-        userAbortedRef.current = false
+        // .abort() (chamado quando o usuário toca o mic de novo pra parar
+        // de propósito) sempre dispara onerror com 'aborted' — isso não é
+        // uma falha, é o usuário pedindo pra parar. Não é erro nenhum.
+        if (userAbortedRef.current) {
+          userAbortedRef.current = false
+          return
+        }
+
+        // Sem ter sido o usuário: alguns iPhones expõem SpeechRecognition
+        // mas ela não funciona de verdade — falha sozinha com 'aborted' (ou
+        // 'service-not-allowed') assim que chamada. Cai pro MediaRecorder
+        // em vez de mostrar erro, e não tenta mais o caminho nativo nesta
+        // sessão.
+        const brokenNative = e.error === 'aborted' || e.error === 'service-not-allowed'
 
         if (brokenNative && supportsMediaRecorder) {
           nativeRecognitionBrokenRef.current = true
@@ -265,6 +272,7 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
       }
 
       recognitionRef.current = rec
+      userAbortedRef.current = false // estado limpo a cada nova gravação, por garantia
 
       try {
         rec.start()
