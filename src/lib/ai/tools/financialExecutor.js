@@ -1,13 +1,15 @@
 import { supabase } from '../../supabase'
+import { resumoPagamento } from '../../format'
+import { matchClient } from './clientesExecutor'
 
 export async function executeTool(name, args, userId) {
   try {
     switch (name) {
-      case 'create_expense':       return await createExpense(args, userId)
-      case 'create_income':        return await createIncome(args, userId)
-      case 'mark_order_as_paid':   return await markOrderAsPaid(args, userId)
+      case 'create_expense':        return await createExpense(args, userId)
+      case 'create_income':         return await createIncome(args, userId)
+      case 'register_os_payment':   return await registerOSPayment(args, userId)
       case 'get_financial_summary': return await getFinancialSummary(args, userId)
-      case 'list_pending_orders':  return await listPendingOrders(userId)
+      case 'list_pending_orders':   return await listPendingOrders(userId)
       default: return { error: `Ferramenta desconhecida: ${name}` }
     }
   } catch (err) {
@@ -47,35 +49,85 @@ async function createIncome({ data, descricao, valor }, userId) {
   }
 }
 
-async function markOrderAsPaid({ os_numero, valor }, userId) {
-  const { data: os, error } = await supabase
-    .from('ordens_servico')
-    .select('id, numero, valor, status')
+// Registra o pagamento de uma OS identificada pelo nome do cliente — cobre
+// tanto uma OS ainda não concluída (fecha e marca paga em um passo) quanto
+// uma já concluída com saldo pendente ("cobrança em aberto"/"em atraso").
+// Usa exatamente o mesmo modelo de dados que o botão "✓ Recebido" do app
+// (CobrancaPendenteCard.jsx — ordens_servico.pagamentos), pra que o
+// pagamento feito por voz/texto apareça nas mesmas telas (Painel, Relatório,
+// Ordens) que um pagamento marcado manualmente.
+async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, userId) {
+  const { data: clientes, error: clientesError } = await supabase
+    .from('clientes')
+    .select('id, nome')
     .eq('tecnico_id', userId)
-    .eq('numero', os_numero)
-    .maybeSingle()
+  if (clientesError) return { error: clientesError.message }
 
+  const cliente = matchClient(clientes, cliente_nome)
+  if (!cliente) return { error: `Cliente "${cliente_nome}" não encontrado.` }
+
+  let query = supabase
+    .from('ordens_servico')
+    .select('id, numero, tipo_servico, valor, status, pagamentos, forma_pagamento, data_pagamento_pendente')
+    .eq('tecnico_id', userId)
+    .eq('cliente_id', cliente.id)
+    .neq('status', 'cancelado')
+  if (os_numero) query = query.eq('numero', os_numero)
+
+  const { data: ordens, error } = await query
   if (error) return { error: error.message }
-  if (!os) return { error: `OS nº ${os_numero} não encontrada.` }
-  if (os.status === 'concluido') return { error: `OS nº ${os_numero} já está marcada como concluída.` }
 
-  const valorFinal = valor ?? os.valor ?? 0
+  const abertas = (ordens || [])
+    .map(os => ({ os, pag: resumoPagamento(os) }))
+    .filter(({ os, pag }) => (os.status === 'concluido' ? pag.saldo > 0.004 : Number(os.valor) > 0))
 
-  await supabase.from('ordens_servico').update({ status: 'concluido' }).eq('id', os.id)
+  if (!abertas.length) {
+    return {
+      error: os_numero
+        ? `OS nº ${os_numero} de ${cliente.nome} não tem pagamento em aberto.`
+        : `Não encontrei nenhuma cobrança em aberto para ${cliente.nome}.`,
+    }
+  }
+
+  if (abertas.length > 1) {
+    return {
+      needs_disambiguation: true,
+      cliente_nome: cliente.nome,
+      ordens_em_aberto: abertas.map(({ os, pag }) => ({
+        os_numero: os.numero,
+        tipo_servico: os.tipo_servico,
+        saldo: os.status === 'concluido' ? pag.saldo : Number(os.valor),
+      })),
+    }
+  }
+
+  const { os, pag } = abertas[0]
+  const hoje = today()
+  const forma = forma_pagamento || 'outros'
+  const valorPago = os.status === 'concluido' ? pag.saldo : Number(os.valor)
+  const novosPagamentos = [...pag.pagamentos, { forma, valor: valorPago, data: hoje }]
+
+  const updates = { pagamentos: novosPagamentos, data_pagamento_pendente: null }
+  if (os.status !== 'concluido') updates.status = 'concluido'
+
+  const { error: updateError } = await supabase.from('ordens_servico').update(updates).eq('id', os.id)
+  if (updateError) return { error: updateError.message }
 
   await supabase.from('receitas').insert({
     tecnico_id: userId,
-    data: today(),
-    descricao: `Pagamento OS #${os_numero}`,
-    valor: valorFinal,
+    data: hoje,
+    descricao: `Pagamento OS #${os.numero} — ${cliente.nome}`,
+    valor: valorPago,
     ordem_id: os.id,
   })
 
   return {
     success: true,
-    os_numero,
-    valor: valorFinal,
-    action: { type: 'order_paid', numero: os_numero, valor: valorFinal },
+    os_numero: os.numero,
+    cliente_nome: cliente.nome,
+    valor: valorPago,
+    forma_pagamento: forma,
+    action: { type: 'order_paid', numero: os.numero, valor: valorPago },
   }
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAI } from '../hooks/useAI'
 import { useAuth } from '../hooks/useAuth'
@@ -9,7 +9,7 @@ import SuggestionsRow from './ai/SuggestionsRow'
 import ChatMessageList from './ai/ChatMessageList'
 import ChatComposer from './ai/ChatComposer'
 import AddonUpsell from './ai/AddonUpsell'
-import { SparklesIcon, TrashIcon, CloseIcon } from './ai/icons'
+import { SparklesIcon, MicIcon, TrashIcon, CloseIcon } from './ai/icons'
 
 // Chrome do modal do ClimaPro IA (FAB + painel de tela cheia), usado a
 // partir de qualquer rota que não seja a Home (que já é o chat em si —
@@ -22,6 +22,11 @@ export default function AIAssistant() {
   const { profile, hasAiAssistant } = useAuth()
   const location = useLocation()
   const composerRef = useRef(null)
+  // Liga o mic sozinho assim que o composer montar, quando o FAB é aberto
+  // por comando de voz (ver handleVoiceFab) — o composer só existe no DOM
+  // depois que `open` vira true, então não dá pra chamar startVoice() no
+  // mesmo clique.
+  const [autoVoice, setAutoVoice] = useState(false)
 
   const firstName = profile?.nome?.split(' ')[0] || null
   const isChatTab = location.pathname === '/chat'
@@ -33,16 +38,30 @@ export default function AIAssistant() {
     composerRef.current?.prefill(action.prompt)
   }, [send])
 
+  const handleVoiceFab = useCallback(() => {
+    setAutoVoice(true)
+    setOpen(true)
+  }, [setOpen])
+
+  useEffect(() => {
+    if (!open || !autoVoice) return
+    const timer = setTimeout(() => {
+      composerRef.current?.startVoice()
+      setAutoVoice(false)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [open, autoVoice])
+
   return (
     <>
       {!open && !isChatTab && (
         <button
-          onClick={() => setOpen(true)}
-          aria-label="Abrir ClimaPro IA"
+          onClick={handleVoiceFab}
+          aria-label="Falar com a IA por voz"
           className="fixed bottom-20 right-4 z-[100] w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-white transition-transform active:scale-95 focus:outline-none"
           style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' }}
         >
-          <SparklesIcon className="w-6 h-6" />
+          <MicIcon className="w-6 h-6" />
           {messages.length > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white" />
           )}

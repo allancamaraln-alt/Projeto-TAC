@@ -1,6 +1,6 @@
 import { supabase } from '../../supabase'
 
-function matchClient(clientes, nome) {
+export function matchClient(clientes, nome) {
   const termo = (nome || '').toLowerCase().trim()
   return clientes?.find(c => {
     const cn = c.nome.toLowerCase()

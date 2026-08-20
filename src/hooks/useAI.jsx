@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useAuth } from './useAuth'
+import { useToast } from './useToast'
 import { supabase } from '../lib/supabase'
 import { callClimaPro } from '../lib/ai'
 import { trimHistory } from '../lib/openai'
@@ -23,6 +24,7 @@ const AIContext = createContext(null)
 
 export function AIProvider({ children }) {
   const { user, profile } = useAuth()
+  const toast = useToast()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)) || [] } catch { return [] }
@@ -59,7 +61,7 @@ export function AIProvider({ children }) {
     // há usuário autenticado.
     let convId = conversationId
     if (!convId && user?.id) {
-      const { data: conv } = await supabase
+      const { data: conv, error: convError } = await supabase
         .from('ai_conversations')
         .insert({ tecnico_id: user.id, tipo: 'chat', titulo: text?.trim() ? makeTitulo(text.trim()) : 'Conversa com foto' })
         .select()
@@ -68,9 +70,17 @@ export function AIProvider({ children }) {
         convId = conv.id
         setConversationId(convId)
         sessionStorage.setItem(CONVERSATION_KEY, convId)
+      } else if (convError) {
+        // Sem convId esta conversa segue funcionando normalmente, só não
+        // entra no histórico — avisa uma vez em vez de falhar em silêncio.
+        console.error('Falha ao criar conversa no histórico:', convError)
+        toast?.('Não foi possível salvar esta conversa no histórico.', 'error')
       }
     }
-    if (convId) supabase.from('ai_messages').insert({ conversation_id: convId, tecnico_id: user.id, role: 'user', content })
+    if (convId) {
+      supabase.from('ai_messages').insert({ conversation_id: convId, tecnico_id: user.id, role: 'user', content })
+        .then(({ error }) => { if (error) console.error('Falha ao salvar mensagem do usuário no histórico:', error) })
+    }
 
     abortRef.current = new AbortController()
 
@@ -91,8 +101,9 @@ export function AIProvider({ children }) {
           tecnico_id: user.id,
           role: 'assistant',
           content: { text: assistantMsg.content, actions: assistantMsg.actions || [] },
-        })
+        }).then(({ error }) => { if (error) console.error('Falha ao salvar resposta da IA no histórico:', error) })
         supabase.from('ai_conversations').update({ updated_at: new Date().toISOString() }).eq('id', convId)
+          .then(({ error }) => { if (error) console.error('Falha ao atualizar conversa no histórico:', error) })
       }
 
       // Persiste sem base64 para não estourar sessionStorage
@@ -110,7 +121,7 @@ export function AIProvider({ children }) {
       setLoading(false)
       setPhase(null)
     }
-  }, [messages, loading, profile, user, activeOrdemId, conversationId])
+  }, [messages, loading, profile, user, activeOrdemId, conversationId, toast])
 
   const clear = useCallback(() => {
     abortRef.current?.abort()
@@ -131,11 +142,17 @@ export function AIProvider({ children }) {
   // troca a sessão atual para continuar exatamente a conversa selecionada.
   const openConversation = useCallback(async (conv) => {
     abortRef.current?.abort()
-    const { data: rows } = await supabase
+    const { data: rows, error } = await supabase
       .from('ai_messages')
       .select('*')
       .eq('conversation_id', conv.id)
       .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Falha ao carregar mensagens da conversa:', error)
+      toast?.('Não foi possível abrir esta conversa.', 'error')
+      return
+    }
 
     const loaded = (rows || []).map(rowToMessage)
     setMessages(loaded)
@@ -149,7 +166,7 @@ export function AIProvider({ children }) {
     }))
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(storable))
     sessionStorage.setItem(CONVERSATION_KEY, conv.id)
-  }, [])
+  }, [toast])
 
   return (
     <AIContext.Provider value={{

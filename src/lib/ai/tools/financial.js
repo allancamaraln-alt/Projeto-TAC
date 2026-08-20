@@ -38,15 +38,20 @@ export const FINANCIAL_TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'mark_order_as_paid',
-      description: 'Marca uma Ordem de Serviço como paga/concluída e registra a receita automaticamente.',
+      name: 'register_os_payment',
+      description: 'Registra que um cliente pagou uma Ordem de Serviço, identificando-a pelo nome do cliente (não pelo número). Cobre tanto uma OS ainda não concluída (marca como concluída e paga em um passo) quanto uma OS já concluída com saldo pendente ("cobrança em aberto"/"em atraso"). Se o cliente tiver mais de uma OS com pagamento em aberto, a ferramenta retorna a lista delas em vez de adivinhar — pergunte ao usuário qual foi paga e chame de novo informando os_numero.',
       parameters: {
         type: 'object',
         properties: {
-          os_numero: { type: 'integer', description: 'Número da OS.' },
-          valor: { type: 'number', description: 'Valor recebido. Se omitido, usa o valor registrado na OS.' },
+          cliente_nome: { type: 'string', description: 'Nome do cliente que pagou.' },
+          os_numero: { type: 'integer', description: 'Número da OS específica — só informe quando já souber, por exemplo depois de perguntar ao usuário qual das OS em aberto foi paga.' },
+          forma_pagamento: {
+            type: 'string',
+            enum: ['pix', 'dinheiro', 'cartao_credito', 'cartao_debito', 'outros'],
+            description: 'Forma de pagamento. SEMPRE extraia da frase do usuário quando der pra identificar — ex: "pagou em dinheiro"/"no dinheiro" → dinheiro; "pagou no pix"/"via pix" → pix; "no cartão de crédito" → cartao_credito; "no débito" → cartao_debito. Só omita quando o usuário realmente não mencionar a forma.',
+          },
         },
-        required: ['os_numero'],
+        required: ['cliente_nome'],
       },
     },
   },

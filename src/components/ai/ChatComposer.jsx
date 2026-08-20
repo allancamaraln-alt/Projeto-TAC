@@ -2,9 +2,10 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { useAI } from '../../hooks/useAI'
 import { QUICK_ACTIONS } from '../../lib/openai'
 import { transcribeAudio } from '../../lib/ai/api'
-import { MicIcon, PlusIcon, CameraIcon } from './icons'
+import { PlusIcon, CameraIcon } from './icons'
 import ToolbarIconButton from './ToolbarIconButton'
 import SendButton from './SendButton'
+import VoiceButton from './VoiceButton'
 
 async function compressImage(file) {
   return new Promise((resolve) => {
@@ -385,13 +386,6 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
           <div className="flex items-center gap-3">
             <ToolbarIconButton icon={PlusIcon} label="Enviar da galeria" onPress={() => galleryInputRef.current?.click()} />
             <ToolbarIconButton icon={CameraIcon} label="Tirar foto" onPress={() => cameraInputRef.current?.click()} />
-            <ToolbarIconButton
-              icon={MicIcon}
-              label={listening ? 'Parar gravação' : transcribing ? 'Transcrevendo' : 'Gravar voz'}
-              onPress={toggleVoice}
-              active={listening || transcribing}
-              activeClassName={listening ? 'text-red-400 animate-pulse' : 'text-white/40 animate-pulse'}
-            />
           </div>
 
           {loading ? (
@@ -404,8 +398,10 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
                 <rect x="6" y="6" width="12" height="12" rx="2" />
               </svg>
             </button>
-          ) : (
+          ) : canSend ? (
             <SendButton onPress={handleSend} disabled={!canSend} />
+          ) : (
+            <VoiceButton onPress={toggleVoice} listening={listening} transcribing={transcribing} />
           )}
         </div>
       </div>
