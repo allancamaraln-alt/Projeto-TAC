@@ -17,7 +17,8 @@ import PlanoPlus from './pages/PlanoPlus'
 Sentry.init({
   dsn: "https://39e93ed64894fb89acb4b451fdb4a136@o4511269979291648.ingest.us.sentry.io/4511270012846080",
   tracesSampleRate: 1.0,
-  environment: "production",
+  environment: import.meta.env.DEV ? "development" : "production",
+  enabled: !import.meta.env.DEV,
   ignoreErrors: [
     /ServiceWorker/i,
     /Failed to register/i,

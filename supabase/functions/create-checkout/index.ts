@@ -33,7 +33,7 @@ serve(async (req) => {
     if (!PLANOS[plan as keyof typeof PLANOS]) throw new Error('Plano inválido')
 
     const plano = PLANOS[plan as keyof typeof PLANOS]
-    const appUrl = Deno.env.get('APP_URL') ?? 'https://climapro.app'
+    const appUrl = Deno.env.get('APP_URL') ?? 'https://climaproapp.com.br'
 
     const { data: profile } = await supabase
       .from('profiles')

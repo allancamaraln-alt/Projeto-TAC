@@ -60,7 +60,7 @@ function emailFalhaHtml(nome: string): string {
             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
               <tr>
                 <td align="center">
-                  <a href="https://app.climapro.com.br"
+                  <a href="https://climaproapp.com.br"
                      style="display:inline-block;background:linear-gradient(135deg,#0284c7,#0369a1);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:10px;letter-spacing:0.2px;">
                     Atualizar cartão agora →
                   </a>
