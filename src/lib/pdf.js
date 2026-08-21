@@ -245,6 +245,7 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   // à direita (mesmo padrão de um orçamento detalhado por linha).
   if (Array.isArray(ordem.itens) && ordem.itens.length > 0) {
     y += 4
+    y = pageBreak(doc, y, 20)
     doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...SLATE5)
@@ -260,14 +261,21 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
       const valorW = doc.getTextWidth(valorTexto)
 
       doc.setFont('helvetica', 'normal')
-      doc.setTextColor(...SLATE8)
       const linhas = doc.splitTextToSize(`${numero}. ${item.descricao}`, contentW - valorW - 10)
+      const alturaItem = linhas.length * 7.5 + 3
+
+      // Item não cabe no resto da página — quebra antes de desenhar, senão
+      // ele fica escrito fora da área visível (some no PDF, mesmo somando
+      // certo no total, que é calculado à parte a partir de ordem.itens).
+      y = pageBreak(doc, y, alturaItem + 4)
+
+      doc.setTextColor(...SLATE8)
       doc.text(linhas, margin, y)
 
       doc.setFont('helvetica', 'bold')
       doc.text(valorTexto, W - margin, y, { align: 'right' })
 
-      y += linhas.length * 7.5 + 3
+      y += alturaItem
     })
   }
 
@@ -510,19 +518,24 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
       const valorTexto = formatBRL(item.valor)
 
       doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...SLATE8)
       const valorW = doc.getTextWidth(valorTexto)
 
       doc.setFont('helvetica', 'normal')
-      doc.setTextColor(...SLATE5)
       const linhas = doc.splitTextToSize(`${numero}. ${item.descricao}`, contentW - valorW - 8)
+      const alturaItem = linhas.length * 6.5 + 2
+
+      // Mesmo cuidado do PDF de orçamento: sem isso o item que não coubesse
+      // na página ficava desenhado fora da área visível, invisível no PDF.
+      y = pageBreak(doc, y, alturaItem + 4)
+
+      doc.setTextColor(...SLATE5)
       doc.text(linhas, margin, y)
 
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...SLATE8)
       doc.text(valorTexto, W - margin, y, { align: 'right' })
 
-      y += linhas.length * 6.5 + 2
+      y += alturaItem
     })
   }
 
