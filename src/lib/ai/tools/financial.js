@@ -1,16 +1,19 @@
+export const CATEGORIAS_GASTO = ['Combustível', 'Funcionário', 'Material/Peças', 'Alimentação', 'Ferramenta', 'Transporte', 'Outros']
+
 export const FINANCIAL_TOOLS = [
   {
     type: 'function',
     function: {
       name: 'create_expense',
-      description: 'Registra uma despesa ou gasto do técnico.',
+      description: 'Registra uma despesa ou gasto do técnico. Nunca pergunte a categoria ao usuário — classifique você mesmo pela descrição do gasto, seguindo o guia de classificação do prompt do sistema.',
       parameters: {
         type: 'object',
         properties: {
           data: { type: 'string', description: 'Data no formato YYYY-MM-DD. Use a data atual se não informada.' },
           categoria: {
             type: 'string',
-            enum: ['Combustível', 'Funcionário', 'Material/Peças', 'Alimentação', 'Ferramenta', 'Transporte', 'Outros'],
+            enum: CATEGORIAS_GASTO,
+            description: 'Escolhida por você a partir da descrição do gasto — nunca pergunte ao usuário. Ex: "gasolina"/"combustível" → Combustível; "ferragista"/"parafuso"/"peça" → Material/Peças; "almoço"/"lanche" → Alimentação; "ajudante"/"diária" → Funcionário. Use Outros só se não houver nenhuma pista.',
           },
           descricao: { type: 'string', description: 'Descrição breve do gasto.' },
           valor: { type: 'number', description: 'Valor em reais.' },
@@ -69,7 +72,11 @@ export const FINANCIAL_TOOLS = [
           },
           data_inicio: { type: 'string', description: 'YYYY-MM-DD. Obrigatório quando periodo=personalizado.' },
           data_fim: { type: 'string', description: 'YYYY-MM-DD. Obrigatório quando periodo=personalizado.' },
-          categoria: { type: 'string', description: 'Filtrar por categoria específica (opcional).' },
+          categoria: {
+            type: 'string',
+            enum: CATEGORIAS_GASTO,
+            description: 'Filtrar por categoria específica (opcional). Use sempre que o usuário perguntar sobre um tipo de gasto específico (ex: "quanto gastei de combustível?").',
+          },
         },
         required: ['periodo'],
       },

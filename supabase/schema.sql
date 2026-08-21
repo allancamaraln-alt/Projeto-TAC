@@ -1018,6 +1018,75 @@ create policy "Técnico remove seus gastos com add-on de IA"
   using (auth.uid() = tecnico_id and public.has_ai_assistant(auth.uid()));
 
 -- ============================================
+-- MIGRATION: libera INSERT/UPDATE/DELETE de gastos/receitas para hasFaturamento
+-- ============================================
+-- Contexto: a migration anterior alinhou o SELECT de gastos/receitas ao gate de
+-- UI (has_faturamento OR has_ai_assistant), mas manteve INSERT/UPDATE/DELETE
+-- restritos a has_ai_assistant (só o add-on de IA). Isso bloqueava o lançamento
+-- manual de gastos/receitas na aba "Financeiro" do Relatório para quem tem
+-- apenas has_faturamento, sem o add-on. Esta migration alinha INSERT/UPDATE/
+-- DELETE à mesma condição OR do SELECT — sem alterar has_faturamento/
+-- has_ai_assistant nem nenhuma outra regra de entitlement.
+
+-- receitas
+drop policy if exists "Técnico grava receitas com add-on de IA" on public.receitas;
+create policy "Técnico grava receitas com entitlement"
+  on public.receitas for insert
+  with check (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+drop policy if exists "Técnico atualiza/remove suas receitas com add-on de IA" on public.receitas;
+create policy "Técnico atualiza receitas com entitlement"
+  on public.receitas for update
+  using (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  )
+  with check (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+drop policy if exists "Técnico remove suas receitas com add-on de IA" on public.receitas;
+create policy "Técnico remove receitas com entitlement"
+  on public.receitas for delete
+  using (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+-- gastos
+drop policy if exists "Técnico grava gastos com add-on de IA" on public.gastos;
+create policy "Técnico grava gastos com entitlement"
+  on public.gastos for insert
+  with check (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+drop policy if exists "Técnico atualiza suas gastos com add-on de IA" on public.gastos;
+create policy "Técnico atualiza gastos com entitlement"
+  on public.gastos for update
+  using (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  )
+  with check (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+drop policy if exists "Técnico remove seus gastos com add-on de IA" on public.gastos;
+create policy "Técnico remove gastos com entitlement"
+  on public.gastos for delete
+  using (
+    auth.uid() = tecnico_id
+    and (public.has_faturamento(auth.uid()) or public.has_ai_assistant(auth.uid()))
+  );
+
+-- ============================================
 -- MIGRATION: PMOC (Plano de Manutenção, Operação e Controle)
 -- Módulo novo e independente: atende Portaria GM/MS nº 3.523/1998,
 -- RE ANVISA 09/2003 e NBR 13971. Cadastro persistente de ambientes

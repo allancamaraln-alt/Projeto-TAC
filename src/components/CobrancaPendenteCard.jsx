@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, resumoPagamento } from '../lib/format'
+import { formatOS, formatBRL, formatDateWeekday, resumoPagamento } from '../lib/format'
 import { gerarLinkCobranca } from '../lib/whatsapp'
 import { useToast } from '../hooks/useToast'
 
@@ -52,6 +52,9 @@ export default function CobrancaPendenteCard({ os, onAtualizado }) {
           <span className="text-xs text-gray-400 font-mono">{formatOS(os.numero)}</span>
           <p className="font-semibold text-gray-800 truncate">{os.clientes?.nome}</p>
           <p className="text-sm text-gray-500 truncate">{os.tipo_servico}</p>
+          {os.data_pagamento_pendente && (
+            <p className="text-xs text-gray-400 mt-0.5">Vencimento {formatDateWeekday(os.data_pagamento_pendente)}</p>
+          )}
         </div>
         <p className="font-bold text-amber-600 flex-shrink-0 ml-2 whitespace-nowrap">{formatBRL(pag.saldo)}</p>
       </div>

@@ -1,5 +1,6 @@
 import { supabase } from '../../supabase'
 import { resumoPagamento } from '../../format'
+import { todayISODate, resolvePeriodoAI } from '../../financialPeriod'
 import { matchClient } from './clientesExecutor'
 
 export async function executeTool(name, args, userId) {
@@ -17,14 +18,10 @@ export async function executeTool(name, args, userId) {
   }
 }
 
-function today() {
-  return new Date().toISOString().split('T')[0]
-}
-
 async function createExpense({ data, categoria, descricao, valor }, userId) {
   const { data: row, error } = await supabase
     .from('gastos')
-    .insert({ tecnico_id: userId, data: data || today(), categoria, descricao, valor: Number(valor) })
+    .insert({ tecnico_id: userId, data: data || todayISODate(), categoria, descricao, valor: Number(valor) })
     .select('id, data, categoria, descricao, valor')
     .single()
   if (error) return { error: error.message }
@@ -38,7 +35,7 @@ async function createExpense({ data, categoria, descricao, valor }, userId) {
 async function createIncome({ data, descricao, valor }, userId) {
   const { data: row, error } = await supabase
     .from('receitas')
-    .insert({ tecnico_id: userId, data: data || today(), descricao, valor: Number(valor) })
+    .insert({ tecnico_id: userId, data: data || todayISODate(), descricao, valor: Number(valor) })
     .select('id, data, descricao, valor')
     .single()
   if (error) return { error: error.message }
@@ -102,7 +99,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
   }
 
   const { os, pag } = abertas[0]
-  const hoje = today()
+  const hoje = todayISODate()
   const forma = forma_pagamento || 'outros'
   const valorPago = os.status === 'concluido' ? pag.saldo : Number(os.valor)
   const novosPagamentos = [...pag.pagamentos, { forma, valor: valorPago, data: hoje }]
@@ -132,29 +129,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
 }
 
 async function getFinancialSummary({ periodo, data_inicio, data_fim, categoria }, userId) {
-  const now = new Date()
-  let startDate, endDate
-
-  if (periodo === 'hoje') {
-    startDate = endDate = today()
-  } else if (periodo === 'semana') {
-    const d = new Date(now)
-    const day = d.getDay()
-    d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)) // segunda-feira
-    startDate = d.toISOString().split('T')[0]
-    endDate = today()
-  } else if (periodo === 'mes') {
-    startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-    endDate = today()
-  } else if (periodo === 'mes_anterior') {
-    const first = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const last = new Date(now.getFullYear(), now.getMonth(), 0)
-    startDate = first.toISOString().split('T')[0]
-    endDate = last.toISOString().split('T')[0]
-  } else {
-    startDate = data_inicio
-    endDate = data_fim
-  }
+  const { startDate, endDate } = resolvePeriodoAI({ periodo, data_inicio, data_fim })
 
   let gastosQ = supabase
     .from('gastos')

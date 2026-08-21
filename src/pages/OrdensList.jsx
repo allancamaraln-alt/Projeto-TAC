@@ -89,7 +89,14 @@ export default function OrdensList() {
       {/* Header */}
       <div className="bg-white px-4 pt-12 pb-3 border-b border-gray-100 sticky top-0 z-10">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-gray-800">Ordens de Serviço</h1>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-full active:bg-gray-100 -ml-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 className="text-xl font-bold text-gray-800">Ordens de Serviço</h1>
+          </div>
           <button
             onClick={() => navigate('/ordens/nova')}
             className="w-10 h-10 ac-bg rounded-full flex items-center justify-center ac-shadow"

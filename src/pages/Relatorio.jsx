@@ -4,40 +4,23 @@ import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDate, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
+import LancamentoRow from '../components/financial/LancamentoRow'
+import LancamentoFormSheet from '../components/financial/LancamentoFormSheet'
 import { useAuth } from '../hooks/useAuth'
-
-const PERIODOS = [
-  { label: 'Esta semana', value: 'semana' },
-  { label: 'Este mês', value: 'mes' },
-  { label: 'Últimos 3 meses', value: 'trimestre' },
-  { label: 'Tudo', value: 'tudo' },
-]
-
-function getInicio(periodo) {
-  const now = new Date()
-  if (periodo === 'semana') {
-    const d = new Date(now)
-    d.setDate(d.getDate() - 7)
-    return d.toISOString()
-  }
-  if (periodo === 'mes') {
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  }
-  if (periodo === 'trimestre') {
-    const d = new Date(now)
-    d.setMonth(d.getMonth() - 3)
-    return d.toISOString()
-  }
-  return null // tudo
-}
+import { useLancamentosFinanceiros } from '../hooks/useLancamentosFinanceiros'
+import { PERIODOS_UI, resolvePeriodoUI } from '../lib/financialPeriod'
 
 export default function Relatorio() {
   const navigate = useNavigate()
-  const { hasFaturamento, hasRelatorioAvancado } = useAuth()
+  const { user, hasFaturamento, hasRelatorioAvancado } = useAuth()
   const [periodo, setPeriodo] = useState('mes')
+  const [aba, setAba] = useState('faturamento')
   const [ordens, setOrdens] = useState([])
   const [loading, setLoading] = useState(true)
   const [pagamentosOrdens, setPagamentosOrdens] = useState([])
+  const [sheet, setSheet] = useState(null) // { tipo: 'gasto'|'receita', initialValue } | null
+
+  const { startISO, startDate, endDate } = resolvePeriodoUI(periodo)
 
   useEffect(() => {
     async function load() {
@@ -47,8 +30,7 @@ export default function Relatorio() {
         .select('*, clientes(nome)')
         .order('created_at', { ascending: false })
 
-      const inicio = getInicio(periodo)
-      if (inicio) query = query.gte('created_at', inicio)
+      if (startISO) query = query.gte('created_at', startISO)
 
       const timeout = new Promise(resolve => setTimeout(() => resolve({ data: [] }), 5000))
       const { data } = await Promise.race([query, timeout])
@@ -56,7 +38,7 @@ export default function Relatorio() {
       setLoading(false)
     }
     load()
-  }, [periodo])
+  }, [startISO])
 
   // Pendências e recebimentos não seguem o filtro de período acima: uma
   // dívida de uma OS antiga continua valendo hoje mesmo que ela tenha sido
@@ -116,6 +98,34 @@ export default function Relatorio() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5)
 
+  const {
+    gastos, receitas, loading: loadingFinanceiro,
+    totalGastos, totalReceitas, porCategoria,
+    criarGasto, atualizarGasto, excluirGasto,
+    criarReceita, atualizarReceita, excluirReceita,
+  } = useLancamentosFinanceiros({ userId: user?.id, startDate, endDate })
+
+  const recebidoNoPeriodo = todosPagamentos
+    .filter(p => p.data && p.data <= endDate && (!startDate || p.data >= startDate))
+    .reduce((s, p) => s + p.valor, 0)
+  const lucroLiquido = recebidoNoPeriodo + totalReceitas - totalGastos
+
+  async function handleSubmitLancamento(payload) {
+    const { tipo, initialValue } = sheet
+    if (tipo === 'gasto') {
+      if (initialValue) await atualizarGasto(initialValue.id, payload)
+      else await criarGasto(payload)
+    } else {
+      if (initialValue) await atualizarReceita(initialValue.id, payload)
+      else await criarReceita(payload)
+    }
+  }
+
+  async function handleDeleteLancamento(id) {
+    if (sheet.tipo === 'gasto') await excluirGasto(id)
+    else await excluirReceita(id)
+  }
+
   if (!hasFaturamento) {
     return (
       <div className="page-container">
@@ -160,7 +170,7 @@ export default function Relatorio() {
       <div className="px-4 pt-4 space-y-4">
         {/* Seletor de período */}
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {PERIODOS.map(p => (
+          {PERIODOS_UI.map(p => (
             <button
               key={p.value}
               onClick={() => setPeriodo(p.value)}
@@ -175,7 +185,27 @@ export default function Relatorio() {
           ))}
         </div>
 
-        {loading ? (
+        {/* Abas */}
+        <div className="grid grid-cols-2 gap-2 bg-gray-100 rounded-2xl p-1">
+          <button
+            onClick={() => setAba('faturamento')}
+            className={`text-sm py-2 rounded-xl font-semibold transition-colors ${
+              aba === 'faturamento' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500'
+            }`}
+          >
+            Faturamento
+          </button>
+          <button
+            onClick={() => setAba('financeiro')}
+            className={`text-sm py-2 rounded-xl font-semibold transition-colors ${
+              aba === 'financeiro' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500'
+            }`}
+          >
+            Financeiro
+          </button>
+        </div>
+
+        {aba === 'faturamento' && (loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => <div key={i} className="card h-20 animate-pulse bg-gray-100" />)}
           </div>
@@ -222,8 +252,8 @@ export default function Relatorio() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <MetricCard label="A receber" value={formatBRL(totalAReceber)} bg="bg-amber-50" text="text-amber-600" />
-              <MetricCard label="Vencido" value={formatBRL(totalVencido)} bg="bg-red-50" text="text-red-600" />
+              <MetricCard label="A receber" value={formatBRL(totalAReceber)} bg="bg-amber-50" text="text-amber-600" onClick={() => navigate('/ordens?pagamento=pendente')} />
+              <MetricCard label="Vencido" value={formatBRL(totalVencido)} bg="bg-red-50" text="text-red-600" onClick={() => navigate('/ordens?pagamento=vencido')} />
             </div>
             <div>
               <p className="text-xs text-gray-400 pt-2">
@@ -344,17 +374,128 @@ export default function Relatorio() {
               </div>
             )}
           </>
+        ))}
+
+        {aba === 'financeiro' && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCard label="Gastos" value={formatBRL(totalGastos)} bg="bg-red-50" text="text-red-600" />
+              <MetricCard label="Receitas avulsas" value={formatBRL(totalReceitas)} bg="bg-emerald-50" text="text-emerald-600" />
+            </div>
+
+            <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl p-5 text-white shadow-md">
+              <p className="text-slate-300 text-sm font-medium">Lucro líquido</p>
+              <p className="text-4xl font-bold mt-1">{formatBRL(lucroLiquido)}</p>
+              <p className="text-slate-300 text-xs mt-2">
+                Regime de caixa: recebido de OS + receitas avulsas − gastos, no período selecionado.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSheet({ tipo: 'gasto', initialValue: null })}
+                className="flex-1 bg-red-50 text-red-600 text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all"
+              >
+                + Despesa
+              </button>
+              <button
+                onClick={() => setSheet({ tipo: 'receita', initialValue: null })}
+                className="flex-1 bg-emerald-50 text-emerald-600 text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all"
+              >
+                + Receita
+              </button>
+            </div>
+
+            {Object.keys(porCategoria).length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide pt-1 mb-2">
+                  Gastos por categoria
+                </h2>
+                <div className="card space-y-2">
+                  {Object.entries(porCategoria)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, valor]) => (
+                      <div key={cat} className="flex justify-between text-sm">
+                        <span className="text-gray-600">{cat}</span>
+                        <span className="font-semibold text-gray-800">{formatBRL(valor)}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide pt-1">
+              Gastos no período
+            </h2>
+            {loadingFinanceiro ? (
+              <div className="card h-16 animate-pulse bg-gray-100" />
+            ) : gastos.length === 0 ? (
+              <div className="card text-center text-gray-400 py-8">
+                <p className="text-3xl mb-2">📊</p>
+                <p>Nenhum gasto lançado neste período.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {gastos.map(g => (
+                  <LancamentoRow
+                    key={g.id}
+                    item={g}
+                    tipo="gasto"
+                    onTap={() => setSheet({ tipo: 'gasto', initialValue: g })}
+                  />
+                ))}
+              </div>
+            )}
+
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide pt-1">
+              Receitas no período
+            </h2>
+            {loadingFinanceiro ? (
+              <div className="card h-16 animate-pulse bg-gray-100" />
+            ) : receitas.length === 0 ? (
+              <div className="card text-center text-gray-400 py-8">
+                <p className="text-3xl mb-2">📊</p>
+                <p>Nenhuma receita avulsa neste período.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 pb-4">
+                {receitas.map(r => (
+                  <LancamentoRow
+                    key={r.id}
+                    item={r}
+                    tipo="receita"
+                    onTap={() => r.ordem_id ? navigate(`/ordens/${r.ordem_id}`) : setSheet({ tipo: 'receita', initialValue: r })}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {sheet && (
+        <LancamentoFormSheet
+          key={`${sheet.tipo}-${sheet.initialValue?.id ?? 'novo'}`}
+          tipo={sheet.tipo}
+          initialValue={sheet.initialValue}
+          onClose={() => setSheet(null)}
+          onSubmit={handleSubmitLancamento}
+          onDelete={handleDeleteLancamento}
+        />
+      )}
     </div>
   )
 }
 
-function MetricCard({ label, value, bg, text }) {
+function MetricCard({ label, value, bg, text, onClick }) {
+  const Tag = onClick ? 'button' : 'div'
   return (
-    <div className={`${bg} rounded-2xl p-3 text-center`}>
+    <Tag
+      onClick={onClick}
+      className={`${bg} rounded-2xl p-3 text-center${onClick ? ' active:scale-95 transition-transform cursor-pointer' : ''}`}
+    >
       <p className={`text-base font-bold ${text} leading-tight`}>{value}</p>
       <p className={`text-xs ${text} opacity-80 mt-0.5`}>{label}</p>
-    </div>
+    </Tag>
   )
 }
