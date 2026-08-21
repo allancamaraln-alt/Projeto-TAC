@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import * as Sentry from '@sentry/react'
 import { supabase } from '../lib/supabase'
 import { extractPalette, applyPalette } from '../lib/palette'
 
@@ -59,14 +60,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id, session.user.email)
-      else setLoading(false)
+      if (session?.user) {
+        // Identifica os erros no Sentry pelo usuário logado — sem isso não dá
+        // pra saber de quem é um relato de bug (todo evento chegava anônimo).
+        Sentry.setUser({ id: session.user.id, email: session.user.email })
+        fetchProfile(session.user.id, session.user.email)
+      } else {
+        setLoading(false)
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id, session.user.email)
-      else { setProfile(null); setLoading(false); applyPalette(null) }
+      if (session?.user) {
+        Sentry.setUser({ id: session.user.id, email: session.user.email })
+        fetchProfile(session.user.id, session.user.email)
+      } else {
+        Sentry.setUser(null)
+        setProfile(null); setLoading(false); applyPalette(null)
+      }
     })
 
     return () => subscription.unsubscribe()
