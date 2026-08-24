@@ -124,10 +124,12 @@ function StatsStrip() {
 
 const FEATURES = [
   { icon: '📋', title: 'Ordens de Serviço', desc: 'Crie, acompanhe e finalize OS com fotos, valores e histórico completo.' },
-  { icon: '👥', title: 'Gestão de Clientes', desc: 'Endereço, telefone e todo o histórico de atendimento na palma da mão.' },
+  { icon: '👥', title: 'Clientes e localização', desc: 'Endereço, telefone e histórico dos serviços, com mapa e rota pelo GPS.' },
   { icon: '🔔', title: 'Lembretes de Manutenção', desc: 'Avise seus clientes automaticamente na época certa para a próxima revisão.' },
-  { icon: '📄', title: 'Relatórios em PDF', desc: 'Gere laudos e comprovantes profissionais para enviar pelo WhatsApp.' },
+  { icon: '📄', title: 'Orçamento e recibo em PDF', desc: 'Gere documentos profissionais e compartilhe com o cliente pelo WhatsApp.' },
+  { icon: '🤖', title: 'Assistente com IA', desc: 'Use texto, voz ou foto para agilizar atendimentos, pagamentos, despesas, diagnósticos e laudos.' },
   { icon: '💰', title: 'Relatório de Faturamento', desc: 'Veja quanto faturou na semana, no mês ou nos últimos 3 meses. Ticket médio e OS concluídas em um só lugar.' },
+  { icon: '🧾', title: 'Controle Financeiro', desc: 'Lance gastos e receitas avulsas em segundos — por voz ou texto — e veja o lucro líquido do mês sem precisar de planilha.' },
   { icon: '📱', title: 'Funciona no celular', desc: 'App rápido e leve, feito para usar em campo, em qualquer Android ou iPhone.' },
   { icon: '🌐', title: 'Acesso offline', desc: 'Sem sinal no local? O app abre e você consulta seus dados mesmo sem internet.' },
 ]
@@ -230,64 +232,75 @@ const FAQS = [
 const ACCENT = '#0284c7'
 const ACCENT_DK = '#0369a1'
 
-function PhoneMockup() {
+function PhoneScreenshot({ src, alt, width = 220 }) {
   return (
-    <div style={{ position: 'relative', width: 220, margin: '0 auto' }}>
+    <div style={{ position: 'relative', width, margin: '0 auto' }}>
       <div style={{
-        width: 220, borderRadius: 36, background: '#1e293b',
+        width, borderRadius: 36, background: '#1e293b',
         padding: '12px 8px', boxShadow: '0 30px 80px rgba(0,0,0,0.4)',
       }}>
-        <div style={{ borderRadius: 28, overflow: 'hidden', background: '#f1f5f9' }}>
-          {/* Status bar */}
-          <div style={{ background: ACCENT, padding: '8px 16px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'white', fontSize: 10, fontWeight: 700 }}>ClimaPro</span>
-            <span style={{ fontSize: 16 }}>❄️</span>
-          </div>
-          {/* Header */}
-          <div style={{ background: `linear-gradient(160deg, ${ACCENT}, ${ACCENT_DK})`, padding: '12px 14px 14px' }}>
-            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 9, marginBottom: 2 }}>Boa tarde,</div>
-            <div style={{ color: 'white', fontSize: 13, fontWeight: 800 }}>Carlos Técnico 👋</div>
-          </div>
-          {/* Cards */}
-          <div style={{ padding: '10px 10px 6px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            {[['📋', 'Nova OS'], ['📊', 'Relatório']].map(([ic, lb]) => (
-              <div key={lb} style={{ background: 'white', borderRadius: 10, padding: '8px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-                <div style={{ fontSize: 16, marginBottom: 2 }}>{ic}</div>
-                <div style={{ fontSize: 8, fontWeight: 700, color: '#0f172a' }}>{lb}</div>
-              </div>
-            ))}
-          </div>
-          {/* Stats */}
-          <div style={{ padding: '0 10px 6px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            {[['3', 'Em andamento', '#fef3c7', '#d97706'], ['12', 'Concluídos', '#dcfce7', '#16a34a']].map(([n, lb, bg, color]) => (
-              <div key={lb} style={{ background: bg, borderRadius: 8, padding: '6px 8px' }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color }}>{n}</div>
-                <div style={{ fontSize: 7, color: '#64748b' }}>{lb}</div>
-              </div>
-            ))}
-          </div>
-          {/* List */}
-          <div style={{ padding: '0 10px 6px' }}>
-            <div style={{ fontSize: 7, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>RECENTES</div>
-            {[['Mateus Silva', 'Manutenção preventiva', '#16a34a'], ['João Costa', 'Instalação split', '#d97706']].map(([name, desc, color]) => (
-              <div key={name} style={{ background: 'white', borderRadius: 8, padding: '6px 8px', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: '#0f172a' }}>{name}</div>
-                  <div style={{ fontSize: 7, color: '#64748b' }}>{desc}</div>
-                </div>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
-              </div>
-            ))}
-          </div>
-          {/* Nav */}
-          <div style={{ background: 'white', padding: '6px 0', display: 'flex', justifyContent: 'space-around', borderTop: '1px solid #e2e8f0' }}>
-            {['🏠', '📋', '👥', '🔔', '👤'].map(ic => (
-              <span key={ic} style={{ fontSize: 14 }}>{ic}</span>
-            ))}
-          </div>
+        <div style={{ borderRadius: 28, overflow: 'hidden', background: '#f1f5f9', aspectRatio: '390 / 844' }}>
+          <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', display: 'block' }} />
         </div>
       </div>
     </div>
+  )
+}
+
+const SCREENSHOTS = [
+  { src: '/landing/screen-inicio.png', title: 'Painel completo', desc: 'Faturamento, cobranças em aberto e o resumo do seu dia em um só lugar.' },
+  { src: '/landing/screen-financeiro.png', title: 'Controle financeiro', desc: 'Lance gastos e receitas avulsas e veja o lucro líquido do período na hora.' },
+  { src: '/landing/screen-os.png', title: 'Ordens de Serviço', desc: 'Acompanhe orçamento, aprovação, andamento e conclusão de cada atendimento.' },
+  { src: '/landing/screen-chat.png', title: 'Assistente de IA', desc: 'Fale um gasto por texto ou voz e a IA classifica e lança sozinha.' },
+]
+
+function ScreenshotsGallery() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return (
+    <section style={{ background: '#f0f9ff', borderTop: '1px solid #e2e8f0', padding: '72px 0' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px' }}>
+        <h2 style={{ textAlign: 'center', fontSize: 28, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+          Conheça o app por dentro
+        </h2>
+        <p style={{ textAlign: 'center', color: '#64748b', fontSize: 16, marginBottom: 12 }}>
+          Telas reais do ClimaPro, direto do celular
+        </p>
+        {isMobile && (
+          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: 13, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <span style={{ display: 'inline-block', animation: 'swipeHint 1.4s ease-in-out infinite' }}>👆</span>
+            Deslize para ver as outras telas
+          </p>
+        )}
+      </div>
+      {isMobile ? (
+        <div style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none', padding: '16px 24px', gap: 20 }}>
+          {SCREENSHOTS.map(s => (
+            <div key={s.title} style={{ flex: '0 0 78%', scrollSnapAlign: 'start', textAlign: 'center' }}>
+              <PhoneScreenshot src={s.src} alt={s.title} width={200} />
+              <p style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', margin: '20px 0 6px' }}>{s.title}</p>
+              <p style={{ color: '#64748b', fontSize: 13, lineHeight: 1.5, margin: '0 auto', maxWidth: 260 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ maxWidth: 1100, margin: '16px auto 0', padding: '0 24px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+          {SCREENSHOTS.map(s => (
+            <div key={s.title} style={{ textAlign: 'center' }}>
+              <PhoneScreenshot src={s.src} alt={s.title} width={200} />
+              <p style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', margin: '20px 0 6px' }}>{s.title}</p>
+              <p style={{ color: '#64748b', fontSize: 13, lineHeight: 1.5 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -626,7 +639,7 @@ export default function Landing() {
             <TrustSeals dark />
           </div>
           <div style={{ flex: '0 0 auto' }}>
-            <PhoneMockup />
+            <PhoneScreenshot src="/landing/screen-inicio.png" alt="Painel do ClimaPro" />
           </div>
         </div>
       </section>
@@ -662,6 +675,8 @@ export default function Landing() {
           ))}
         </div>
       </section>
+
+      <ScreenshotsGallery />
 
       {/* Testimonials */}
       <section style={{ background: '#f0fdf4', borderTop: '1px solid #e2e8f0', padding: '72px 24px' }}>
