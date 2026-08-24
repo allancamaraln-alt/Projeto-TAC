@@ -187,7 +187,7 @@ const ChatComposer = forwardRef(function ChatComposer({ send: sendProp, loading:
             setTimeout(() => setVoiceError(null), 4000)
           }
         } catch (err) {
-          const friendly = { addon_required: 'Assine o Assistente IA para usar voz.' }
+          const friendly = { plan_required: 'Disponível nos planos Profissional e Anual.' }
           setVoiceError(friendly[err.message] || `Erro ao transcrever (${err?.name || err?.message || 'falha de rede'}). Tente novamente.`)
           setTimeout(() => setVoiceError(null), 5000)
         } finally {

@@ -175,8 +175,8 @@ export function AuthProvider({ children }) {
   const hasHistoricoCompleto  = !(isLocked && isBasico) || !!profile?.historico_liberado
   const hasRelatorioAvancado  = !isLocked || profile?.plan === 'annual'
 
-  // Add-on pago independente do plano — R$19,90/mês, some sobre qualquer plano base.
-  const hasAiAssistant = !!profile?.ai_addon_until && new Date(profile.ai_addon_until) > new Date()
+  // IA é recurso incluso nos planos Profissional e Anual (não é mais add-on à parte).
+  const hasAiAssistant = !isLocked || profile?.plan === 'professional' || profile?.plan === 'annual'
 
   return (
     <AuthContext.Provider value={{

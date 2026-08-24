@@ -1,11 +1,14 @@
 /**
- * Recuperação de usuários com trial vencido.
+ * Recuperação de ex-assinantes pagantes (churn).
  * Envia email personalizado para cada usuário que:
- *   - Terminou o trial (trial_starts_at + 7 dias < agora)
- *   - Não tem assinatura ativa (subscribed_until IS NULL ou < agora)
+ *   - Já teve um plano pago de verdade (plan_locked_at preenchido)
+ *   - Não tem assinatura ativa hoje (subscribed_until IS NULL ou < agora)
+ *
+ * Diferente de recover-trial-users.mjs: esse público já pagou antes, então o
+ * email é de reativação de assinatura, não de "conheça o produto".
  *
  * Uso:
- *   node scripts/recover-trial-users.mjs
+ *   node scripts/recover-churned-payers.mjs
  *
  * Variáveis de ambiente necessárias (copie para .env.local):
  *   SUPABASE_SERVICE_ROLE_KEY=...   (Project Settings → API → service_role)
@@ -59,32 +62,32 @@ const transporter = nodemailer.createTransport({
   auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
 })
 
-// --- Busca usuários com trial vencido ---
-async function buscarUsuariosTrialVencido() {
+const PLANO_LABEL = { monthly: 'Básico', plus: 'Técnico Plus', professional: 'Profissional', annual: 'Anual' }
+
+// --- Busca ex-assinantes pagantes sem assinatura ativa ---
+async function buscarChurnedPayers() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, nome, trial_starts_at, subscribed_until')
+    .select('id, email, nome, plan, subscribed_until')
     .not('email', 'is', null)
-    .not('trial_starts_at', 'is', null)
-    .lt('trial_starts_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .not('plan_locked_at', 'is', null)
     .or('subscribed_until.is.null,subscribed_until.lt.' + new Date().toISOString())
-    .not('email', 'ilike', '%@climapro.test')
-    .neq('email', 'teste@climapro.com')
 
   if (error) throw new Error(`Erro ao consultar Supabase: ${error.message}`)
   return data || []
 }
 
 // --- Template do email ---
-function gerarEmailHTML(nome, appUrl) {
+function gerarEmailHTML(nome, planoAnterior, appUrl) {
   const primeiroNome = nome?.split(' ')[0] || 'Técnico'
+  const planoLabel = PLANO_LABEL[planoAnterior] || 'seu plano'
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Seu acesso ao ClimaPro</title>
+  <title>Reative sua assinatura no ClimaPro</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 0;">
@@ -105,25 +108,14 @@ function gerarEmailHTML(nome, appUrl) {
             <td style="padding:40px 40px 32px;">
               <p style="margin:0 0 16px;font-size:18px;font-weight:600;color:#111827;">Oi, ${primeiroNome}! 👋</p>
               <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;">
-                Notamos que seu <strong>período de teste gratuito encerrou</strong> e sentimos sua falta no ClimaPro!
+                Sentimos sua falta no ClimaPro! Sua assinatura do plano <strong>${planoLabel}</strong> não está mais ativa,
+                mas seus dados — clientes, ordens de serviço e histórico — continuam guardados, prontos pra você continuar de onde parou.
               </p>
               <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
-                Durante o período gratuito, você teve acesso a tudo que o app oferece — ordens de serviço, controle de clientes, lembretes de manutenção e muito mais. Não perca o ritmo que você começou a construir.
+                Desde que você saiu, lançamos uma novidade: o <strong>Assistente de IA</strong>, que ajuda a diagnosticar
+                defeitos, interpretar código de erro, gerar OS e laudo técnico por voz ou foto, e até controlar seu
+                financeiro por conversa — incluso nos planos Profissional e Anual.
               </p>
-
-              <!-- Benefícios -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f9ff;border-radius:8px;margin-bottom:28px;">
-                <tr>
-                  <td style="padding:20px 24px;">
-                    <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:0.5px;">O que você continua tendo acesso</p>
-                    <p style="margin:0 0 8px;font-size:14px;color:#374151;">📋 <strong>Ordens de serviço</strong> com numeração automática e PDF</p>
-                    <p style="margin:0 0 8px;font-size:14px;color:#374151;">👥 <strong>Clientes</strong> organizados com histórico completo</p>
-                    <p style="margin:0 0 8px;font-size:14px;color:#374151;">🔔 <strong>Lembretes de manutenção</strong> para nunca perder um retorno</p>
-                    <p style="margin:0 0 8px;font-size:14px;color:#374151;">📊 <strong>Relatórios</strong> para acompanhar seu desempenho</p>
-                    <p style="margin:0;font-size:14px;color:#374151;">🤖 <strong>Novo:</strong> Assistente de IA por texto, voz ou foto — incluso nos planos Profissional e Anual</p>
-                  </td>
-                </tr>
-              </table>
 
               <!-- Preços -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
@@ -153,7 +145,7 @@ function gerarEmailHTML(nome, appUrl) {
                 <tr>
                   <td align="center">
                     <a href="${appUrl}" style="display:inline-block;background:#0ea5e9;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;">
-                      Reativar meu acesso →
+                      Reativar minha assinatura →
                     </a>
                   </td>
                 </tr>
@@ -165,7 +157,7 @@ function gerarEmailHTML(nome, appUrl) {
           <tr>
             <td style="padding:20px 40px 32px;border-top:1px solid #f3f4f6;">
               <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;line-height:1.6;">
-                Você recebeu este email porque criou uma conta no ClimaPro.<br/>
+                Você recebeu este email porque já foi assinante do ClimaPro.<br/>
                 Dúvidas? Responda este email — estamos aqui para ajudar.
               </p>
             </td>
@@ -185,27 +177,25 @@ async function enviarEmail(usuario) {
   await transporter.sendMail({
     from: `"ClimaPro" <${GMAIL_USER}>`,
     to: usuario.email,
-    subject: `${nome.split(' ')[0]}, seu teste no ClimaPro acabou — continue sem perder nada`,
-    html: gerarEmailHTML(nome, APP_URL),
+    subject: `${nome.split(' ')[0]}, sentimos sua falta no ClimaPro — reative sua assinatura`,
+    html: gerarEmailHTML(nome, usuario.plan, APP_URL),
   })
 }
 
 // --- Main ---
 async function main() {
-  console.log('🔍 Buscando usuários com trial vencido...\n')
+  console.log('🔍 Buscando ex-assinantes pagantes sem assinatura ativa...\n')
 
-  const usuarios = await buscarUsuariosTrialVencido()
+  const usuarios = await buscarChurnedPayers()
 
   if (usuarios.length === 0) {
-    console.log('✅ Nenhum usuário com trial vencido encontrado.')
+    console.log('✅ Nenhum ex-assinante pagante encontrado.')
     return
   }
 
   console.log(`📋 ${usuarios.length} usuário(s) encontrado(s):\n`)
   for (const u of usuarios) {
-    const trialFim = new Date(new Date(u.trial_starts_at).getTime() + 7 * 24 * 60 * 60 * 1000)
-    const diasVencido = Math.floor((Date.now() - trialFim) / (1000 * 60 * 60 * 24))
-    console.log(`  • ${u.nome || '(sem nome)'} <${u.email}> — venceu há ${diasVencido} dia(s)`)
+    console.log(`  • ${u.nome || '(sem nome)'} <${u.email}> — plano anterior: ${PLANO_LABEL[u.plan] || u.plan} — venceu em ${u.subscribed_until}`)
   }
 
   console.log('\n📧 Enviando emails...\n')
@@ -222,7 +212,6 @@ async function main() {
       console.error(`  ❌ ${usuario.email} — ${err.message}`)
       erros++
     }
-    // Pequena pausa para não estourar limite do Gmail
     await new Promise(r => setTimeout(r, 500))
   }
 

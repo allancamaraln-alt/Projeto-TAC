@@ -43,7 +43,7 @@ export async function transcribeAudio(audioBlob) {
   if (error) {
     const status = error.context?.status
     if (status === 401) throw new Error('Não autorizado.')
-    if (status === 403) throw new Error('addon_required')
+    if (status === 403) throw new Error('plan_required')
     if (status >= 500) throw new Error('Serviço de transcrição indisponível. Tente novamente.')
     throw new Error(data?.error || error.message || 'Erro ao transcrever áudio.')
   }

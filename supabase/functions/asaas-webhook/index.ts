@@ -33,7 +33,7 @@ async function registrarComissao(supabase: any, userId: string, amount: number, 
   }
 }
 
-/** externalReference é sempre "${userId}:${plan}" (plan = monthly|plus|professional|annual|ai_addon) — ver asaas-client.ts e as functions asaas-create-*. */
+/** externalReference é sempre "${userId}:${plan}" (plan = monthly|plus|professional|annual) — ver asaas-client.ts e as functions asaas-create-*. */
 function parseExternalReference(externalReference: string | undefined): { userId: string; plan: string } | null {
   if (!externalReference) return null
   const [userId, plan] = externalReference.split(':')
@@ -72,55 +72,6 @@ serve(async (req) => {
       const approvedAtIso = payment.clientPaymentDate || payment.paymentDate
         ? new Date(`${payment.clientPaymentDate || payment.paymentDate}T12:00:00Z`).toISOString()
         : new Date().toISOString()
-
-      if (plan === 'ai_addon') {
-        const addonUntil = new Date()
-        addonUntil.setDate(addonUntil.getDate() + 30 + GRACE_DAYS)
-
-        await supabase.from('profiles').update({
-          ai_addon_until: addonUntil.toISOString(),
-        }).eq('id', userId)
-        const accessGrantedAt = new Date().toISOString()
-
-        await registrarComissao(supabase, userId, value, paymentId)
-
-        const { data: addonProfile } = await supabase
-          .from('profiles')
-          .select(PROFILE_TRACKING_FIELDS)
-          .eq('id', userId).single()
-
-        const tracking = resolverTracking(addonProfile, undefined)
-
-        const utmifyResult = await notificarUtmify(
-          paymentId, value, 'ai_addon', payment.billingType ?? '',
-          payment.dateCreated ?? new Date().toISOString(), approvedAtIso,
-          addonProfile, tracking,
-        )
-
-        const metaCapiResult = await enviarMetaCAPI({
-          eventId: paymentId,
-          eventTime: Math.floor(new Date(approvedAtIso).getTime() / 1000),
-          value,
-          email: addonProfile?.email,
-          userId,
-          fbc: tracking.fbc,
-          fbp: tracking.fbp,
-          clientIp: addonProfile?.signup_ip,
-          userAgent: addonProfile?.signup_user_agent,
-          eventSourceUrl: addonProfile?.signup_page_url,
-        })
-
-        await registrarPurchaseLog(supabase, {
-          userId, paymentId, eventId: paymentId, plan: 'ai_addon', value,
-          purchasedAt: approvedAtIso, utmifyResult, metaCapiResult,
-          processingTimeMs: Date.now() - webhookStart,
-          paymentCreatedAt: payment.dateCreated ?? null,
-          webhookReceivedAt, accessGrantedAt,
-        })
-
-        console.log(`[asaas-webhook] add-on IA concluído para usuário ${userId}, pagamento ${paymentId}`)
-        return new Response('ok', { status: 200 })
-      }
 
       if (!PLAN_DAYS[plan]) return new Response('ok', { status: 200 })
       const days = PLAN_DAYS[plan]

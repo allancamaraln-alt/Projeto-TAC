@@ -46,11 +46,12 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
     const { data: profile } = await serviceClient
-      .from('profiles').select('ai_addon_until').eq('id', user.id).single()
+      .from('profiles').select('plan, plan_locked_at, subscribed_until').eq('id', user.id).single()
 
-    const hasAddon = !!profile?.ai_addon_until && new Date(profile.ai_addon_until) > new Date()
-    if (!hasAddon) {
-      return new Response(JSON.stringify({ error: 'addon_required' }), {
+    const isLocked = !!profile?.plan_locked_at && !!profile?.subscribed_until && new Date(profile.subscribed_until) > new Date()
+    const hasAiAssistant = !isLocked || profile?.plan === 'professional' || profile?.plan === 'annual'
+    if (!hasAiAssistant) {
+      return new Response(JSON.stringify({ error: 'plan_required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

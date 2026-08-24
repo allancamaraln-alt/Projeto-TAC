@@ -1428,3 +1428,42 @@ alter table public.clientes add column if not exists origem text default '';
 -- só por compatibilidade com código/relatórios antigos que ainda leem esse
 -- campo direto. OS antigas sem `itens` continuam funcionando normalmente.
 alter table public.ordens_servico add column if not exists itens jsonb;
+
+-- ============================================
+-- MIGRATION: remoção do add-on de IA (agora incluso nos planos Profissional/Anual)
+-- ============================================
+-- O Assistente de IA deixou de ser um add-on pago à parte (ai_addon_until) e
+-- passou a ser um recurso incluso nos planos Profissional e Anual — mesmo
+-- padrão de entitlement já usado por has_faturamento/hasRelatorioAvancado
+-- (ver src/hooks/useAuth.jsx). Assinantes do add-on que não estavam no
+-- Profissional são migrados automaticamente: a cobrança se ajusta sozinha na
+-- próxima renovação, pois auto-renew-subscriptions busca o valor pelo campo
+-- `plan`.
+
+create or replace function public.has_ai_assistant(uid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select not (
+    coalesce(p.subscribed_until, 'epoch'::timestamptz) > now()
+    and p.plan_locked_at is not null
+    and p.plan not in ('professional', 'annual')
+  )
+  from public.profiles p
+  where p.id = uid;
+$$;
+
+-- Migração de dados única: quem tinha o add-on ativo e não estava no
+-- Profissional/Anual vira Profissional.
+update public.profiles
+set plan = 'professional'
+where coalesce(ai_addon_until, 'epoch'::timestamptz) > now()
+  and plan not in ('professional', 'annual');
+
+-- Limpeza: colunas do add-on não são mais lidas por nenhum código.
+alter table public.profiles drop column if exists ai_addon_until;
+alter table public.profiles drop column if exists ai_addon_auto_renew;
+alter table public.profiles drop column if exists asaas_addon_subscription_id;
