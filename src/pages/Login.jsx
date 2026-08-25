@@ -626,7 +626,7 @@ export default function Login() {
                   if (p.id === 'plus') return false
                   return p.id !== 'monthly_saida50'
                 })
-                .sort((a, b) => {
+                .sort((a) => {
                   if (planoPre === 'monthly') return a.id === 'plus' ? -1 : 1
                   return planoPre ? (a.id === planoPre ? -1 : 1) : 0
                 })

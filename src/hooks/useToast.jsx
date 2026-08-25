@@ -17,7 +17,9 @@ function playNotifSound() {
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
     osc.start(ctx.currentTime)
     osc.stop(ctx.currentTime + 0.45)
-  } catch {}
+  } catch {
+    // AudioContext indisponível/bloqueado pelo navegador — som é best-effort
+  }
 }
 
 const CONFIG = {

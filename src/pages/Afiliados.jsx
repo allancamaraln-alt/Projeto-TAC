@@ -32,10 +32,6 @@ export default function Afiliados() {
   const totalPago = comissoes.filter(c => c.status === 'pago').reduce((s, c) => s + Number(c.valor), 0)
   const indicadosUnicos = [...new Set(comissoes.map(c => c.indicado_user_id).filter(Boolean))].length
 
-  useEffect(() => {
-    carregarAfiliado()
-  }, [])
-
   async function carregarAfiliado() {
     setLoading(true)
     try {
@@ -62,12 +58,16 @@ export default function Afiliados() {
         .order('created_at', { ascending: false })
 
       setComissoes(comissoesData || [])
-    } catch (e) {
+    } catch {
       toast('Erro ao carregar dados', 'error')
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    carregarAfiliado()
+  }, [])
 
   async function salvarPix() {
     if (!chavePix.trim()) { toast('Informe sua chave Pix', 'error'); return }

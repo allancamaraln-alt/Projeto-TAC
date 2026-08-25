@@ -11,15 +11,19 @@ const STATUS_COR = { ok: 'bg-green-500', success: 'bg-green-500', error: 'bg-red
 
 /** Etapas no formato { etapa, horario, status } vindas de admin-tracking (action detail). */
 export default function PurchaseTimeline({ etapas }) {
-  let anterior = null
+  const deltas = etapas.reduce((acc, e) => {
+    const delta = e.horario && acc.anterior ? new Date(e.horario).getTime() - new Date(acc.anterior).getTime() : null
+    acc.lista.push(delta)
+    if (e.horario) acc.anterior = e.horario
+    return acc
+  }, { anterior: null, lista: [] }).lista
 
   return (
     <div className="card">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Timeline da compra</p>
       <div className="space-y-4">
         {etapas.map((e, i) => {
-          const delta = e.horario && anterior ? new Date(e.horario).getTime() - new Date(anterior).getTime() : null
-          if (e.horario) anterior = e.horario
+          const delta = deltas[i]
           return (
             <div key={i} className="flex gap-3">
               <div className="flex flex-col items-center">

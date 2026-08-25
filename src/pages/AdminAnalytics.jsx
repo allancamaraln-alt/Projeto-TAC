@@ -25,10 +25,6 @@ export default function AdminAnalytics() {
   const [origem, setOrigem] = useState(null)
   const [plano, setPlano] = useState(null)
 
-  useEffect(() => {
-    carregar()
-  }, [periodo, campanha, origem, plano])
-
   async function carregar() {
     setLoading(true)
     try {
@@ -41,6 +37,10 @@ export default function AdminAnalytics() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    carregar()
+  }, [periodo, campanha, origem, plano])
 
   const campanhasDisponiveis = useMemo(
     () => [...new Set((dados?.campaigns ?? []).map((c) => c.utm_campaign).filter(Boolean))],

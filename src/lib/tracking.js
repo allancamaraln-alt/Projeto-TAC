@@ -12,7 +12,9 @@ function readUtmifyLead() {
   try {
     const lead = JSON.parse(localStorage.getItem('lead') || 'null')
     if (lead?.parameters) return new URLSearchParams(lead.parameters)
-  } catch {}
+  } catch {
+    // lead inválido/ausente no localStorage — segue sem fallback
+  }
   return null
 }
 
@@ -49,7 +51,9 @@ export function captureTracking() {
   let stored = {}
   try {
     stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
-  } catch {}
+  } catch {
+    // storage corrompido — segue com stored vazio
+  }
 
   const merged = { ...stored }
   for (const [key, value] of Object.entries(incoming)) {
