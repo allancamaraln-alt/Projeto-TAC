@@ -285,76 +285,6 @@ function PixModal({ pixData, onClose, onPago }) {
   )
 }
 
-function UpsellModal({ method, onEscolha, onFechar }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70">
-      <div className="bg-white rounded-t-3xl w-full max-w-sm mx-auto shadow-2xl overflow-hidden">
-        {/* Cabeçalho em gradiente */}
-        <div className="px-6 pt-5 pb-6 text-white" style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' }}>
-          <div className="w-10 h-1 bg-white/30 rounded-full mx-auto mb-4" />
-          <div className="inline-flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1 mb-3">
-            <span className="text-xs font-bold tracking-wide">⚡ OFERTA ESPECIAL</span>
-          </div>
-          <h2 className="text-xl font-extrabold leading-tight mb-1">
-            Upgrade para o Técnico Plus?
-          </h2>
-          <p className="text-white/80 text-sm">
-            Por apenas <strong className="text-white">R$10 a mais</strong> você desbloqueia recursos que economizam horas de trabalho.
-          </p>
-        </div>
-
-        {/* Corpo */}
-        <div className="px-6 py-5">
-          {/* Preço */}
-          <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-2xl px-4 py-3">
-            <div>
-              <p className="font-bold text-gray-800 text-base">Técnico Plus</p>
-              <p className="text-xs text-gray-400 mt-0.5">antes <span className="line-through">R$ 39,90/mês</span></p>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-extrabold text-gray-900 leading-none">R$ 29,90</p>
-              <p className="text-xs text-gray-400">/mês</p>
-              <span className="inline-block bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full mt-1">
-                só +R$10 vs Básico
-              </span>
-            </div>
-          </div>
-
-          {/* Features */}
-          <ul className="space-y-3 mb-5">
-            {[
-              { icon: '📊', text: 'Relatório de faturamento' },
-              { icon: '📋', text: 'Histórico completo de OS por cliente' },
-              { icon: '🔔', text: 'Notificações com som' },
-              { icon: '✅', text: 'Cancele quando quiser' },
-            ].map(({ icon, text }) => (
-              <li key={text} className="flex items-center gap-3">
-                <span className="text-base w-6 text-center flex-shrink-0">{icon}</span>
-                <span className="text-sm text-gray-700 font-medium">{text}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* CTAs */}
-          <button
-            onClick={() => onEscolha('plus', method)}
-            className="w-full py-3.5 rounded-2xl text-sm font-bold text-white shadow-lg mb-2"
-            style={{ background: 'linear-gradient(135deg, rgb(var(--ac)), rgb(var(--ac-dk)))' }}
-          >
-            Assinar Técnico Plus — R$ 29,90/mês
-          </button>
-          <button
-            onClick={() => onEscolha('monthly', method)}
-            className="w-full py-2.5 text-sm text-gray-400 font-medium"
-          >
-            Não, continuar com o Básico (R$ 19,90)
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function preloadMpSdk() {
   if (window.MercadoPago || document.querySelector('script[src*="mercadopago"]')) return
   const script = document.createElement('script')
@@ -371,7 +301,6 @@ export default function Paywall() {
   const [cardBricksData, setCardBricksData] = useState(null)
   const [savedCardData, setSavedCardData] = useState(null)
   const [saveCard, setSaveCard] = useState(true)
-  const [upsellMethod, setUpsellMethod] = useState(null)
 
   useEffect(() => { preloadMpSdk() }, [])
 
@@ -416,11 +345,7 @@ export default function Paywall() {
   }
 
   function handleAssinar(planId) {
-    if (planId === 'monthly') {
-      setUpsellMethod('card')
-    } else {
-      abrirPagamentoCartao(planId)
-    }
+    abrirPagamentoCartao(planId)
   }
 
   function handleNovoCartao(planId) {
@@ -428,15 +353,6 @@ export default function Paywall() {
     setErro('')
     setSavedCardData(null)
     setCardBricksData({ plan: planId, amount: plano.amount })
-  }
-
-  function handleUpsellEscolha(planId, method) {
-    setUpsellMethod(null)
-    if (method === 'card') {
-      abrirPagamentoCartao(planId)
-    } else {
-      iniciarPix(planId)
-    }
   }
 
   async function iniciarPix(planId) {
@@ -457,11 +373,7 @@ export default function Paywall() {
   }
 
   function handlePix(planId) {
-    if (planId === 'monthly') {
-      setUpsellMethod('pix')
-    } else {
-      iniciarPix(planId)
-    }
+    iniciarPix(planId)
   }
 
   async function handlePagoPix() {
@@ -503,14 +415,6 @@ export default function Paywall() {
   return (
     <>
       <SocialProofToast />
-
-      {upsellMethod && (
-        <UpsellModal
-          method={upsellMethod}
-          onEscolha={handleUpsellEscolha}
-          onFechar={() => setUpsellMethod(null)}
-        />
-      )}
 
       {pixData && (
         <PixModal
@@ -588,7 +492,9 @@ export default function Paywall() {
           )}
 
           <div className="w-full max-w-sm mt-5 space-y-4">
-            {PLANOS.filter(p => p.id !== 'plus').map(plano => {
+            {/* Básico e Plus foram descontinuados para novas assinaturas — só continuam
+                aparecendo aqui para quem já está nesses planos (mantém o preço contratado). */}
+            {PLANOS.filter(p => p.id === 'professional' || p.id === 'annual' || p.id === profile?.plan).map(plano => {
               const carregandoPix = loadingPix === plano.id
               return (
                 <div

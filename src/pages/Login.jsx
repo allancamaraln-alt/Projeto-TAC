@@ -10,34 +10,6 @@ const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY
 
 const PLANOS_SIGNUP = [
   {
-    id: 'monthly',
-    label: 'Básico',
-    destaque: false,
-    preco: 'R$ 19,90',
-    periodo: '/mês',
-    equivalente: null,
-    economia: null,
-    descricao: 'Cancele quando quiser',
-    amount: 19.90,
-  },
-  {
-    id: 'plus',
-    label: 'Técnico Plus',
-    destaque: true,
-    preco: 'R$ 29,90',
-    periodo: '/mês',
-    equivalente: null,
-    economia: 'Recomendado',
-    descricao: 'Tudo do Básico + muito mais por só R$10 a mais',
-    features: [
-      'Relatório de faturamento mensal',
-      'Histórico completo de OS por cliente',
-      'Notificações com som de alerta',
-      'Lembretes avançados de atendimento',
-    ],
-    amount: 29.90,
-  },
-  {
     id: 'professional',
     label: 'Profissional',
     destaque: true,
@@ -58,19 +30,6 @@ const PLANOS_SIGNUP = [
     economia: 'Economize 50%',
     descricao: 'Melhor custo-benefício',
     amount: 239.90,
-  },
-  {
-    id: 'monthly_saida50',
-    label: 'Básico',
-    destaque: false,
-    preco: 'R$ 9,95',
-    precoOriginal: 'R$ 19,90',
-    periodo: '/mês',
-    equivalente: null,
-    economia: '50% OFF',
-    descricao: 'Cancele quando quiser',
-    amount: 9.95,
-    ofertaEspecial: true,
   },
 ]
 
@@ -353,12 +312,10 @@ export default function Login() {
 
   const searchParams = new URLSearchParams(window.location.search)
   const initialModo = searchParams.get('modo') === 'cadastro' ? 'cadastro' : 'login'
-  const cupom = searchParams.get('cupom')
-  const planoPre = (() => {
-    const raw = searchParams.get('plano')
-    if (cupom === 'SAIDA50' && raw === 'monthly') return 'monthly_saida50'
-    return raw
-  })()
+  // Só professional/annual existem para novos cadastros — qualquer outro valor
+  // na URL (ex.: links antigos com ?plano=monthly) é ignorado.
+  const planoPreRaw = searchParams.get('plano')
+  const planoPre = (planoPreRaw === 'professional' || planoPreRaw === 'annual') ? planoPreRaw : null
   const [modo, setModo] = useState(initialModo)
   const [form, setForm] = useState(() => ({
     nome: '',
@@ -620,16 +577,8 @@ export default function Login() {
 
             <div className="w-full max-w-sm mt-8 space-y-4">
               {[...PLANOS_SIGNUP]
-                .filter(p => {
-                  if (planoPre === 'monthly') return p.id === 'plus' || p.id === 'monthly'
-                  if (planoPre) return p.id === planoPre
-                  if (p.id === 'plus') return false
-                  return p.id !== 'monthly_saida50'
-                })
-                .sort((a) => {
-                  if (planoPre === 'monthly') return a.id === 'plus' ? -1 : 1
-                  return planoPre ? (a.id === planoPre ? -1 : 1) : 0
-                })
+                .filter(p => planoPre ? p.id === planoPre : true)
+                .sort((a) => planoPre ? (a.id === planoPre ? -1 : 1) : 0)
                 .map(plano => {
                 const carregandoPix = loadingSignupPix === plano.id
                 const isEscolhido = planoPre && plano.id === planoPre

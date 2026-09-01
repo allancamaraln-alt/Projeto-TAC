@@ -14,6 +14,10 @@ const PLANOS = {
   annual:          { description: 'ClimaPro Premium Anual',   amount: 239.90, days: 365 },
 }
 
+// Básico/Plus/oferta de saída saíram de venda — só quem já está num desses
+// planos pode seguir pagando o valor antigo (renovação manual mantém o preço contratado).
+const PLANOS_DESCONTINUADOS = new Set(['monthly', 'monthly_saida50', 'plus'])
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -39,9 +43,13 @@ serve(async (req) => {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('email, nome')
+      .select('email, nome, plan')
       .eq('id', user.id)
       .single()
+
+    if (PLANOS_DESCONTINUADOS.has(plan) && profile?.plan !== plan) {
+      throw new Error('Este plano não está mais disponível para novas assinaturas.')
+    }
 
     const mpRes = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',

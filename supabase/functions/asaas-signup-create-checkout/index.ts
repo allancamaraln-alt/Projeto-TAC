@@ -12,9 +12,9 @@ function debugLog(...args: unknown[]) {
   if (DEBUG) console.log(...args)
 }
 
+// Básico e Plus foram descontinuados para novas assinaturas (só professional/annual
+// seguem no ar; quem já tinha os outros mantém o preço via renovação).
 const PLANOS = {
-  monthly:      { description: 'ClimaPro Mensal',        amount: 19.90,  cycle: 'MONTHLY' as const },
-  plus:         { description: 'ClimaPro Técnico Plus',  amount: 29.90,  cycle: 'MONTHLY' as const },
   professional: { description: 'ClimaPro Profissional',  amount: 39.90,  cycle: 'MONTHLY' as const },
   annual:       { description: 'ClimaPro Anual',         amount: 239.90, cycle: 'YEARLY' as const },
 }

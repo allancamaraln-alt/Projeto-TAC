@@ -12,10 +12,9 @@ function debugLog(...args: unknown[]) {
   if (DEBUG) console.log(...args)
 }
 
+// Básico, Plus e a oferta de saída foram descontinuados para novas assinaturas
+// (só professional/annual seguem no ar; quem já tinha os outros mantém o preço via renovação).
 const PLANOS = {
-  monthly:         { description: 'ClimaPro Mensal',          amount: 19.90,  days: 30  },
-  monthly_saida50: { description: 'ClimaPro Mensal — Oferta', amount: 9.95,   days: 30  },
-  plus:            { description: 'ClimaPro Técnico Plus',    amount: 29.90,  days: 30  },
   professional:    { description: 'ClimaPro Profissional',    amount: 39.90,  days: 30  },
   annual:          { description: 'ClimaPro Anual',           amount: 239.90, days: 365 },
 }
@@ -115,8 +114,6 @@ serve(async (req) => {
         .eq('id', userId)
     }
 
-    const grantedPlan = plan === 'monthly_saida50' ? 'monthly' : plan
-
     try {
       const customerId = await createOrGetCustomer({
         name: nome,
@@ -128,7 +125,7 @@ serve(async (req) => {
         customerId,
         value: plano.amount,
         description: plano.description,
-        externalReference: `${userId}:${grantedPlan}`,
+        externalReference: `${userId}:${plan}`,
       })
 
       console.log('[asaas-signup-create-pix] pagamento Pix criado no Asaas:', { payment_id: pix.paymentId, userId, plan })

@@ -11,7 +11,6 @@ import { getTheme, applyTheme } from './lib/theme'
 import Login from './pages/Login'
 import Paywall from './pages/Paywall'
 import Landing from './pages/Landing'
-import PlanoPlus from './pages/PlanoPlus'
 
 // Inicializar Sentry
 Sentry.init({
@@ -118,7 +117,9 @@ function AppContent() {
 
   if (!user) {
     if (location.pathname === '/entrar') return <Login />
-    if (location.pathname === '/plano-plus') return <PlanoPlus />
+    // Técnico Plus foi descontinuado — quem cai aqui (ex.: anúncio antigo) vai
+    // direto para o cadastro do Profissional em vez de uma oferta fora do ar.
+    if (location.pathname === '/plano-plus') return <Navigate to="/entrar?modo=cadastro&plano=professional" replace />
     if (location.pathname === '/privacidade') return <Suspense fallback={<PageLoader />}><Privacidade /></Suspense>
     if (location.pathname === '/excluir-conta') return <Suspense fallback={<PageLoader />}><ExcluirConta /></Suspense>
     return <Landing />

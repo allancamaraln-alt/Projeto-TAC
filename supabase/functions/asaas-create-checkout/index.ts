@@ -14,6 +14,10 @@ const PLANOS = {
   annual:       { description: 'ClimaPro Premium Anual', amount: 239.90, cycle: 'YEARLY' as const },
 }
 
+// Básico/Plus saíram de venda — só quem já está num desses planos pode seguir
+// pagando o valor antigo (renovação manual mantém o preço contratado).
+const PLANOS_DESCONTINUADOS = new Set(['monthly', 'plus'])
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -41,9 +45,13 @@ serve(async (req) => {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('email, nome, cpf_cnpj')
+      .select('email, nome, cpf_cnpj, plan')
       .eq('id', user.id)
       .single()
+
+    if (PLANOS_DESCONTINUADOS.has(plan) && profile?.plan !== plan) {
+      throw new Error('Este plano não está mais disponível para novas assinaturas.')
+    }
 
     const serviceSupabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
