@@ -44,11 +44,11 @@ export const formatGarantia = (valor, unidade) => {
 // fonte de verdade quando existe; OS antigas (antes dessa funcionalidade) só
 // têm `forma_pagamento`, e são tratadas como pagas integralmente naquela forma.
 export function resumoPagamento(ordem) {
+  const valorTotal = Math.max(0, (Number(ordem?.valor) || 0) - (Number(ordem?.desconto) || 0))
   const pagamentos = Array.isArray(ordem?.pagamentos) && ordem.pagamentos.length > 0
     ? ordem.pagamentos
-    : (ordem?.forma_pagamento ? [{ forma: ordem.forma_pagamento, valor: Number(ordem?.valor) || 0 }] : [])
+    : (ordem?.forma_pagamento ? [{ forma: ordem.forma_pagamento, valor: valorTotal }] : [])
   const valorPago = pagamentos.reduce((soma, p) => soma + (Number(p.valor) || 0), 0)
-  const valorTotal = Number(ordem?.valor) || 0
   const saldo = Math.max(0, valorTotal - valorPago)
   return { pagamentos, valorPago, valorTotal, saldo, quitado: saldo <= 0.005 }
 }

@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { resumoPagamento } from '../format'
 
 // Estatísticas leves usadas pela saudação do ClimaPro IA (GreetingHero) —
 // extraído de AIAssistant.jsx para ser reutilizado também por ChatHome.jsx.
@@ -16,19 +17,19 @@ export async function fetchDashboardStats(userId) {
       .neq('status', 'cancelado'),
     supabase
       .from('ordens_servico')
-      .select('valor')
+      .select('valor, desconto')
       .eq('tecnico_id', userId)
       .in('status', ['orcamento', 'aprovado', 'em_andamento']),
     supabase
       .from('ordens_servico')
-      .select('valor')
+      .select('valor, desconto')
       .eq('tecnico_id', userId)
       .eq('status', 'concluido')
       .gte('created_at', startOfMonth),
   ])
 
-  const aReceber = (pendentesRes.data || []).reduce((s, o) => s + Number(o.valor || 0), 0)
-  const receitaMes = (mesRes.data || []).reduce((s, o) => s + Number(o.valor || 0), 0)
+  const aReceber = (pendentesRes.data || []).reduce((s, o) => s + resumoPagamento(o).valorTotal, 0)
+  const receitaMes = (mesRes.data || []).reduce((s, o) => s + resumoPagamento(o).valorTotal, 0)
 
   return {
     osHoje: osHojeRes.count ?? 0,

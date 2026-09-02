@@ -48,7 +48,7 @@ export default function Relatorio() {
     async function loadPagamentos() {
       const { data } = await supabase
         .from('ordens_servico')
-        .select('id, numero, valor, pagamentos, forma_pagamento, data_conclusao, data_pagamento_pendente, tipo_servico, clientes(nome, telefone)')
+        .select('id, numero, valor, desconto, pagamentos, forma_pagamento, data_conclusao, data_pagamento_pendente, tipo_servico, clientes(nome, telefone)')
         .eq('status', 'concluido')
       setPagamentosOrdens(data ?? [])
     }
@@ -56,7 +56,7 @@ export default function Relatorio() {
   }, [])
 
   const concluidas = ordens.filter(os => os.status === 'concluido')
-  const totalFaturado = concluidas.reduce((acc, os) => acc + Number(os.valor), 0)
+  const totalFaturado = concluidas.reduce((acc, os) => acc + resumoPagamento(os).valorTotal, 0)
   const totalOrcamentos = ordens.filter(os => os.status === 'orcamento').length
   const totalEmAndamento = ordens.filter(os => os.status === 'em_andamento').length
 
@@ -90,7 +90,7 @@ export default function Relatorio() {
   const topClientes = Object.entries(
     concluidas.reduce((acc, os) => {
       const nome = os.clientes?.nome ?? 'Desconhecido'
-      acc[nome] = (acc[nome] ?? 0) + Number(os.valor)
+      acc[nome] = (acc[nome] ?? 0) + resumoPagamento(os).valorTotal
       return acc
     }, {})
   )
@@ -304,7 +304,7 @@ export default function Relatorio() {
                         <p className="text-sm text-gray-500">{os.tipo_servico}</p>
                       </div>
                       <div className="text-right flex-shrink-0 ml-2">
-                        <p className="font-bold text-green-600">{formatBRL(os.valor)}</p>
+                        <p className="font-bold text-green-600">{formatBRL(resumoPagamento(os).valorTotal)}</p>
                         <p className="text-xs text-gray-400 mt-1">{formatDate(os.created_at)}</p>
                       </div>
                     </div>
@@ -336,7 +336,7 @@ export default function Relatorio() {
                           </div>
                           <div className="text-right flex-shrink-0 ml-2">
                             <StatusBadge status={os.status} />
-                            <p className="text-sm font-bold text-gray-600 mt-1">{formatBRL(os.valor)}</p>
+                            <p className="text-sm font-bold text-gray-600 mt-1">{formatBRL(resumoPagamento(os).valorTotal)}</p>
                           </div>
                         </div>
                       </button>

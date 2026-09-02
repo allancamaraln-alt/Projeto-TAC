@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
-import { somaItens, itensPreenchidos } from '../lib/format'
+import { somaItens, itensPreenchidos, formatBRL } from '../lib/format'
 import ItensServico from '../components/ItensServico'
 
 const TIPOS = [
@@ -26,6 +26,7 @@ export default function OrdemForm() {
     tipo_servico: 'Manutenção preventiva',
     descricao: '',
     valor: '',
+    desconto: '',
     data_agendamento: '',
     hora_agendamento: '',
     observacoes: '',
@@ -41,6 +42,8 @@ export default function OrdemForm() {
   // sem itens preenchidos, o campo continua livre pra digitar na mão.
   const usaItens = itensPreenchidos(itens)
   const valorFinal = usaItens ? somaItens(itens) : (parseFloat(form.valor) || 0)
+  const descontoFinal = parseFloat(form.desconto) || 0
+  const valorComDesconto = Math.max(0, valorFinal - descontoFinal)
 
   useEffect(() => {
     // Pré-selecionar cliente se veio da tela de clientes
@@ -77,6 +80,7 @@ export default function OrdemForm() {
       tipo_servico: form.tipo_servico,
       descricao: form.descricao,
       valor: valorFinal,
+      desconto: descontoFinal,
       itens: itensParaSalvar,
       data_agendamento: form.data_agendamento || null,
       hora_agendamento: form.hora_agendamento || null,
@@ -194,6 +198,23 @@ export default function OrdemForm() {
           />
           {usaItens && (
             <p className="text-xs text-gray-400 mt-1">Calculado automaticamente pelos itens acima.</p>
+          )}
+        </div>
+
+        {/* Desconto */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Desconto (R$) <span className="font-normal text-gray-400">(opcional)</span></label>
+          <input
+            type="number"
+            className="input-field"
+            placeholder="0,00"
+            min="0"
+            step="0.01"
+            value={form.desconto}
+            onChange={set('desconto')}
+          />
+          {descontoFinal > 0 && (
+            <p className="text-xs text-gray-400 mt-1">Valor com desconto: {formatBRL(valorComDesconto)}</p>
           )}
         </div>
 

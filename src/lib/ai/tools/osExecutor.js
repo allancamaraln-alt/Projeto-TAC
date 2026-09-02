@@ -1,4 +1,5 @@
 import { supabase } from '../../supabase'
+import { resumoPagamento } from '../../format'
 import { findOrCreateClient } from './clientesExecutor'
 
 export async function executeOSTool(name, args, userId) {
@@ -76,19 +77,19 @@ async function updateOS({ os_numero, ...fields }, userId) {
 async function getOS({ os_numero }, userId) {
   const { data: os, error } = await supabase
     .from('ordens_servico')
-    .select('numero, tipo_servico, descricao, valor, status, data_agendamento, hora_agendamento, observacoes, clientes(nome, telefone)')
+    .select('numero, tipo_servico, descricao, valor, desconto, status, data_agendamento, hora_agendamento, observacoes, clientes(nome, telefone)')
     .eq('tecnico_id', userId)
     .eq('numero', os_numero)
     .maybeSingle()
   if (error) return { error: error.message }
   if (!os) return { error: `OS nº ${os_numero} não encontrada.` }
-  return { os }
+  return { os: { ...os, valor: resumoPagamento(os).valorTotal } }
 }
 
 async function listOS({ status, limit }, userId) {
   let query = supabase
     .from('ordens_servico')
-    .select('numero, tipo_servico, valor, status, data_agendamento, clientes(nome)')
+    .select('numero, tipo_servico, valor, desconto, status, data_agendamento, clientes(nome)')
     .eq('tecnico_id', userId)
     .order('created_at', { ascending: false })
     .limit(limit && limit > 0 ? limit : 15)
@@ -96,5 +97,5 @@ async function listOS({ status, limit }, userId) {
 
   const { data, error } = await query
   if (error) return { error: error.message }
-  return { ordens: data || [] }
+  return { ordens: (data || []).map(os => ({ ...os, valor: resumoPagamento(os).valorTotal })) }
 }

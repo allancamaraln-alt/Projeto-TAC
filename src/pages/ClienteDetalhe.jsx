@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, formatDate } from '../lib/format'
+import { formatOS, formatBRL, formatDate, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import { useAuth } from '../hooks/useAuth'
 import MapaEndereco from '../components/MapaEndereco'
@@ -35,7 +35,7 @@ export default function ClienteDetalhe() {
 
   const totalGasto = ordens
     .filter(os => os.status === 'concluido')
-    .reduce((acc, os) => acc + Number(os.valor), 0)
+    .reduce((acc, os) => acc + resumoPagamento(os).valorTotal, 0)
 
   if (loading) return (
     <div className="page-container flex items-center justify-center">
@@ -151,7 +151,7 @@ export default function ClienteDetalhe() {
                   </div>
                   <div className="text-right flex-shrink-0 ml-2">
                     <StatusBadge status={os.status} />
-                    <p className="text-sm font-bold text-gray-700 mt-1">{formatBRL(os.valor)}</p>
+                    <p className="text-sm font-bold text-gray-700 mt-1">{formatBRL(resumoPagamento(os).valorTotal)}</p>
                   </div>
                 </div>
                 <p className="text-xs text-gray-400">{formatDate(os.created_at)}</p>

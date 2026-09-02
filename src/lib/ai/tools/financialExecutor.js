@@ -65,7 +65,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
 
   let query = supabase
     .from('ordens_servico')
-    .select('id, numero, tipo_servico, valor, status, pagamentos, forma_pagamento, data_pagamento_pendente')
+    .select('id, numero, tipo_servico, valor, desconto, status, pagamentos, forma_pagamento, data_pagamento_pendente')
     .eq('tecnico_id', userId)
     .eq('cliente_id', cliente.id)
     .neq('status', 'cancelado')
@@ -76,7 +76,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
 
   const abertas = (ordens || [])
     .map(os => ({ os, pag: resumoPagamento(os) }))
-    .filter(({ os, pag }) => (os.status === 'concluido' ? pag.saldo > 0.004 : Number(os.valor) > 0))
+    .filter(({ os, pag }) => (os.status === 'concluido' ? pag.saldo > 0.004 : pag.valorTotal > 0))
 
   if (!abertas.length) {
     return {
@@ -93,7 +93,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
       ordens_em_aberto: abertas.map(({ os, pag }) => ({
         os_numero: os.numero,
         tipo_servico: os.tipo_servico,
-        saldo: os.status === 'concluido' ? pag.saldo : Number(os.valor),
+        saldo: os.status === 'concluido' ? pag.saldo : pag.valorTotal,
       })),
     }
   }
@@ -101,7 +101,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
   const { os, pag } = abertas[0]
   const hoje = todayISODate()
   const forma = forma_pagamento || 'outros'
-  const valorPago = os.status === 'concluido' ? pag.saldo : Number(os.valor)
+  const valorPago = os.status === 'concluido' ? pag.saldo : pag.valorTotal
   const novosPagamentos = [...pag.pagamentos, { forma, valor: valorPago, data: hoje }]
 
   const updates = { pagamentos: novosPagamentos, data_pagamento_pendente: null }
@@ -171,12 +171,12 @@ async function getFinancialSummary({ periodo, data_inicio, data_fim, categoria }
 async function listPendingOrders(userId) {
   const { data, error } = await supabase
     .from('ordens_servico')
-    .select('numero, valor, status, data_agendamento')
+    .select('numero, valor, desconto, status, data_agendamento')
     .eq('tecnico_id', userId)
     .not('status', 'in', '("concluido","cancelado")')
     .gt('valor', 0)
     .order('created_at', { ascending: false })
     .limit(20)
   if (error) return { error: error.message }
-  return { ordens: data || [] }
+  return { ordens: (data || []).map(os => ({ ...os, valor: resumoPagamento(os).valorTotal })) }
 }

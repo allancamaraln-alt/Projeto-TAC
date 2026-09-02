@@ -1467,3 +1467,12 @@ where coalesce(ai_addon_until, 'epoch'::timestamptz) > now()
 alter table public.profiles drop column if exists ai_addon_until;
 alter table public.profiles drop column if exists ai_addon_auto_renew;
 alter table public.profiles drop column if exists asaas_addon_subscription_id;
+
+-- ============================================
+-- ORDENS_SERVICO: desconto (abatido do valor na criação ou na finalização)
+-- ============================================
+-- `desconto`: valor em R$ a subtrair de `valor` na hora de calcular quanto o
+-- cliente deve pagar. `valor` continua sendo o preço "cheio" do serviço (útil
+-- pra manter o histórico do que foi orçado); todo cálculo de saldo/recebido
+-- usa `resumoPagamento()` (src/lib/format.js), que já desconta esse campo.
+alter table public.ordens_servico add column if not exists desconto numeric(10,2) default 0;

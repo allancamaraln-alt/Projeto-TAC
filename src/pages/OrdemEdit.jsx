@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatDate, somaItens, itensPreenchidos } from '../lib/format'
+import { formatOS, formatDate, formatBRL, somaItens, itensPreenchidos } from '../lib/format'
 import { useToast } from '../hooks/useToast'
 import ItensServico from '../components/ItensServico'
 
@@ -65,6 +65,7 @@ export default function OrdemEdit() {
           tipo_servico: data.tipo_servico,
           descricao: data.descricao || '',
           valor: data.valor ?? '',
+          desconto: data.desconto ?? '',
           data_agendamento: data.data_agendamento || '',
           hora_agendamento: data.hora_agendamento || '',
           observacoes: data.observacoes || '',
@@ -101,6 +102,7 @@ export default function OrdemEdit() {
         tipo_servico: form.tipo_servico,
         descricao: form.descricao,
         valor: usaItensAoSalvar ? somaItens(itens) : (parseFloat(form.valor) || 0),
+        desconto: parseFloat(form.desconto) || 0,
         itens: itensParaSalvar,
         data_agendamento: form.data_agendamento || null,
         hora_agendamento: form.hora_agendamento || null,
@@ -135,6 +137,8 @@ export default function OrdemEdit() {
   // sem itens preenchidos, o campo continua livre pra digitar na mão.
   const usaItens = itensPreenchidos(itens)
   const valorFinal = usaItens ? somaItens(itens) : (parseFloat(form.valor) || 0)
+  const descontoFinal = parseFloat(form.desconto) || 0
+  const valorComDesconto = Math.max(0, valorFinal - descontoFinal)
 
   return (
     <div className="page-container">
@@ -272,6 +276,23 @@ export default function OrdemEdit() {
           />
           {usaItens && (
             <p className="text-xs text-gray-400 mt-1">Calculado automaticamente pelos itens acima.</p>
+          )}
+        </div>
+
+        {/* Desconto */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Desconto (R$) <span className="font-normal text-gray-400">(opcional)</span></label>
+          <input
+            type="number"
+            className="input-field"
+            placeholder="0,00"
+            min="0"
+            step="0.01"
+            value={form.desconto}
+            onChange={set('desconto')}
+          />
+          {descontoFinal > 0 && (
+            <p className="text-xs text-gray-400 mt-1">Valor com desconto: {formatBRL(valorComDesconto)}</p>
           )}
         </div>
 

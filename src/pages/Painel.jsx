@@ -90,14 +90,14 @@ export default function Painel() {
         // pago. Busca os últimos 35 dias uma vez só e reparte por período
         // no cliente, pra trocar dia/semana/mês sem nova consulta.
         supabase.from('ordens_servico')
-          .select('valor, created_at')
+          .select('valor, desconto, created_at')
           .eq('status', 'concluido')
           .gte('created_at', inicio35dias),
         // "Cobranças em aberto": estado atual, de TODAS as OS concluídas
         // (qualquer mês) — mesmo escopo da seção "Cobranças" do Relatório
         // e do filtro /ordens?pagamento=. Uma dívida de março não some em abril.
         supabase.from('ordens_servico')
-          .select('valor, pagamentos, forma_pagamento, data_pagamento_pendente')
+          .select('valor, desconto, pagamentos, forma_pagamento, data_pagamento_pendente')
           .eq('status', 'concluido'),
       ])
 
@@ -129,7 +129,7 @@ export default function Painel() {
   const inicioPorPeriodo = { dia: hojeISO, semana: inicioSemanaISO, mes: inicioMesISO }
   const concluidasPeriodo = concluidasRecentes.filter(os => os.created_at >= `${inicioPorPeriodo[periodoFin]}T00:00:00`)
   const faturamentoPeriodo = {
-    total: concluidasPeriodo.reduce((s, os) => s + (Number(os.valor) || 0), 0),
+    total: concluidasPeriodo.reduce((s, os) => s + resumoPagamento(os).valorTotal, 0),
     qtde: concluidasPeriodo.length,
   }
 
@@ -399,7 +399,7 @@ export default function Painel() {
                   <div className="text-right flex-shrink-0">
                     <StatusBadge status={os.status} />
                     <p className="text-sm font-bold text-gray-700 mt-1.5">
-                      {formatBRL(os.valor)}
+                      {formatBRL(resumoPagamento(os).valorTotal)}
                     </p>
                   </div>
                 </button>

@@ -1,4 +1,5 @@
 import { supabase } from '../../supabase'
+import { resumoPagamento } from '../../format'
 
 // Resumo compacto da OS aberta pelo técnico, injetado como contexto extra
 // na conversa — assim ele não precisa redigitar cliente/equipamento/
@@ -9,7 +10,7 @@ export async function fetchOsContext(ordemId, userId) {
     supabase
       .from('ordens_servico')
       .select(`
-        numero, tipo_servico, descricao, status, valor, observacoes, data_agendamento,
+        numero, tipo_servico, descricao, status, valor, desconto, observacoes, data_agendamento,
         equipamento_tipo, equipamento_marca, equipamento_modelo, equipamento_capacidade,
         equipamento_fluido, equipamento_numero_serie,
         clientes(nome, telefone, endereco)
@@ -37,7 +38,8 @@ export async function fetchOsContext(ordemId, userId) {
   ]
   if (os.clientes?.endereco) linhas.push(`Endereço: ${os.clientes.endereco}`)
 
-  linhas.push(`Status: ${os.status} · Serviço: ${os.tipo_servico}${os.valor ? ` · Valor: R$ ${os.valor}` : ''}`)
+  const valorLiquido = resumoPagamento(os).valorTotal
+  linhas.push(`Status: ${os.status} · Serviço: ${os.tipo_servico}${valorLiquido ? ` · Valor: R$ ${valorLiquido}` : ''}`)
   if (os.descricao) linhas.push(`Descrição: ${os.descricao}`)
   if (os.observacoes) linhas.push(`Observações: ${os.observacoes}`)
 

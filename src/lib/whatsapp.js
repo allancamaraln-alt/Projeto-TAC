@@ -1,3 +1,5 @@
+import { resumoPagamento } from './format'
+
 // Número oficial do WhatsApp de Suporte do ClimaPro (DDI+DDD+número, sem símbolos)
 export const SUPPORT_PHONE = '64993010651'
 
@@ -30,7 +32,7 @@ export function gerarLinkWhatsApp({ cliente, ordem, tecnico }) {
 
 🔧 Serviço: ${ordem.tipo_servico}
 📍 Local: ${cliente.endereco}
-💰 Valor: R$ ${Number(ordem.valor).toFixed(2).replace('.', ',')}
+💰 Valor: R$ ${resumoPagamento(ordem).valorTotal.toFixed(2).replace('.', ',')}
 
 📝 ${ordem.descricao}
 

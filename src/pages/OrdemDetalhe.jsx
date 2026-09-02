@@ -118,6 +118,7 @@ export default function OrdemDetalhe() {
   const [mostrarModalConclusao, setMostrarModalConclusao] = useState(false)
   const [conclusaoForm, setConclusaoForm] = useState({
     pagamentos: [{ forma: '', valor: '' }],
+    desconto: '',
     data_pagamento_pendente: '',
     garantia_valor: '', garantia_unidade: 'meses', garantia_obs: '',
   })
@@ -292,8 +293,10 @@ export default function OrdemDetalhe() {
     if (!proximo) return
 
     if (proximo.next === 'concluido') {
+      const valorLiquido = Math.max(0, (Number(os.valor) || 0) - (Number(os.desconto) || 0))
       setConclusaoForm({
-        pagamentos: [{ forma: '', valor: os.valor != null ? String(os.valor) : '' }],
+        pagamentos: [{ forma: '', valor: valorLiquido > 0 ? String(valorLiquido) : '' }],
+        desconto: os.desconto ? String(os.desconto) : '',
         data_pagamento_pendente: '',
         garantia_valor: '', garantia_unidade: 'meses', garantia_obs: '',
       })
@@ -319,15 +322,18 @@ export default function OrdemDetalhe() {
     const hoje = new Date().toISOString().split('T')[0]
     const vencimento = gValor ? calcularVencimento(gValor, conclusaoForm.garantia_unidade) : null
 
+    const desconto = parseFloat(conclusaoForm.desconto) || 0
     const pagamentos = conclusaoForm.pagamentos
       .filter(p => p.forma && parseFloat(p.valor) > 0)
       .map(p => ({ forma: p.forma, valor: parseFloat(p.valor), data: hoje }))
     const totalPago = pagamentos.reduce((soma, p) => soma + p.valor, 0)
-    const saldo = Math.max(0, (Number(os.valor) || 0) - totalPago)
+    const valorLiquido = Math.max(0, (Number(os.valor) || 0) - desconto)
+    const saldo = Math.max(0, valorLiquido - totalPago)
 
     const payload = {
       status: 'concluido',
       data_conclusao: hoje,
+      desconto,
       forma_pagamento: pagamentos[0]?.forma || null,
       pagamentos: pagamentos.length > 0 ? pagamentos : null,
       data_pagamento_pendente: saldo > 0.004 ? (conclusaoForm.data_pagamento_pendente || null) : null,
@@ -417,7 +423,7 @@ export default function OrdemDetalhe() {
       const nome = `Orcamento-${formatOS(os.numero)}-${os.clientes?.nome?.split(' ')[0]}.pdf`
       const msg = encodeURIComponent(
         `Olá ${os.clientes?.nome}! Segue em anexo o orçamento ${formatOS(os.numero)}` +
-        ` para *${os.tipo_servico}*.\n\nValor: *${formatBRL(os.valor)}*\n\nPara aprovar, responda *SIM*.\n\n` +
+        ` para *${os.tipo_servico}*.\n\nValor: *${formatBRL(resumoPagamento(os).valorTotal)}*\n\nPara aprovar, responda *SIM*.\n\n` +
         `-- ${profile?.nome || 'Técnico'}${profile?.empresa ? ` | ${profile.empresa}` : ''}`
       )
       await compartilharPDF(() => gerarOrcamentoPDF({ cliente: os.clientes, ordem: os, tecnico: profile }), nome, msg)
@@ -482,7 +488,7 @@ export default function OrdemDetalhe() {
       const nome = `Recibo-${formatOS(os.numero)}-${os.clientes?.nome?.split(' ')[0]}.pdf`
       const msg = encodeURIComponent(
         `Olá ${os.clientes?.nome}! Segue o recibo referente ao serviço *${os.tipo_servico}* (${formatOS(os.numero)}).\n\n` +
-        `Valor pago: *${formatBRL(os.valor)}*\n\nObrigado pela preferência!\n\n` +
+        `Valor pago: *${formatBRL(resumoPagamento(os).valorPago)}*\n\nObrigado pela preferência!\n\n` +
         `-- ${profile?.nome || 'Técnico'}${profile?.empresa ? ` | ${profile.empresa}` : ''}`
       )
       await compartilharPDF(() => gerarReciboPDF({ cliente: os.clientes, ordem: os, tecnico: profile, fotos }), nome, msg)
@@ -511,7 +517,9 @@ export default function OrdemDetalhe() {
   const datasPagamento = pagamentoOS.pagamentos.map(p => p.data).filter(Boolean).sort()
   const dataQuitacao = datasPagamento[datasPagamento.length - 1]
   const totalPagoForm = conclusaoForm.pagamentos.reduce((soma, p) => soma + (parseFloat(p.valor) || 0), 0)
-  const saldoDevedorForm = Math.max(0, (Number(os.valor) || 0) - totalPagoForm)
+  const descontoForm = parseFloat(conclusaoForm.desconto) || 0
+  const valorLiquidoForm = Math.max(0, (Number(os.valor) || 0) - descontoForm)
+  const saldoDevedorForm = Math.max(0, valorLiquidoForm - totalPagoForm)
 
   return (
     <>
@@ -694,6 +702,12 @@ export default function OrdemDetalhe() {
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Serviço</h2>
           <Row label="Tipo" value={os.tipo_servico} />
           <Row label="Valor" value={formatBRL(os.valor)} highlight />
+          {os.desconto > 0 && (
+            <>
+              <Row label="Desconto" value={`- ${formatBRL(os.desconto)}`} />
+              <Row label="Valor com desconto" value={formatBRL(pagamentoOS.valorTotal)} highlight />
+            </>
+          )}
           {pagamentoOS.pagamentos.length > 0 && (
             <div>
               <p className="text-xs text-gray-400">Pagamento</p>
@@ -963,6 +977,21 @@ export default function OrdemDetalhe() {
             </button>
           </div>
 
+          {/* Desconto */}
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-2">Desconto (R$) <span className="font-normal text-gray-400">(opcional)</span></p>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              className="input-field"
+              placeholder="0,00"
+              value={conclusaoForm.desconto}
+              onChange={e => setConclusaoForm(prev => ({ ...prev, desconto: e.target.value }))}
+            />
+          </div>
+
           {/* Pagamento recebido */}
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-2">Pagamento recebido</p>
@@ -1019,12 +1048,18 @@ export default function OrdemDetalhe() {
 
             <div className="mt-3 p-3 rounded-xl bg-gray-50 space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Recebido agora</span>
-                <span className="font-semibold text-gray-800">{formatBRL(totalPagoForm)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Valor da OS</span>
                 <span className="text-gray-600">{formatBRL(os.valor)}</span>
+              </div>
+              {descontoForm > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Desconto</span>
+                  <span className="text-gray-600">- {formatBRL(descontoForm)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Recebido agora</span>
+                <span className="font-semibold text-gray-800">{formatBRL(totalPagoForm)}</span>
               </div>
               {saldoDevedorForm > 0.004 && (
                 <div className="flex justify-between text-sm pt-1.5 mt-1 border-t border-gray-200">
@@ -1034,8 +1069,8 @@ export default function OrdemDetalhe() {
               )}
             </div>
 
-            {totalPagoForm > (Number(os.valor) || 0) + 0.004 && (
-              <p className="text-xs text-red-500 mt-1.5">O total recebido não pode ser maior que o valor da OS.</p>
+            {totalPagoForm > valorLiquidoForm + 0.004 && (
+              <p className="text-xs text-red-500 mt-1.5">O total recebido não pode ser maior que o valor da OS (com desconto).</p>
             )}
 
             {saldoDevedorForm > 0.004 && (
@@ -1091,7 +1126,7 @@ export default function OrdemDetalhe() {
 
           <button
             onClick={confirmarConclusao}
-            disabled={atualizando || totalPagoForm > (Number(os.valor) || 0) + 0.004}
+            disabled={atualizando || totalPagoForm > valorLiquidoForm + 0.004}
             className="btn-primary"
           >
             {atualizando ? 'Salvando...' : '✔️ Confirmar Conclusão'}

@@ -198,7 +198,7 @@ export default function OrdensList() {
                   <div className="text-right flex-shrink-0 ml-2">
                     <StatusBadge status={os.status} />
                     <p className="text-sm font-bold text-gray-700 mt-1">
-                      {formatBRL(os.valor)}
+                      {formatBRL(resumoPagamento(os).valorTotal)}
                     </p>
                   </div>
                 </div>

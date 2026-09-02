@@ -281,6 +281,22 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
 
   y += 10
 
+  const temDesconto = Number(ordem.desconto) > 0
+  const valorLiquido = Math.max(0, Number(ordem.valor || 0) - Number(ordem.desconto || 0))
+
+  // ── DESCONTO (quando houver) ───────────────────────────────
+  if (temDesconto) {
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...SLATE5)
+    doc.text('Subtotal:', margin, y)
+    doc.text(formatBRL(ordem.valor), W - margin, y, { align: 'right' })
+    y += 7
+    doc.text('Desconto:', margin, y)
+    doc.text(`- ${formatBRL(ordem.desconto)}`, W - margin, y, { align: 'right' })
+    y += 3
+  }
+
   // ── VALOR BOX ──────────────────────────────────────────────
   const boxH = 20
   // limite seguro para a caixa não invadir o rodapé (box + gap + texto do rodapé)
@@ -311,7 +327,7 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
   doc.setFontSize(22)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...ACCENT_DK)
-  doc.text(formatBRL(ordem.valor), W - margin - 6, boxY + 13, { align: 'right' })
+  doc.text(formatBRL(valorLiquido), W - margin - 6, boxY + 13, { align: 'right' })
 
   // ── FOOTER ─────────────────────────────────────────────────
   const footerY = Math.max(boxY + boxH + 12, 276)
@@ -545,6 +561,9 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
   y = rcHeader(doc, 'PAGAMENTO', y, margin, contentW, ACCENT)
 
   y = rcRow(doc, 'Valor do serviço:', formatBRL(ordem.valor), y, margin)
+  if (Number(ordem.desconto) > 0) {
+    y = rcRow(doc, 'Desconto:', `- ${formatBRL(ordem.desconto)}`, y, margin)
+  }
   if (ordem.forma_pagamento) {
     y = rcRow(doc, 'Forma:', FORMA_PAGAMENTO_LABEL[ordem.forma_pagamento] || 'Outros', y, margin)
   }
@@ -1069,7 +1088,7 @@ export async function compartilharOrcamento({ cliente, ordem, tecnico }) {
   const msg = encodeURIComponent(
     `Olá ${cliente.nome}! Segue em anexo o orçamento ${formatOS(ordem.numero)}` +
     ` para *${ordem.tipo_servico}*.\n\n` +
-    `Valor: *${formatBRL(ordem.valor)}*\n\n` +
+    `Valor: *${formatBRL(resumoPagamento(ordem).valorTotal)}*\n\n` +
     `Para aprovar, responda *SIM*.\n\n` +
     `-- ${tecnico?.nome || 'Técnico'}${tecnico?.empresa ? ` | ${tecnico.empresa}` : ''}`
   )
