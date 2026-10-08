@@ -58,8 +58,13 @@ export default function AIAssistant() {
         <button
           onClick={handleVoiceFab}
           aria-label="Falar com a IA por voz"
-          className="fixed bottom-20 right-4 z-[100] w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-white transition-transform active:scale-95 focus:outline-none"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)' }}
+          className="fixed right-4 z-[100] w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-white transition-transform active:scale-95 focus:outline-none"
+          style={{
+            // Soma a área segura do iPhone (barra de gestos), que a BottomNav
+            // também soma — sem isso o botão invade a aba "Mais".
+            bottom: 'calc(env(safe-area-inset-bottom) + 80px)',
+            background: 'linear-gradient(135deg, rgb(var(--ac)) 0%, rgb(var(--ac-dk)) 100%)',
+          }}
         >
           <MicIcon className="w-6 h-6" />
           {messages.length > 0 && (
