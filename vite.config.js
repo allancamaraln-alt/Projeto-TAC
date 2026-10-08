@@ -9,6 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: null,
       workbox: {
+        // Handlers de push/notificationclick das notificações de serviço agendado.
+        importScripts: ['/push-sw.js'],
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,webp}'],
         runtimeCaching: [
           {

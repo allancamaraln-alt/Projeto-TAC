@@ -1476,3 +1476,79 @@ alter table public.profiles drop column if exists asaas_addon_subscription_id;
 -- pra manter o histórico do que foi orçado); todo cálculo de saldo/recebido
 -- usa `resumoPagamento()` (src/lib/format.js), que já desconta esse campo.
 alter table public.ordens_servico add column if not exists desconto numeric(10,2) default 0;
+
+-- ============================================
+-- NOTIFICAÇÕES PUSH (Web Push) de serviços agendados
+-- ============================================
+-- O app roda só no navegador, então os avisos usam Web Push (VAPID): cada
+-- aparelho que ativa as notificações vira uma linha em push_subscriptions, e a
+-- edge function `send-service-notifications` (chamada pelo cron a cada 5 min)
+-- manda o lembrete X minutos antes de cada OS agendada + um resumo às 7h.
+
+-- Preferências do técnico (editadas no Perfil).
+-- notif_antecedencia_min: minutos antes do horário da OS (0 = não avisar).
+alter table public.profiles add column if not exists notif_antecedencia_min integer not null default 60;
+alter table public.profiles add column if not exists notif_resumo_diario boolean not null default true;
+
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_push_subscriptions_user on public.push_subscriptions(user_id);
+
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "Usuário vê seus aparelhos" on public.push_subscriptions;
+create policy "Usuário vê seus aparelhos"
+  on public.push_subscriptions for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Usuário remove seus aparelhos" on public.push_subscriptions;
+create policy "Usuário remove seus aparelhos"
+  on public.push_subscriptions for delete
+  using (auth.uid() = user_id);
+
+-- Insert/update passam por esta função: o mesmo navegador (mesmo endpoint) pode
+-- ter sido usado por outra conta antes, e o RLS não deixaria "pegar" a linha.
+create or replace function public.registrar_push_subscription(
+  p_endpoint text, p_p256dh text, p_auth text, p_user_agent text
+) returns void
+language sql security definer set search_path = public
+as $$
+  insert into public.push_subscriptions (user_id, endpoint, p256dh, auth, user_agent)
+  values (auth.uid(), p_endpoint, p_p256dh, p_auth, p_user_agent)
+  on conflict (endpoint) do update
+    set user_id = auth.uid(), p256dh = excluded.p256dh,
+        auth = excluded.auth, user_agent = excluded.user_agent;
+$$;
+revoke execute on function public.registrar_push_subscription(text, text, text, text) from public, anon;
+grant execute on function public.registrar_push_subscription(text, text, text, text) to authenticated;
+
+-- Controle de "já avisei": evita mandar o mesmo lembrete duas vezes.
+-- chave = 'lembrete:<ordem_id>:<data>T<hora>' (reagendar gera aviso novo)
+--       ou 'resumo:<data>'. Só a service role acessa (RLS sem policies).
+create table if not exists public.notificacoes_enviadas (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  chave text not null,
+  enviado_em timestamptz not null default now(),
+  primary key (user_id, chave)
+);
+alter table public.notificacoes_enviadas enable row level security;
+
+-- Cron: a cada 5 minutos (substituir <SUPABASE_URL> e <PUSH_CRON_SECRET>).
+-- select cron.schedule(
+--   'service-notifications',
+--   '*/5 * * * *',
+--   $$
+--   select net.http_post(
+--     url     := '<SUPABASE_URL>/functions/v1/send-service-notifications',
+--     headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', '<PUSH_CRON_SECRET>'),
+--     body    := '{}'::jsonb
+--   )
+--   $$
+-- );

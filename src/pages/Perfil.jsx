@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import SignaturePad from '../components/SignaturePad'
+import NotificacoesCard from '../components/NotificacoesCard'
 import { Card, CardTitle, IconTile } from '../components/ui/kit'
 
 function IconArrowLeft({ className = 'w-5 h-5' }) {
@@ -343,6 +344,8 @@ export default function Perfil() {
             </button>
           </form>
         </Card>
+
+        <NotificacoesCard />
 
         {/* Minha Assinatura */}
         <Card className="p-4 space-y-2">

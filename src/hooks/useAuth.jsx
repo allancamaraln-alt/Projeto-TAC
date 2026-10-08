@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import * as Sentry from '@sentry/react'
 import { supabase } from '../lib/supabase'
 import { extractPalette, applyPalette } from '../lib/palette'
+import { desativarNotificacoes } from '../lib/push'
 
 const AuthContext = createContext({})
 
@@ -131,6 +132,9 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    // Desinscreve este aparelho antes de sair, senão os avisos da conta
+    // continuariam chegando aqui pra quem logar depois.
+    await desativarNotificacoes().catch(() => {})
     await supabase.auth.signOut()
     applyPalette(null)
   }
