@@ -8,7 +8,10 @@ import LancamentoRow from '../components/financial/LancamentoRow'
 import LancamentoFormSheet from '../components/financial/LancamentoFormSheet'
 import { useAuth } from '../hooks/useAuth'
 import { useLancamentosFinanceiros } from '../hooks/useLancamentosFinanceiros'
-import { PERIODOS_UI, resolvePeriodoUI } from '../lib/financialPeriod'
+import {
+  PERIODOS_UI, resolvePeriodoUI, todayISODate, inicioMesISODate, diasAtrasISODate,
+  dataFaturamentoOS, filtroConcluidasDesde, pagamentosDasOrdens, somaPagamentos,
+} from '../lib/financialPeriod'
 
 export default function Relatorio() {
   const navigate = useNavigate()
@@ -22,6 +25,9 @@ export default function Relatorio() {
 
   const { startISO, startDate, endDate } = resolvePeriodoUI(periodo)
 
+  // OS do período: as concluídas entram pela data de conclusão (uma OS
+  // aberta em setembro e concluída em outubro é faturamento de outubro); as
+  // demais, pela data de criação.
   useEffect(() => {
     async function load() {
       setLoading(true)
@@ -30,7 +36,11 @@ export default function Relatorio() {
         .select('*, clientes(nome)')
         .order('created_at', { ascending: false })
 
-      if (startISO) query = query.gte('created_at', startISO)
+      if (startISO) {
+        query = query.or(
+          `and(status.neq.concluido,created_at.gte.${startISO}),and(status.eq.concluido,or(${filtroConcluidasDesde(startDate, startISO)}))`
+        )
+      }
 
       const timeout = new Promise(resolve => setTimeout(() => resolve({ data: [] }), 5000))
       const { data } = await Promise.race([query, timeout])
@@ -38,7 +48,7 @@ export default function Relatorio() {
       setLoading(false)
     }
     load()
-  }, [startISO])
+  }, [startISO, startDate])
 
   // Pendências e recebimentos não seguem o filtro de período acima: uma
   // dívida de uma OS antiga continua valendo hoje mesmo que ela tenha sido
@@ -55,7 +65,9 @@ export default function Relatorio() {
     loadPagamentos()
   }, [])
 
-  const concluidas = ordens.filter(os => os.status === 'concluido')
+  const concluidas = ordens
+    .filter(os => os.status === 'concluido')
+    .sort((a, b) => (dataFaturamentoOS(b) ?? '').localeCompare(dataFaturamentoOS(a) ?? ''))
   const totalFaturado = concluidas.reduce((acc, os) => acc + resumoPagamento(os).valorTotal, 0)
   const totalOrcamentos = ordens.filter(os => os.status === 'orcamento').length
   const totalEmAndamento = ordens.filter(os => os.status === 'em_andamento').length
@@ -63,9 +75,9 @@ export default function Relatorio() {
   // Cobranças: pendente/vencido são o estado atual (não olham o período
   // selecionado); recebido hoje/semana/mês somam cada pagamento pela data
   // em que ele foi de fato recebido (não pela data de criação da OS).
-  const hojeISO = new Date().toISOString().split('T')[0]
-  const inicioSemanaISO = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
-  const inicioMesISO = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+  const hojeISO = todayISODate()
+  const inicioSemanaISO = diasAtrasISODate(7)
+  const inicioMesISO = inicioMesISODate()
 
   const resumosPagamento = pagamentosOrdens.map(os => ({ os, pag: resumoPagamento(os) }))
   const pendentes = resumosPagamento.filter(r => r.pag.saldo > 0.004)
@@ -76,14 +88,10 @@ export default function Relatorio() {
   // ficam mutuamente exclusivos (dá pra somar e bater com o total pendente).
   const totalAReceber = totalPendente - totalVencido
 
-  const todosPagamentos = resumosPagamento.flatMap(r =>
-    r.pag.pagamentos.map(p => ({ valor: Number(p.valor) || 0, data: p.data || r.os.data_conclusao }))
-  )
-  const somaPagamentosDesde = (desde) =>
-    todosPagamentos.filter(p => p.data && p.data >= desde).reduce((s, p) => s + p.valor, 0)
-  const recebidoHoje = somaPagamentosDesde(hojeISO)
-  const recebidoSemana = somaPagamentosDesde(inicioSemanaISO)
-  const recebidoMes = somaPagamentosDesde(inicioMesISO)
+  const todosPagamentos = pagamentosDasOrdens(pagamentosOrdens)
+  const recebidoHoje = somaPagamentos(todosPagamentos, hojeISO)
+  const recebidoSemana = somaPagamentos(todosPagamentos, inicioSemanaISO)
+  const recebidoMes = somaPagamentos(todosPagamentos, inicioMesISO)
 
   const ticketMedio = concluidas.length > 0 ? totalFaturado / concluidas.length : 0
 
@@ -105,9 +113,9 @@ export default function Relatorio() {
     criarReceita, atualizarReceita, excluirReceita,
   } = useLancamentosFinanceiros({ userId: user?.id, startDate, endDate })
 
-  const recebidoNoPeriodo = todosPagamentos
-    .filter(p => p.data && p.data <= endDate && (!startDate || p.data >= startDate))
-    .reduce((s, p) => s + p.valor, 0)
+  // totalReceitas só tem receitas avulsas (sem OS) — o dinheiro de OS entra
+  // aqui uma única vez, pelos pagamentos registrados na própria OS.
+  const recebidoNoPeriodo = somaPagamentos(todosPagamentos, startDate, endDate)
   const lucroLiquido = recebidoNoPeriodo + totalReceitas - totalGastos
 
   async function handleSubmitLancamento(payload) {
@@ -305,7 +313,7 @@ export default function Relatorio() {
                       </div>
                       <div className="text-right flex-shrink-0 ml-2">
                         <p className="font-bold text-green-600">{formatBRL(resumoPagamento(os).valorTotal)}</p>
-                        <p className="text-xs text-gray-400 mt-1">{formatDate(os.created_at)}</p>
+                        <p className="text-xs text-gray-400 mt-1">{formatDate(dataFaturamentoOS(os))}</p>
                       </div>
                     </div>
                   </button>
@@ -464,7 +472,7 @@ export default function Relatorio() {
                     key={r.id}
                     item={r}
                     tipo="receita"
-                    onTap={() => r.ordem_id ? navigate(`/ordens/${r.ordem_id}`) : setSheet({ tipo: 'receita', initialValue: r })}
+                    onTap={() => setSheet({ tipo: 'receita', initialValue: r })}
                   />
                 ))}
               </div>

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDateWeekday, resumoPagamento } from '../lib/format'
 import { gerarLinkCobranca } from '../lib/whatsapp'
 import { useToast } from '../hooks/useToast'
+import { todayISODate } from '../lib/financialPeriod'
 
 const FORMAS_PAGAMENTO = [
   { value: 'pix',            label: 'Pix' },
@@ -12,7 +13,7 @@ const FORMAS_PAGAMENTO = [
   { value: 'outros',         label: 'Outros' },
 ]
 
-const hojeISO = () => new Date().toISOString().split('T')[0]
+const hojeISO = todayISODate
 
 // Card de uma OS com saldo pendente — usado no card "A receber hoje" do
 // Início, na lista de vencidos do Relatório e nos filtros "A receber"/"Em

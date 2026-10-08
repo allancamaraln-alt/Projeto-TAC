@@ -1,5 +1,66 @@
-/** 'YYYY-MM-DD' de hoje. */
-export const todayISODate = () => new Date().toISOString().split('T')[0]
+import { resumoPagamento } from './format'
+
+/**
+ * 'YYYY-MM-DD' de uma data no fuso do aparelho. Não usar
+ * `toISOString().split('T')[0]` pra isso: toISOString é UTC, então no Brasil
+ * (UTC−3) a partir das 21h ela já devolve o dia seguinte.
+ */
+export function toLocalISODate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** 'YYYY-MM-DD' de hoje (fuso local). */
+export const todayISODate = () => toLocalISODate()
+
+/** 'YYYY-MM-DD' do dia 1º do mês corrente (fuso local). */
+export const inicioMesISODate = () => {
+  const now = new Date()
+  return toLocalISODate(new Date(now.getFullYear(), now.getMonth(), 1))
+}
+
+/** 'YYYY-MM-DD' de N dias atrás (fuso local). */
+export const diasAtrasISODate = (n) => {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return toLocalISODate(d)
+}
+
+/**
+ * Data em que a OS conta como faturada: data_conclusao, ou — em OS antigas
+ * concluídas por caminhos que não gravavam esse campo — o dia de criação.
+ */
+export function dataFaturamentoOS(os) {
+  return os.data_conclusao || (os.created_at ? toLocalISODate(new Date(os.created_at)) : null)
+}
+
+/**
+ * Filtro PostgREST (`.or(...)`) pra OS concluídas a partir de `startDate`,
+ * pela mesma regra de dataFaturamentoOS. `startISO` é o instante equivalente
+ * usado no fallback por created_at.
+ */
+export const filtroConcluidasDesde = (startDate, startISO) =>
+  `data_conclusao.gte.${startDate},and(data_conclusao.is.null,created_at.gte.${startISO})`
+
+/**
+ * Achata os pagamentos de uma lista de OS em [{ valor, data }] — data é o
+ * dia em que o dinheiro entrou (ou a conclusão da OS, pra pagamentos antigos
+ * sem data). Regime de caixa: é isso que conta como "recebido".
+ */
+export function pagamentosDasOrdens(ordens) {
+  return ordens.flatMap(os =>
+    resumoPagamento(os).pagamentos.map(p => ({
+      valor: Number(p.valor) || 0,
+      data: p.data || os.data_conclusao,
+    }))
+  )
+}
+
+/** Soma pagamentos com data em [startDate, endDate] (startDate null = sem limite). */
+export function somaPagamentos(pagamentos, startDate, endDate) {
+  return pagamentos
+    .filter(p => p.data && (!startDate || p.data >= startDate) && (!endDate || p.data <= endDate))
+    .reduce((s, p) => s + p.valor, 0)
+}
 
 // Pills de período usados na tela de Relatório — 'semana'/'trimestre' são
 // janelas corridas (rolling), não calendário, ao contrário do período 'semana'
@@ -34,7 +95,7 @@ export function resolvePeriodoUI(periodo) {
     startISO = d.toISOString()
   }
 
-  const startDate = startISO ? startISO.split('T')[0] : null
+  const startDate = startISO ? toLocalISODate(new Date(startISO)) : null
   return { startISO, startDate, endDate }
 }
 
@@ -49,16 +110,16 @@ export function resolvePeriodoAI({ periodo, data_inicio, data_fim }) {
     const d = new Date(now)
     const day = d.getDay()
     d.setDate(d.getDate() - (day === 0 ? 6 : day - 1)) // segunda-feira
-    startDate = d.toISOString().split('T')[0]
+    startDate = toLocalISODate(d)
     endDate = todayISODate()
   } else if (periodo === 'mes') {
-    startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    startDate = inicioMesISODate()
     endDate = todayISODate()
   } else if (periodo === 'mes_anterior') {
     const first = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const last = new Date(now.getFullYear(), now.getMonth(), 0)
-    startDate = first.toISOString().split('T')[0]
-    endDate = last.toISOString().split('T')[0]
+    startDate = toLocalISODate(first)
+    endDate = toLocalISODate(last)
   } else {
     startDate = data_inicio
     endDate = data_fim

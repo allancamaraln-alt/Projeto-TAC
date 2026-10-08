@@ -11,6 +11,7 @@ import SignaturePad from '../components/SignaturePad'
 import { useToast } from '../hooks/useToast'
 import { Capacitor } from '@capacitor/core'
 import MapaEndereco from '../components/MapaEndereco'
+import { todayISODate } from '../lib/financialPeriod'
 
 const PROXIMOS_STATUS = {
   orcamento:    { label: '✅ Marcar como Aprovado', next: 'aprovado' },
@@ -319,7 +320,7 @@ export default function OrdemDetalhe() {
   async function confirmarConclusao() {
     setAtualizando(true)
     const gValor = parseInt(conclusaoForm.garantia_valor) || null
-    const hoje = new Date().toISOString().split('T')[0]
+    const hoje = todayISODate()
     const vencimento = gValor ? calcularVencimento(gValor, conclusaoForm.garantia_unidade) : null
 
     const desconto = parseFloat(conclusaoForm.desconto) || 0

@@ -1,4 +1,5 @@
 import { fetchText } from '../api'
+import { todayISODate } from '../../financialPeriod'
 
 const SYSTEM_PROMPT = `Você é o Especialista Técnico do ClimaPro IA, especialista em refrigeração, ar-condicionado e climatização. Você auxilia técnicos de campo com:
 
@@ -52,7 +53,7 @@ function buildSystemMsg(profile) {
   let content = SYSTEM_PROMPT
   if (profile?.nome) content += `\n\nO técnico consultando é ${profile.nome}.`
   if (profile?.empresa) content += ` Empresa: ${profile.empresa}.`
-  content += `\nData atual: ${new Date().toISOString().split('T')[0]}`
+  content += `\nData atual: ${todayISODate()}`
   return { role: 'system', content }
 }
 

@@ -5,6 +5,10 @@ import { useAuth } from '../hooks/useAuth'
 import { formatBRL, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
+import {
+  todayISODate, inicioMesISODate, diasAtrasISODate, toLocalISODate,
+  dataFaturamentoOS, filtroConcluidasDesde,
+} from '../lib/financialPeriod'
 import { Card, CardTitle, IconTile } from '../components/ui/kit'
 
 function diasParaData(dataIso) {
@@ -52,15 +56,16 @@ export default function Painel() {
 
   useEffect(() => {
     async function load() {
-      const inicioSemana = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
-      const em30dias = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
-      const hoje = new Date().toISOString().split('T')[0]
+      const now = new Date()
+      const meiaNoite = (diasAtras) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - diasAtras).toISOString()
+      const em30dias = toLocalISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30))
+      const hoje = todayISODate()
       // 35 dias cobre com folga tanto "últimos 7 dias" quanto o mês corrente
       // inteiro, mesmo se hoje for dia 1º.
-      const inicio35dias = new Date(Date.now() - 35 * 86400000).toISOString()
+      const inicio35dias = diasAtrasISODate(35)
 
       const [{ data: todas }, { data: ultimas }, { data: avisos }, { data: cobrancas }, { count: totalHoje }, { count: revisoesHojeCount }, { data: concluidas35 }, { data: pagamentos }] = await Promise.all([
-        supabase.from('ordens_servico').select('status').gte('created_at', `${inicioSemana}T00:00:00`),
+        supabase.from('ordens_servico').select('status').gte('created_at', meiaNoite(7)),
         supabase.from('ordens_servico')
           .select('*, clientes(nome)')
           .order('created_at', { ascending: false })
@@ -77,7 +82,7 @@ export default function Painel() {
           .eq('data_pagamento_pendente', hoje),
         supabase.from('ordens_servico')
           .select('id', { count: 'exact', head: true })
-          .gte('created_at', `${hoje}T00:00:00`),
+          .gte('created_at', meiaNoite(0)),
         // Revisões PREVISTAS para hoje (data_prevista = hoje), não o total de
         // pendentes nos próximos 30 dias — esse é um número separado, usado
         // só na lista "Próximas revisões" mais abaixo.
@@ -86,13 +91,14 @@ export default function Painel() {
           .eq('status', 'pendente')
           .eq('data_prevista', hoje),
         // Faturamento (dia/semana/mês) — mesma ideia do hero verde do
-        // Relatório: soma valor das OS concluídas, sem olhar se já foi
-        // pago. Busca os últimos 35 dias uma vez só e reparte por período
-        // no cliente, pra trocar dia/semana/mês sem nova consulta.
+        // Relatório: soma valor das OS concluídas no período (pela data de
+        // conclusão), sem olhar se já foi pago. Busca os últimos 35 dias uma
+        // vez só e reparte por período no cliente, pra trocar dia/semana/mês
+        // sem nova consulta.
         supabase.from('ordens_servico')
-          .select('valor, desconto, created_at')
+          .select('valor, desconto, created_at, data_conclusao')
           .eq('status', 'concluido')
-          .gte('created_at', inicio35dias),
+          .or(filtroConcluidasDesde(inicio35dias, meiaNoite(35))),
         // "Cobranças em aberto": estado atual, de TODAS as OS concluídas
         // (qualquer mês) — mesmo escopo da seção "Cobranças" do Relatório
         // e do filtro /ordens?pagamento=. Uma dívida de março não some em abril.
@@ -118,16 +124,12 @@ export default function Painel() {
   }, [])
 
   const totalCobrancasHoje = cobrancasHoje.reduce((soma, os) => soma + resumoPagamento(os).saldo, 0)
-  const hojeISO = new Date().toISOString().split('T')[0]
+  const hojeISO = todayISODate()
 
   // Faturamento por período — reparte os últimos 35 dias já buscados,
   // sem precisar de uma consulta nova a cada troca de dia/semana/mês.
-  const seteDiasAtras = new Date()
-  seteDiasAtras.setDate(seteDiasAtras.getDate() - 7)
-  const inicioSemanaISO = seteDiasAtras.toISOString().split('T')[0]
-  const inicioMesISO = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-  const inicioPorPeriodo = { dia: hojeISO, semana: inicioSemanaISO, mes: inicioMesISO }
-  const concluidasPeriodo = concluidasRecentes.filter(os => os.created_at >= `${inicioPorPeriodo[periodoFin]}T00:00:00`)
+  const inicioPorPeriodo = { dia: hojeISO, semana: diasAtrasISODate(7), mes: inicioMesISODate() }
+  const concluidasPeriodo = concluidasRecentes.filter(os => (dataFaturamentoOS(os) ?? '') >= inicioPorPeriodo[periodoFin])
   const faturamentoPeriodo = {
     total: concluidasPeriodo.reduce((s, os) => s + resumoPagamento(os).valorTotal, 0),
     qtde: concluidasPeriodo.length,

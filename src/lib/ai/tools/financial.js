@@ -62,7 +62,7 @@ export const FINANCIAL_TOOLS = [
     type: 'function',
     function: {
       name: 'get_financial_summary',
-      description: 'Retorna resumo financeiro (despesas, receitas, lucro) para um período. Use para qualquer consulta sobre o que o técnico gastou, recebeu ou lucrou.',
+      description: 'Retorna resumo financeiro (despesas, receitas, lucro) para um período, em regime de caixa: total_receitas = recebido_de_os (pagamentos de OS recebidos no período) + receitas_avulsas. Use para qualquer consulta sobre o que o técnico gastou, recebeu ou lucrou.',
       parameters: {
         type: 'object',
         properties: {

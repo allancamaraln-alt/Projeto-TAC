@@ -1,3 +1,5 @@
+import { todayISODate } from '../financialPeriod'
+
 // Prompt único do ClimaPro IA — funde o conhecimento técnico (antes em
 // specialists/technical.js) com as regras financeiras (antes em
 // specialists/financial.js) e as regras de OS/cliente/laudo via tool-calling.
@@ -94,7 +96,7 @@ Responda sempre em português brasileiro, de forma concisa, natural e amigável 
 Data atual: {data}`
 
 export function buildSystemPrompt(profile) {
-  let content = BASE_PROMPT.replace('{data}', new Date().toISOString().split('T')[0])
+  let content = BASE_PROMPT.replace('{data}', todayISODate())
   if (profile?.nome) content += `\nTécnico: ${profile.nome}.`
   if (profile?.empresa) content += ` Empresa: ${profile.empresa}.`
   return content

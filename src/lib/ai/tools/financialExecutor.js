@@ -1,6 +1,6 @@
 import { supabase } from '../../supabase'
 import { resumoPagamento } from '../../format'
-import { todayISODate, resolvePeriodoAI } from '../../financialPeriod'
+import { todayISODate, resolvePeriodoAI, pagamentosDasOrdens, somaPagamentos } from '../../financialPeriod'
 import { matchClient } from './clientesExecutor'
 
 export async function executeTool(name, args, userId) {
@@ -105,18 +105,16 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
   const novosPagamentos = [...pag.pagamentos, { forma, valor: valorPago, data: hoje }]
 
   const updates = { pagamentos: novosPagamentos, data_pagamento_pendente: null }
-  if (os.status !== 'concluido') updates.status = 'concluido'
+  if (os.status !== 'concluido') {
+    updates.status = 'concluido'
+    updates.data_conclusao = hoje
+  }
 
+  // Sem linha em `receitas`: o pagamento fica só em ordens_servico.pagamentos,
+  // igual ao botão "✓ Recebido". Duplicar em `receitas` fazia o Relatório e
+  // o resumo financeiro contarem o mesmo dinheiro duas vezes.
   const { error: updateError } = await supabase.from('ordens_servico').update(updates).eq('id', os.id)
   if (updateError) return { error: updateError.message }
-
-  await supabase.from('receitas').insert({
-    tecnico_id: userId,
-    data: hoje,
-    descricao: `Pagamento OS #${os.numero} — ${cliente.nome}`,
-    valor: valorPago,
-    ordem_id: os.id,
-  })
 
   return {
     success: true,
@@ -140,17 +138,29 @@ async function getFinancialSummary({ periodo, data_inicio, data_fim, categoria }
     .order('data', { ascending: false })
   if (categoria) gastosQ = gastosQ.eq('categoria', categoria)
 
-  const { data: gastos } = await gastosQ
-  const { data: receitas } = await supabase
-    .from('receitas')
-    .select('data, descricao, valor')
-    .eq('tecnico_id', userId)
-    .gte('data', startDate)
-    .lte('data', endDate)
-    .order('data', { ascending: false })
+  // Mesma conta do Relatório (regime de caixa): pagamentos de OS pela data
+  // em que entraram + receitas avulsas (sem ordem_id) − gastos.
+  const [{ data: gastos }, { data: receitas }, { data: ordensConcluidas }] = await Promise.all([
+    gastosQ,
+    supabase
+      .from('receitas')
+      .select('data, descricao, valor')
+      .eq('tecnico_id', userId)
+      .is('ordem_id', null)
+      .gte('data', startDate)
+      .lte('data', endDate)
+      .order('data', { ascending: false }),
+    supabase
+      .from('ordens_servico')
+      .select('valor, desconto, pagamentos, forma_pagamento, data_conclusao')
+      .eq('tecnico_id', userId)
+      .eq('status', 'concluido'),
+  ])
 
   const totalGastos = (gastos || []).reduce((s, g) => s + Number(g.valor), 0)
-  const totalReceitas = (receitas || []).reduce((s, r) => s + Number(r.valor), 0)
+  const totalReceitasAvulsas = (receitas || []).reduce((s, r) => s + Number(r.valor), 0)
+  const recebidoDeOS = somaPagamentos(pagamentosDasOrdens(ordensConcluidas || []), startDate, endDate)
+  const totalReceitas = recebidoDeOS + totalReceitasAvulsas
 
   const porCategoria = (gastos || []).reduce((acc, g) => {
     acc[g.categoria] = (acc[g.categoria] || 0) + Number(g.valor)
@@ -160,6 +170,8 @@ async function getFinancialSummary({ periodo, data_inicio, data_fim, categoria }
   return {
     periodo: `${startDate} a ${endDate}`,
     total_gastos: totalGastos,
+    recebido_de_os: recebidoDeOS,
+    receitas_avulsas: totalReceitasAvulsas,
     total_receitas: totalReceitas,
     lucro: totalReceitas - totalGastos,
     gastos_por_categoria: porCategoria,

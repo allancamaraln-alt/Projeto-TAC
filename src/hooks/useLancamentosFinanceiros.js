@@ -10,10 +10,15 @@ async function fetchLancamentos({ userId, startDate, endDate }) {
     .order('data', { ascending: false })
   if (startDate) gastosQ = gastosQ.gte('data', startDate)
 
+  // Só receitas avulsas. Linhas com ordem_id são cópias antigas de
+  // pagamentos de OS (gravadas pela IA até out/2026) — esse dinheiro já é
+  // contado pelos pagamentos da própria OS, e somá-las de novo duplicava o
+  // lucro líquido.
   let receitasQ = supabase
     .from('receitas')
-    .select('*, ordens_servico(numero, status)')
+    .select('*')
     .eq('tecnico_id', userId)
+    .is('ordem_id', null)
     .lte('data', endDate)
     .order('data', { ascending: false })
   if (startDate) receitasQ = receitasQ.gte('data', startDate)
@@ -85,8 +90,6 @@ export function useLancamentosFinanceiros({ userId, startDate, endDate }) {
   }
 
   async function atualizarReceita(id, { data, descricao, valor }) {
-    const receita = receitas.find(r => r.id === id)
-    if (receita?.ordem_id) throw new Error('Receita vinculada a uma OS não pode ser editada aqui.')
     const { error } = await supabase
       .from('receitas')
       .update({ data, descricao, valor: Number(valor) })
@@ -96,8 +99,6 @@ export function useLancamentosFinanceiros({ userId, startDate, endDate }) {
   }
 
   async function excluirReceita(id) {
-    const receita = receitas.find(r => r.id === id)
-    if (receita?.ordem_id) throw new Error('Receita vinculada a uma OS não pode ser excluída aqui.')
     const { error } = await supabase.from('receitas').delete().eq('id', id)
     if (error) throw error
     await reload()

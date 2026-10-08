@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { formatOS, formatBRL, formatDateWeekday, resumoPagamento } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
+import { todayISODate } from '../lib/financialPeriod'
 
 const FILTROS = [
   { value: '', label: 'Todas' },
@@ -42,7 +43,7 @@ export default function OrdensList() {
           .eq('status', 'concluido')
           .order('created_at', { ascending: false })
 
-        const hojeISO = new Date().toISOString().split('T')[0]
+        const hojeISO = todayISODate()
         const filtradas = (data ?? []).filter(os => {
           const pag = resumoPagamento(os)
           const vencida = pag.saldo > 0.004 && os.data_pagamento_pendente && os.data_pagamento_pendente < hojeISO

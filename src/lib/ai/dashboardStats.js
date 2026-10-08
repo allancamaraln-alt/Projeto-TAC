@@ -1,12 +1,13 @@
 import { supabase } from '../supabase'
 import { resumoPagamento } from '../format'
+import { todayISODate, inicioMesISODate, filtroConcluidasDesde } from '../financialPeriod'
 
 // Estatísticas leves usadas pela saudação do ClimaPro IA (GreetingHero) —
 // extraído de AIAssistant.jsx para ser reutilizado também por ChatHome.jsx.
 export async function fetchDashboardStats(userId) {
-  const today = new Date().toISOString().split('T')[0]
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    .toISOString().split('T')[0]
+  const today = todayISODate()
+  const startOfMonth = inicioMesISODate()
+  const startOfMonthISO = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
   const [osHojeRes, pendentesRes, mesRes] = await Promise.all([
     supabase
@@ -25,7 +26,7 @@ export async function fetchDashboardStats(userId) {
       .select('valor, desconto')
       .eq('tecnico_id', userId)
       .eq('status', 'concluido')
-      .gte('created_at', startOfMonth),
+      .or(filtroConcluidasDesde(startOfMonth, startOfMonthISO)),
   ])
 
   const aReceber = (pendentesRes.data || []).reduce((s, o) => s + resumoPagamento(o).valorTotal, 0)

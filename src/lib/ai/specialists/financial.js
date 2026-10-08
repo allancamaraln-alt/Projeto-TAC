@@ -1,6 +1,7 @@
 import { fetchWithTools } from '../api'
 import { FINANCIAL_TOOLS } from '../tools/financial'
 import { executeTool } from '../tools/financialExecutor'
+import { todayISODate } from '../../financialPeriod'
 
 const SYSTEM_PROMPT = `Você é o Especialista Financeiro do ClimaPro IA.
 
@@ -38,7 +39,7 @@ Data atual: {data}`
 const MAX_TOOL_ITERATIONS = 5
 
 function buildSystemMsg(profile) {
-  let content = SYSTEM_PROMPT.replace('{data}', new Date().toISOString().split('T')[0])
+  let content = SYSTEM_PROMPT.replace('{data}', todayISODate())
   if (profile?.nome) content += `\nTécnico: ${profile.nome}.`
   if (profile?.empresa) content += ` Empresa: ${profile.empresa}.`
   return { role: 'system', content }

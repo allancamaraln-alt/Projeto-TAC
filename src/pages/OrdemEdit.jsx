@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { formatOS, formatDate, formatBRL, somaItens, itensPreenchidos } from '../lib/format'
 import { useToast } from '../hooks/useToast'
 import ItensServico from '../components/ItensServico'
+import { todayISODate } from '../lib/financialPeriod'
 
 const FORMAS_PAGAMENTO = [
   { value: '', label: 'Não informada' },
@@ -108,6 +109,8 @@ export default function OrdemEdit() {
         hora_agendamento: form.hora_agendamento || null,
         observacoes: form.observacoes,
         status: form.status,
+        // O Relatório fatura a OS pela data de conclusão.
+        ...(form.status === 'concluido' && !os.data_conclusao ? { data_conclusao: todayISODate() } : {}),
         forma_pagamento: form.forma_pagamento || null,
         garantia_valor: gValor,
         garantia_unidade: gValor ? form.garantia_unidade : null,

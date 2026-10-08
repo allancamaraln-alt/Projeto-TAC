@@ -1,6 +1,7 @@
 import { supabase } from '../../supabase'
 import { resumoPagamento } from '../../format'
 import { findOrCreateClient } from './clientesExecutor'
+import { todayISODate } from '../../financialPeriod'
 
 export async function executeOSTool(name, args, userId) {
   try {
@@ -31,6 +32,7 @@ async function createOS({ cliente_nome, tipo_servico, descricao, valor, data_age
       hora_agendamento: hora_agendamento || null,
       observacoes: observacoes || '',
       status: status || 'orcamento',
+      data_conclusao: status === 'concluido' ? todayISODate() : null,
     })
     .select()
     .single()
@@ -49,7 +51,7 @@ async function createOS({ cliente_nome, tipo_servico, descricao, valor, data_age
 async function updateOS({ os_numero, ...fields }, userId) {
   const { data: os, error: findError } = await supabase
     .from('ordens_servico')
-    .select('id, numero')
+    .select('id, numero, status, data_conclusao')
     .eq('tecnico_id', userId)
     .eq('numero', os_numero)
     .maybeSingle()
@@ -62,6 +64,10 @@ async function updateOS({ os_numero, ...fields }, userId) {
     if (fields[key] !== undefined && fields[key] !== null) updates[key] = fields[key]
   }
   if (!Object.keys(updates).length) return { error: 'Nenhum dado para atualizar.' }
+  // O Relatório fatura a OS pela data de conclusão.
+  if (updates.status === 'concluido' && os.status !== 'concluido' && !os.data_conclusao) {
+    updates.data_conclusao = todayISODate()
+  }
 
   const { error: updateError } = await supabase.from('ordens_servico').update(updates).eq('id', os.id)
   if (updateError) return { error: updateError.message }
