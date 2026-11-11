@@ -1,5 +1,5 @@
 import { supabase } from '../../supabase'
-import { resumoPagamento } from '../../format'
+import { resumoPagamento, resumoParcelas, valorACobrar, proximoVencimento } from '../../format'
 import { todayISODate, resolvePeriodoAI, pagamentosDasOrdens, somaPagamentos } from '../../financialPeriod'
 import { matchClient } from './clientesExecutor'
 
@@ -65,7 +65,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
 
   let query = supabase
     .from('ordens_servico')
-    .select('id, numero, tipo_servico, valor, desconto, status, pagamentos, forma_pagamento, data_pagamento_pendente')
+    .select('id, numero, tipo_servico, valor, desconto, status, pagamentos, parcelas, forma_pagamento, data_pagamento_pendente')
     .eq('tecnico_id', userId)
     .eq('cliente_id', cliente.id)
     .neq('status', 'cancelado')
@@ -93,7 +93,7 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
       ordens_em_aberto: abertas.map(({ os, pag }) => ({
         os_numero: os.numero,
         tipo_servico: os.tipo_servico,
-        saldo: os.status === 'concluido' ? pag.saldo : pag.valorTotal,
+        saldo: os.status === 'concluido' ? valorACobrar(os) : pag.valorTotal,
       })),
     }
   }
@@ -101,10 +101,16 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
   const { os, pag } = abertas[0]
   const hoje = todayISODate()
   const forma = forma_pagamento || 'outros'
-  const valorPago = os.status === 'concluido' ? pag.saldo : pag.valorTotal
+  // OS parcelada: dá baixa só na próxima parcela em aberto, não no saldo todo.
+  const parc = os.status === 'concluido' ? resumoParcelas(os) : null
+  const valorPago = os.status === 'concluido' ? valorACobrar(os) : pag.valorTotal
   const novosPagamentos = [...pag.pagamentos, { forma, valor: valorPago, data: hoje }]
+  const restaSaldo = os.status === 'concluido' && pag.saldo - valorPago > 0.004
 
-  const updates = { pagamentos: novosPagamentos, data_pagamento_pendente: null }
+  const updates = {
+    pagamentos: novosPagamentos,
+    data_pagamento_pendente: restaSaldo ? proximoVencimento(os, novosPagamentos) : null,
+  }
   if (os.status !== 'concluido') {
     updates.status = 'concluido'
     updates.data_conclusao = hoje
@@ -122,6 +128,10 @@ async function registerOSPayment({ cliente_nome, os_numero, forma_pagamento }, u
     cliente_nome: cliente.nome,
     valor: valorPago,
     forma_pagamento: forma,
+    ...(parc?.proxima && {
+      parcela_paga: `${parc.proxima.numero} de ${parc.total}`,
+      saldo_restante: Math.max(0, pag.saldo - valorPago),
+    }),
     action: { type: 'order_paid', numero: os.numero, valor: valorPago },
   }
 }

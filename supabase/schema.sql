@@ -265,6 +265,15 @@ alter table public.ordens_servico add column if not exists pagamentos jsonb;
 alter table public.ordens_servico add column if not exists data_pagamento_pendente date;
 alter table public.ordens_servico add column if not exists data_conclusao date;
 
+-- ============================================
+-- MIGRATION: Parcelamento do saldo ("fiado")
+-- ============================================
+-- `parcelas`: array de { valor, vencimento } — como o saldo restante da
+-- conclusão será pago. A situação de cada parcela é derivada de `pagamentos`
+-- (o que foi pago além da entrada quita as parcelas em ordem).
+-- `data_pagamento_pendente` guarda o vencimento da próxima parcela em aberto.
+alter table public.ordens_servico add column if not exists parcelas jsonb;
+
 -- Novos usuários: trigger inclui trial_starts_at = now()
 create or replace function public.handle_new_user()
 returns trigger as $$

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, formatDateWeekday, resumoPagamento } from '../lib/format'
+import { formatOS, formatBRL, formatDateWeekday, formatTime, resumoPagamento, saldoVencido } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
 import { todayISODate } from '../lib/financialPeriod'
@@ -20,6 +20,15 @@ const PAGAMENTO_INFO = {
   recebido: { label: 'Recebidas', bg: '#ecfdf5', color: '#059669' },
   pendente: { label: 'A receber', bg: '#fffbeb', color: '#d97706' },
   vencido:  { label: 'Em atraso', bg: '#fef2f2', color: '#dc2626' },
+}
+
+function pertenceAoFiltro(os, filtroPagamento, hojeISO) {
+  const pag = resumoPagamento(os)
+  const vencida = saldoVencido(os, hojeISO) > 0.004
+  if (filtroPagamento === 'recebido') return pag.quitado
+  if (filtroPagamento === 'vencido') return vencida
+  if (filtroPagamento === 'pendente') return pag.saldo > 0.004 && !vencida
+  return true
 }
 
 export default function OrdensList() {
@@ -44,14 +53,7 @@ export default function OrdensList() {
           .order('created_at', { ascending: false })
 
         const hojeISO = todayISODate()
-        const filtradas = (data ?? []).filter(os => {
-          const pag = resumoPagamento(os)
-          const vencida = pag.saldo > 0.004 && os.data_pagamento_pendente && os.data_pagamento_pendente < hojeISO
-          if (filtroPagamento === 'recebido') return pag.quitado
-          if (filtroPagamento === 'vencido') return vencida
-          if (filtroPagamento === 'pendente') return pag.saldo > 0.004 && !vencida
-          return true
-        })
+        const filtradas = (data ?? []).filter(os => pertenceAoFiltro(os, filtroPagamento, hojeISO))
         setOrdens(filtradas)
         setLoading(false)
         return
@@ -65,7 +67,24 @@ export default function OrdensList() {
       if (filtroStatus) query = query.eq('status', filtroStatus)
 
       const { data } = await query
-      setOrdens(data ?? [])
+      let lista = data ?? []
+
+      // Aprovados: ordem cronológica de execução (data + horário agendados),
+      // o serviço mais próximo primeiro. OS sem data agendada vão para o fim;
+      // no mesmo dia, as sem horário ficam depois das que têm horário.
+      if (filtroStatus === 'aprovado') {
+        lista = [...lista].sort((a, b) => {
+          const da = a.data_agendamento || '9999-12-31'
+          const db = b.data_agendamento || '9999-12-31'
+          if (da !== db) return da < db ? -1 : 1
+          const ha = a.hora_agendamento || '99:99'
+          const hb = b.hora_agendamento || '99:99'
+          if (ha !== hb) return ha < hb ? -1 : 1
+          return 0
+        })
+      }
+
+      setOrdens(lista)
       setLoading(false)
     }
     load()
@@ -73,8 +92,13 @@ export default function OrdensList() {
 
   // Some se marcada como recebida (CobrancaPendenteCard) ou paga em atraso —
   // deixa de pertencer ao filtro atual sem precisar recarregar a lista toda.
-  function removerCobrancaResolvida(osId) {
-    setOrdens(prev => prev.filter(os => os.id !== osId))
+  // Com parcelas, pagar uma não tira a OS da lista se ela ainda pertence ao
+  // filtro (ex: segue "A receber" com a próxima parcela).
+  function removerCobrancaResolvida(osId, atualizada) {
+    const hojeISO = todayISODate()
+    setOrdens(prev => prev
+      .map(os => os.id === osId ? atualizada ?? os : os)
+      .filter(os => os.id !== osId || (atualizada && pertenceAoFiltro(atualizada, filtroPagamento, hojeISO))))
   }
 
   const buscaLower = busca.toLowerCase()
@@ -211,6 +235,7 @@ export default function OrdensList() {
                 {os.data_agendamento && (
                   <p className="text-xs text-gray-400">
                     📅 {formatDateWeekday(os.data_agendamento)}
+                    {os.hora_agendamento ? ` às ${formatTime(os.hora_agendamento)}` : ''}
                   </p>
                 )}
               </button>

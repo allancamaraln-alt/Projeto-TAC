@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useAI } from '../hooks/useAI'
-import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento } from '../lib/format'
+import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento, resumoParcelas, gerarParcelas, somarMeses } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import ModalLembrete from '../components/ModalLembrete'
 import ConfirmModal from '../components/ConfirmModal'
@@ -121,6 +121,7 @@ export default function OrdemDetalhe() {
     pagamentos: [{ forma: '', valor: '' }],
     desconto: '',
     data_pagamento_pendente: '',
+    parcelar: false, num_parcelas: '2', primeiro_vencimento: '', parcelas_manual: null,
     garantia_valor: '', garantia_unidade: 'meses', garantia_obs: '',
   })
   const [confirm, setConfirm] = useState({ open: false, title: '', message: '', action: null, danger: false })
@@ -299,6 +300,7 @@ export default function OrdemDetalhe() {
         pagamentos: [{ forma: '', valor: valorLiquido > 0 ? String(valorLiquido) : '' }],
         desconto: os.desconto ? String(os.desconto) : '',
         data_pagamento_pendente: '',
+        parcelar: false, num_parcelas: '2', primeiro_vencimento: somarMeses(todayISODate(), 1), parcelas_manual: null,
         garantia_valor: '', garantia_unidade: 'meses', garantia_obs: '',
       })
       setMostrarModalConclusao(true)
@@ -317,6 +319,18 @@ export default function OrdemDetalhe() {
     setAtualizando(false)
   }
 
+  function parcelasDoForm(saldo) {
+    return conclusaoForm.parcelas_manual
+      ?? gerarParcelas(saldo, conclusaoForm.num_parcelas, conclusaoForm.primeiro_vencimento)
+  }
+
+  function editarParcela(i, campo, valor) {
+    setConclusaoForm(prev => {
+      const atual = prev.parcelas_manual ?? gerarParcelas(saldoDevedorForm, prev.num_parcelas, prev.primeiro_vencimento)
+      return { ...prev, parcelas_manual: atual.map((p, pi) => pi === i ? { ...p, [campo]: valor } : p) }
+    })
+  }
+
   async function confirmarConclusao() {
     setAtualizando(true)
     const gValor = parseInt(conclusaoForm.garantia_valor) || null
@@ -331,13 +345,23 @@ export default function OrdemDetalhe() {
     const valorLiquido = Math.max(0, (Number(os.valor) || 0) - desconto)
     const saldo = Math.max(0, valorLiquido - totalPago)
 
+    // Parcelamento do saldo: cada parcela com valor e vencimento próprios.
+    // `data_pagamento_pendente` fica com o vencimento da 1ª parcela.
+    const parcelas = saldo > 0.004 && conclusaoForm.parcelar
+      ? parcelasDoForm(saldo).map(p => ({ valor: Math.round((parseFloat(p.valor) || 0) * 100) / 100, vencimento: p.vencimento }))
+      : null
+    const dataPendente = saldo > 0.004
+      ? (parcelas ? parcelas[0].vencimento : (conclusaoForm.data_pagamento_pendente || null))
+      : null
+
     const payload = {
       status: 'concluido',
       data_conclusao: hoje,
       desconto,
       forma_pagamento: pagamentos[0]?.forma || null,
       pagamentos: pagamentos.length > 0 ? pagamentos : null,
-      data_pagamento_pendente: saldo > 0.004 ? (conclusaoForm.data_pagamento_pendente || null) : null,
+      data_pagamento_pendente: dataPendente,
+      parcelas,
       garantia_valor: gValor,
       garantia_unidade: gValor ? conclusaoForm.garantia_unidade : null,
       garantia_vencimento: vencimento,
@@ -521,6 +545,12 @@ export default function OrdemDetalhe() {
   const descontoForm = parseFloat(conclusaoForm.desconto) || 0
   const valorLiquidoForm = Math.max(0, (Number(os.valor) || 0) - descontoForm)
   const saldoDevedorForm = Math.max(0, valorLiquidoForm - totalPagoForm)
+  const parcelandoForm = conclusaoForm.parcelar && saldoDevedorForm > 0.004
+  const parcelasForm = parcelandoForm ? parcelasDoForm(saldoDevedorForm) : []
+  const somaParcelasForm = parcelasForm.reduce((s, p) => s + (parseFloat(p.valor) || 0), 0)
+  const parcelasDivergem = parcelandoForm && Math.abs(somaParcelasForm - saldoDevedorForm) > 0.004
+  const parcelaSemData = parcelandoForm && parcelasForm.some(p => !p.vencimento)
+  const parcelasOS = resumoParcelas(os)
 
   return (
     <>
@@ -730,9 +760,39 @@ export default function OrdemDetalhe() {
               ) : (
                 <p className="text-sm text-amber-600 font-semibold mt-1">
                   Saldo pendente: {formatBRL(pagamentoOS.saldo)}
-                  {os.data_pagamento_pendente && ` · previsão ${formatDate(os.data_pagamento_pendente)}`}
+                  {!parcelasOS && os.data_pagamento_pendente && ` · previsão ${formatDate(os.data_pagamento_pendente)}`}
                 </p>
               )}
+            </div>
+          )}
+          {parcelasOS && (
+            <div>
+              <p className="text-xs text-gray-400">
+                Parcelamento · {parcelasOS.pagas} de {parcelasOS.total} pagas
+                {parcelasOS.entrada > 0.004 && ` · entrada ${formatBRL(parcelasOS.entrada)}`}
+              </p>
+              <div className="mt-1 space-y-1">
+                {parcelasOS.parcelas.map(p => {
+                  const atrasada = !p.quitada && p.vencimento && p.vencimento < todayISODate()
+                  return (
+                    <div key={p.numero} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-700">
+                        {p.numero}ª · {formatBRL(p.valor)}
+                        <span className="text-gray-400"> · {formatDate(p.vencimento)}</span>
+                      </span>
+                      {p.quitada ? (
+                        <span className="text-xs font-semibold text-emerald-600">✓ Paga</span>
+                      ) : atrasada ? (
+                        <span className="text-xs font-semibold text-red-500">Em atraso</span>
+                      ) : p.pago > 0.004 ? (
+                        <span className="text-xs font-semibold text-amber-600">Falta {formatBRL(p.restante)}</span>
+                      ) : (
+                        <span className="text-xs font-semibold text-gray-400">A vencer</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
           {os.data_agendamento && (
@@ -1076,15 +1136,102 @@ export default function OrdemDetalhe() {
 
             {saldoDevedorForm > 0.004 && (
               <div className="mt-3">
-                <p className="text-sm font-semibold text-gray-700 mb-1.5">
-                  Previsão de pagamento do restante <span className="font-normal text-gray-400">(opcional)</span>
-                </p>
-                <input
-                  type="date"
-                  className="input-field"
-                  value={conclusaoForm.data_pagamento_pendente}
-                  onChange={e => setConclusaoForm(prev => ({ ...prev, data_pagamento_pendente: e.target.value }))}
-                />
+                <div className="flex gap-2 mb-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setConclusaoForm(prev => ({ ...prev, parcelar: false }))}
+                    className={`flex-1 text-sm font-semibold py-2 rounded-xl transition-all ${!conclusaoForm.parcelar ? 'ac-bg-lt ac-text' : 'bg-gray-100 text-gray-500'}`}
+                  >
+                    Pagar de uma vez
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConclusaoForm(prev => ({ ...prev, parcelar: true }))}
+                    className={`flex-1 text-sm font-semibold py-2 rounded-xl transition-all ${conclusaoForm.parcelar ? 'ac-bg-lt ac-text' : 'bg-gray-100 text-gray-500'}`}
+                  >
+                    Parcelar o restante
+                  </button>
+                </div>
+
+                {!conclusaoForm.parcelar ? (
+                  <>
+                    <p className="text-sm font-semibold text-gray-700 mb-1.5">
+                      Previsão de pagamento do restante <span className="font-normal text-gray-400">(opcional)</span>
+                    </p>
+                    <input
+                      type="date"
+                      className="input-field"
+                      value={conclusaoForm.data_pagamento_pendente}
+                      onChange={e => setConclusaoForm(prev => ({ ...prev, data_pagamento_pendente: e.target.value }))}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <div className="w-28">
+                        <label className="text-xs text-gray-400 block mb-1">Parcelas</label>
+                        <select
+                          className="input-field"
+                          value={conclusaoForm.num_parcelas}
+                          onChange={e => setConclusaoForm(prev => ({ ...prev, num_parcelas: e.target.value, parcelas_manual: null }))}
+                        >
+                          {Array.from({ length: 11 }, (_, i) => i + 2).map(n => (
+                            <option key={n} value={n}>{n}x</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-xs text-gray-400 block mb-1">1º vencimento</label>
+                        <input
+                          type="date"
+                          className="input-field"
+                          value={conclusaoForm.primeiro_vencimento}
+                          onChange={e => setConclusaoForm(prev => ({ ...prev, primeiro_vencimento: e.target.value, parcelas_manual: null }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 space-y-2">
+                      {parcelasForm.map((p, i) => (
+                        <div key={i} className="flex gap-2 items-center">
+                          <span className="text-xs font-semibold text-gray-500 w-6 flex-shrink-0">{i + 1}ª</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            className="input-field w-28 !py-2.5"
+                            value={p.valor}
+                            onChange={e => editarParcela(i, 'valor', e.target.value)}
+                          />
+                          <input
+                            type="date"
+                            className="input-field flex-1 min-w-0 !py-2.5"
+                            value={p.vencimento}
+                            onChange={e => editarParcela(i, 'vencimento', e.target.value)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    {parcelasDivergem && (
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <p className="text-xs text-red-500">
+                          As parcelas somam {formatBRL(somaParcelasForm)}, mas o saldo é {formatBRL(saldoDevedorForm)}.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setConclusaoForm(prev => ({ ...prev, parcelas_manual: null }))}
+                          className="text-xs font-semibold ac-text flex-shrink-0"
+                        >
+                          Dividir igual
+                        </button>
+                      </div>
+                    )}
+                    {parcelaSemData && (
+                      <p className="text-xs text-red-500 mt-1.5">Informe o vencimento de todas as parcelas.</p>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1127,7 +1274,7 @@ export default function OrdemDetalhe() {
 
           <button
             onClick={confirmarConclusao}
-            disabled={atualizando || totalPagoForm > valorLiquidoForm + 0.004}
+            disabled={atualizando || totalPagoForm > valorLiquidoForm + 0.004 || parcelasDivergem || parcelaSemData}
             className="btn-primary"
           >
             {atualizando ? 'Salvando...' : '✔️ Confirmar Conclusão'}

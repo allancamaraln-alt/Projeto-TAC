@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { formatBRL, resumoPagamento } from '../lib/format'
+import { formatBRL, resumoPagamento, valorACobrar, saldoVencido } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
 import {
@@ -103,7 +103,7 @@ export default function Painel() {
         // (qualquer mês) — mesmo escopo da seção "Cobranças" do Relatório
         // e do filtro /ordens?pagamento=. Uma dívida de março não some em abril.
         supabase.from('ordens_servico')
-          .select('valor, desconto, pagamentos, forma_pagamento, data_pagamento_pendente')
+          .select('valor, desconto, pagamentos, parcelas, forma_pagamento, data_pagamento_pendente')
           .eq('status', 'concluido'),
       ])
 
@@ -123,7 +123,7 @@ export default function Painel() {
     load()
   }, [])
 
-  const totalCobrancasHoje = cobrancasHoje.reduce((soma, os) => soma + resumoPagamento(os).saldo, 0)
+  const totalCobrancasHoje = cobrancasHoje.reduce((soma, os) => soma + valorACobrar(os), 0)
   const hojeISO = todayISODate()
 
   // Faturamento por período — reparte os últimos 35 dias já buscados,
@@ -143,9 +143,9 @@ export default function Painel() {
     .map(os => ({ os, pag: resumoPagamento(os) }))
     .filter(r => r.pag.saldo > 0.004)
   const totalPendente = pendentesGlobais.reduce((s, r) => s + r.pag.saldo, 0)
+  // Com parcelas, só as parcelas já vencidas contam como atraso.
   const totalVencido = pendentesGlobais
-    .filter(r => r.os.data_pagamento_pendente && r.os.data_pagamento_pendente < hojeISO)
-    .reduce((s, r) => s + r.pag.saldo, 0)
+    .reduce((s, r) => s + saldoVencido(r.os, hojeISO), 0)
   const aReceber = totalPendente - totalVencido
 
   // Trava o scroll de fundo enquanto a lista de cobranças do dia está aberta
@@ -154,8 +154,11 @@ export default function Painel() {
     return () => { document.body.style.overflow = '' }
   }, [mostrarCobrancas])
 
-  function removerCobrancaResolvida(osId) {
-    setCobrancasHoje(prev => prev.filter(os => os.id !== osId))
+  // Pagou uma parcela e a próxima também vence hoje? Continua na lista.
+  function removerCobrancaResolvida(osId, atualizada) {
+    setCobrancasHoje(prev => prev
+      .map(os => os.id === osId ? atualizada ?? os : os)
+      .filter(os => os.id !== osId || (atualizada && atualizada.data_pagamento_pendente === hojeISO)))
   }
 
   const saudacao = () => {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, formatDateWeekday, resumoPagamento } from '../lib/format'
+import { formatOS, formatBRL, formatDateWeekday, resumoPagamento, resumoParcelas, valorACobrar, proximoVencimento } from '../lib/format'
 import { gerarLinkCobranca } from '../lib/whatsapp'
 import { useToast } from '../hooks/useToast'
 import { todayISODate } from '../lib/financialPeriod'
@@ -28,22 +28,39 @@ export default function CobrancaPendenteCard({ os, onAtualizado }) {
   const [marcando, setMarcando] = useState(false)
   const toast = useToast()
   const pag = resumoPagamento(os)
+  const parc = resumoParcelas(os)
+  const aCobrar = valorACobrar(os)
+  const [valor, setValor] = useState(() => String(Math.round(aCobrar * 100) / 100))
+  const valorNum = Math.round((parseFloat(valor) || 0) * 100) / 100
+  const valorInvalido = valorNum <= 0 || valorNum > pag.saldo + 0.004
 
   async function marcarRecebido() {
-    if (!forma) return
+    if (!forma || valorInvalido) return
     setMarcando(true)
-    const novosPagamentos = [...pag.pagamentos, { forma, valor: pag.saldo, data }]
+    const novosPagamentos = [...pag.pagamentos, { forma, valor: valorNum, data }]
+    const quitou = valorNum >= pag.saldo - 0.004
+    // Com parcelas: passa a apontar pro vencimento da próxima parcela em
+    // aberto. Sem parcelas: pagamento parcial mantém a previsão que já havia.
+    const dataPendente = quitou
+      ? null
+      : (parc ? proximoVencimento(os, novosPagamentos) : os.data_pagamento_pendente)
+    const updates = { pagamentos: novosPagamentos, data_pagamento_pendente: dataPendente }
     const { error } = await supabase
       .from('ordens_servico')
-      .update({ pagamentos: novosPagamentos, data_pagamento_pendente: null })
+      .update(updates)
       .eq('id', os.id)
     setMarcando(false)
     if (error) {
       toast('Erro ao atualizar. Tente novamente.', 'error')
       return
     }
-    toast('Saldo marcado como recebido!')
-    onAtualizado?.(os.id)
+    setMostrarForm(false)
+    setForma('')
+    setValor(String(Math.round(valorACobrar({ ...os, ...updates }) * 100) / 100))
+    if (quitou) toast('Saldo quitado!')
+    else if (parc) toast('Parcela marcada como recebida!')
+    else toast('Pagamento registrado!')
+    onAtualizado?.(os.id, { ...os, ...updates })
   }
 
   return (
@@ -53,15 +70,25 @@ export default function CobrancaPendenteCard({ os, onAtualizado }) {
           <span className="text-xs text-gray-400 font-mono">{formatOS(os.numero)}</span>
           <p className="font-semibold text-gray-800 truncate">{os.clientes?.nome}</p>
           <p className="text-sm text-gray-500 truncate">{os.tipo_servico}</p>
+          {parc?.proxima && (
+            <p className="text-xs font-semibold text-amber-600 mt-0.5">
+              Parcela {parc.proxima.numero} de {parc.total}
+            </p>
+          )}
           {os.data_pagamento_pendente && (
             <p className="text-xs text-gray-400 mt-0.5">Vencimento {formatDateWeekday(os.data_pagamento_pendente)}</p>
           )}
         </div>
-        <p className="font-bold text-amber-600 flex-shrink-0 ml-2 whitespace-nowrap">{formatBRL(pag.saldo)}</p>
+        <div className="flex-shrink-0 ml-2 text-right">
+          <p className="font-bold text-amber-600 whitespace-nowrap">{formatBRL(aCobrar)}</p>
+          {parc && pag.saldo - aCobrar > 0.004 && (
+            <p className="text-xs text-gray-400 whitespace-nowrap">Saldo total {formatBRL(pag.saldo)}</p>
+          )}
+        </div>
       </div>
       <div className="flex gap-2">
         <a
-          href={gerarLinkCobranca({ cliente: os.clientes, ordem: os, saldo: pag.saldo })}
+          href={gerarLinkCobranca({ cliente: os.clientes, ordem: os, saldo: aCobrar, parcela: parc?.proxima ? { numero: parc.proxima.numero, total: parc.total, vencimento: parc.proxima.vencimento } : null })}
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 bg-green-500 text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5 active:scale-95 transition-all"
@@ -94,6 +121,20 @@ export default function CobrancaPendenteCard({ os, onAtualizado }) {
             />
           </div>
           <div>
+            <label className="text-xs text-gray-400 block mb-1">Valor recebido</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              value={valor}
+              onChange={e => setValor(e.target.value)}
+              className="input-field !py-2.5 !text-sm"
+            />
+            {valorNum > pag.saldo + 0.004 && (
+              <p className="text-xs text-red-500 mt-1">Maior que o saldo pendente ({formatBRL(pag.saldo)}).</p>
+            )}
+          </div>
+          <div>
             <label className="text-xs text-gray-400 block mb-1">Forma de pagamento</label>
             <select
               value={forma}
@@ -116,7 +157,7 @@ export default function CobrancaPendenteCard({ os, onAtualizado }) {
             </button>
             <button
               onClick={marcarRecebido}
-              disabled={!forma || marcando}
+              disabled={!forma || valorInvalido || marcando}
               className="flex-1 bg-emerald-500 text-white text-sm font-semibold py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60"
             >
               {marcando ? 'Salvando...' : 'Confirmar'}

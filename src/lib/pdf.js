@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento } from './format'
+import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento, resumoParcelas } from './format'
 import { extractPalette } from './palette'
 
 async function loadImageAsBase64(url) {
@@ -605,11 +605,21 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
     : null
   const breakdownLines = breakdownStr ? doc.splitTextToSize(breakdownStr, contentW - 22) : []
 
+  const parc = resumoParcelas(ordem)
   const saldoStr = !quitado
-    ? `Saldo pendente: ${formatBRL(pag.saldo)}` + (ordem.data_pagamento_pendente
-      ? `  ·  previsão de pagamento em ${formatDate(ordem.data_pagamento_pendente)}`
-      : '  ·  data de pagamento a combinar')
+    ? (parc
+      ? `Saldo pendente: ${formatBRL(pag.saldo)}  ·  parcelado em ${parc.total}x`
+      : `Saldo pendente: ${formatBRL(pag.saldo)}` + (ordem.data_pagamento_pendente
+        ? `  ·  previsão de pagamento em ${formatDate(ordem.data_pagamento_pendente)}`
+        : '  ·  data de pagamento a combinar'))
     : null
+  // Calendário das parcelas — o cliente sabe exatamente quanto e quando paga.
+  const parcelasLinhas = !quitado && parc
+    ? parc.parcelas.map(p => {
+      const situacao = p.quitada ? 'paga' : p.pago > 0.004 ? `falta ${formatBRL(p.restante)}` : 'em aberto'
+      return `${p.numero}ª parcela  ·  ${formatBRL(p.valor)}  ·  vencimento ${formatDate(p.vencimento)}  ·  ${situacao}`
+    })
+    : []
 
   const declaracao = quitado
     ? `Declaramos, para os devidos fins, que o valor de ${formatBRL(pag.valorPago)} foi integralmente recebido em ${dataConclusao}, ` +
@@ -621,7 +631,8 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
   const boxPadTop = 11
   const valorRowH = 13
   const breakdownH = breakdownLines.length * 4.3 + (breakdownLines.length > 0 ? 3 : 0)
-  const saldoH = saldoStr ? 6.5 : 0
+  const parcelasH = parcelasLinhas.length * 4.6
+  const saldoH = saldoStr ? 6.5 + parcelasH : 0
   const boxH = boxPadTop + valorRowH + breakdownH + 3 + saldoH + declLines.length * 4.3 + 7
 
   // evita que o selo de pagamento seja cortado entre páginas
@@ -687,6 +698,11 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...COR)
     doc.text(saldoStr, margin + 8, cy - 0.5)
+    if (parcelasLinhas.length > 0) {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      parcelasLinhas.forEach((linha, i) => doc.text(linha, margin + 12, cy + 4.3 + i * 4.6))
+    }
     cy += saldoH
   }
 

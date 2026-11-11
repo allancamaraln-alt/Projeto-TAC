@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatBRL, formatDate, resumoPagamento } from '../lib/format'
+import { formatOS, formatBRL, formatDate, resumoPagamento, saldoVencido } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import CobrancaPendenteCard from '../components/CobrancaPendenteCard'
 import LancamentoRow from '../components/financial/LancamentoRow'
@@ -58,7 +58,7 @@ export default function Relatorio() {
     async function loadPagamentos() {
       const { data } = await supabase
         .from('ordens_servico')
-        .select('id, numero, valor, desconto, pagamentos, forma_pagamento, data_conclusao, data_pagamento_pendente, tipo_servico, clientes(nome, telefone)')
+        .select('id, numero, valor, desconto, pagamentos, parcelas, forma_pagamento, data_conclusao, data_pagamento_pendente, tipo_servico, clientes(nome, telefone)')
         .eq('status', 'concluido')
       setPagamentosOrdens(data ?? [])
     }
@@ -82,8 +82,9 @@ export default function Relatorio() {
   const resumosPagamento = pagamentosOrdens.map(os => ({ os, pag: resumoPagamento(os) }))
   const pendentes = resumosPagamento.filter(r => r.pag.saldo > 0.004)
   const totalPendente = pendentes.reduce((s, r) => s + r.pag.saldo, 0)
-  const vencidos = pendentes.filter(r => r.os.data_pagamento_pendente && r.os.data_pagamento_pendente < hojeISO)
-  const totalVencido = vencidos.reduce((s, r) => s + r.pag.saldo, 0)
+  // Com parcelas, só as parcelas já vencidas contam como atraso.
+  const vencidos = pendentes.filter(r => saldoVencido(r.os, hojeISO) > 0.004)
+  const totalVencido = vencidos.reduce((s, r) => s + saldoVencido(r.os, hojeISO), 0)
   // "A receber" exibido não inclui o que já está vencido — os dois cards
   // ficam mutuamente exclusivos (dá pra somar e bater com o total pendente).
   const totalAReceber = totalPendente - totalVencido
@@ -281,7 +282,7 @@ export default function Relatorio() {
                 </h2>
                 <div className="space-y-3">
                   {vencidos.map(({ os }) => (
-                    <CobrancaPendenteCard key={os.id} os={os} onAtualizado={() => setPagamentosOrdens(prev => prev.filter(o => o.id !== os.id))} />
+                    <CobrancaPendenteCard key={os.id} os={os} onAtualizado={(id, atualizada) => setPagamentosOrdens(prev => prev.map(o => o.id === id ? (atualizada ?? o) : o))} />
                   ))}
                 </div>
               </>

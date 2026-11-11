@@ -48,15 +48,29 @@ Para aprovar, responda *SIM*.
  * Gera um link wa.me com mensagem pronta para cobrar um saldo pendente
  * (pagamento parcial de uma OS já concluída).
  */
-export function gerarLinkCobranca({ cliente, ordem, saldo }) {
+export function gerarLinkCobranca({ cliente, ordem, saldo, parcela = null }) {
   const numero = (cliente?.telefone || '').replace(/\D/g, '')
   const numeroComDDI = numero.startsWith('55') ? numero : `55${numero}`
+  const valorStr = `R$ ${Number(saldo).toFixed(2).replace('.', ',')}`
+  const osStr = `*${ordem.tipo_servico}* (OS #${String(ordem.numero).padStart(3, '0')})`
+  const vencStr = parcela?.vencimento
+    ? `
+📅 Vencimento: ${parcela.vencimento.split('-').reverse().join('/')}`
+    : ''
 
-  const mensagem = `Olá ${cliente?.nome}! 👋
+  const mensagem = parcela
+    ? `Olá ${cliente?.nome}! 👋
 
-Passando para lembrar sobre o saldo pendente do serviço *${ordem.tipo_servico}* (OS #${String(ordem.numero).padStart(3, '0')}).
+Passando para lembrar da *${parcela.numero}ª parcela* (de ${parcela.total}) do serviço ${osStr}.
 
-💰 Valor pendente: R$ ${Number(saldo).toFixed(2).replace('.', ',')}
+💰 Valor da parcela: ${valorStr}${vencStr}
+
+Fico à disposição. Obrigado!`
+    : `Olá ${cliente?.nome}! 👋
+
+Passando para lembrar sobre o saldo pendente do serviço ${osStr}.
+
+💰 Valor pendente: ${valorStr}
 
 Fico à disposição para combinarmos o pagamento. Obrigado!`
 

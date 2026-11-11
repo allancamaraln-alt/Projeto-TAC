@@ -42,7 +42,7 @@ export const FINANCIAL_TOOLS = [
     type: 'function',
     function: {
       name: 'register_os_payment',
-      description: 'Registra que um cliente pagou uma Ordem de Serviço, identificando-a pelo nome do cliente (não pelo número). Cobre tanto uma OS ainda não concluída (marca como concluída e paga em um passo) quanto uma OS já concluída com saldo pendente ("cobrança em aberto"/"em atraso"). Se o cliente tiver mais de uma OS com pagamento em aberto, a ferramenta retorna a lista delas em vez de adivinhar — pergunte ao usuário qual foi paga e chame de novo informando os_numero.',
+      description: 'Registra que um cliente pagou uma Ordem de Serviço, identificando-a pelo nome do cliente (não pelo número). Cobre tanto uma OS ainda não concluída (marca como concluída e paga em um passo) quanto uma OS já concluída com saldo pendente ("cobrança em aberto"/"em atraso"). Se a OS for parcelada, registra só a próxima parcela em aberto. Se o cliente tiver mais de uma OS com pagamento em aberto, a ferramenta retorna a lista delas em vez de adivinhar — pergunte ao usuário qual foi paga e chame de novo informando os_numero.',
       parameters: {
         type: 'object',
         properties: {

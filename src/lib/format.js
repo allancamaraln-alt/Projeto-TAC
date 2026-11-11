@@ -53,6 +53,84 @@ export function resumoPagamento(ordem) {
   return { pagamentos, valorPago, valorTotal, saldo, quitado: saldo <= 0.005 }
 }
 
+// ── Parcelamento ("fiado") ───────────────────────────────────
+// `ordem.parcelas`: [{ valor, vencimento }] — como o saldo que sobrou na
+// conclusão será pago. A situação de cada parcela NÃO é gravada: é derivada
+// de `pagamentos`. Tudo que foi pago além da entrada (valor da OS menos a
+// soma das parcelas) quita as parcelas em ordem, da primeira à última.
+// `data_pagamento_pendente` continua sendo gravado com o vencimento da
+// próxima parcela em aberto, então Painel, filtros e avisos seguem valendo.
+export function resumoParcelas(ordem) {
+  const brutas = Array.isArray(ordem?.parcelas) ? ordem.parcelas : []
+  if (brutas.length === 0) return null
+  const pag = resumoPagamento(ordem)
+  const somaParcelas = brutas.reduce((s, p) => s + (Number(p.valor) || 0), 0)
+  const entrada = Math.max(0, pag.valorTotal - somaParcelas)
+  let disponivel = Math.max(0, pag.valorPago - entrada)
+  const parcelas = brutas.map((p, i) => {
+    const valor = Number(p.valor) || 0
+    const pago = Math.min(valor, disponivel)
+    disponivel -= pago
+    const restante = Math.max(0, valor - pago)
+    return { numero: i + 1, valor, vencimento: p.vencimento || null, pago, restante, quitada: restante <= 0.005 }
+  })
+  const proxima = parcelas.find(p => !p.quitada) || null
+  return {
+    parcelas,
+    total: parcelas.length,
+    pagas: parcelas.filter(p => p.quitada).length,
+    entrada,
+    proxima,
+  }
+}
+
+/** Quanto cobrar agora: a próxima parcela em aberto, ou o saldo inteiro. */
+export function valorACobrar(ordem) {
+  const parc = resumoParcelas(ordem)
+  if (parc?.proxima) return parc.proxima.restante
+  return resumoPagamento(ordem).saldo
+}
+
+/** Quanto do saldo já passou do vencimento (só as parcelas vencidas, se houver). */
+export function saldoVencido(ordem, hojeISO) {
+  const pag = resumoPagamento(ordem)
+  if (pag.saldo <= 0.004) return 0
+  const parc = resumoParcelas(ordem)
+  if (parc) {
+    return parc.parcelas
+      .filter(p => !p.quitada && p.vencimento && p.vencimento < hojeISO)
+      .reduce((s, p) => s + p.restante, 0)
+  }
+  return ordem?.data_pagamento_pendente && ordem.data_pagamento_pendente < hojeISO ? pag.saldo : 0
+}
+
+/** Vencimento da próxima parcela em aberto depois de registrar `pagamentos`. */
+export function proximoVencimento(ordem, pagamentos) {
+  const parc = resumoParcelas({ ...ordem, pagamentos })
+  if (!parc) return null
+  return parc.proxima?.vencimento ?? null
+}
+
+/** Soma `meses` a uma data ISO, mantendo o dia (ou o último dia do mês). */
+export function somarMeses(iso, meses) {
+  const [a, m, d] = iso.split('-').map(Number)
+  const alvo = new Date(Date.UTC(a, m - 1 + meses, 1))
+  const ultimoDia = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate()
+  alvo.setUTCDate(Math.min(d, ultimoDia))
+  return alvo.toISOString().slice(0, 10)
+}
+
+/** Divide `saldo` em `n` parcelas mensais iguais (centavos que sobram vão na última). */
+export function gerarParcelas(saldo, n, primeiroVencimento) {
+  const qtd = Math.max(1, parseInt(n) || 1)
+  const centavos = Math.round((Number(saldo) || 0) * 100)
+  const base = Math.floor(centavos / qtd)
+  return Array.from({ length: qtd }, (_, i) => ({
+    valor: (i === qtd - 1 ? centavos - base * (qtd - 1) : base) / 100,
+    vencimento: primeiroVencimento ? somarMeses(primeiroVencimento, i) : '',
+  }))
+}
+
 /** Soma o valor de uma lista de itens de orçamento [{ descricao, valor }] */
 export function somaItens(itens) {
   return (itens ?? []).reduce((soma, it) => soma + (parseFloat(it?.valor) || 0), 0)
