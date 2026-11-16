@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { formatOS, formatDate, formatBRL, somaItens, itensPreenchidos } from '../lib/format'
+import { formatOS, formatDate, formatBRL, somaItens, itensPreenchidos, qtdItem } from '../lib/format'
 import { useToast } from '../hooks/useToast'
 import ItensServico from '../components/ItensServico'
 import { todayISODate } from '../lib/financialPeriod'
@@ -82,7 +82,7 @@ export default function OrdemEdit() {
           equipamento_fluido: data.equipamento_fluido || '',
           equipamento_numero_serie: data.equipamento_numero_serie || '',
         })
-        setItens(Array.isArray(data.itens) && data.itens.length > 0 ? data.itens : [{ descricao: '', valor: '' }])
+        setItens(Array.isArray(data.itens) && data.itens.length > 0 ? data.itens : [{ descricao: '', quantidade: 1, valor: '' }])
       })
   }, [id])
 
@@ -95,7 +95,7 @@ export default function OrdemEdit() {
     const base = os.data_conclusao || null
     const usaItensAoSalvar = itensPreenchidos(itens)
     const itensParaSalvar = usaItensAoSalvar
-      ? itens.filter(it => it.descricao.trim() !== '' || it.valor !== '')
+      ? itens.filter(it => it.descricao.trim() !== '' || it.valor !== '').map(it => ({ ...it, quantidade: qtdItem(it) }))
       : null
     const { error } = await supabase
       .from('ordens_servico')

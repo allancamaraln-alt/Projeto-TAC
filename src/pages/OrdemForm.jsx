@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useToast } from '../hooks/useToast'
-import { somaItens, itensPreenchidos, formatBRL } from '../lib/format'
+import { somaItens, itensPreenchidos, qtdItem, formatBRL } from '../lib/format'
 import ItensServico from '../components/ItensServico'
 
 const TIPOS = [
@@ -32,7 +32,7 @@ export default function OrdemForm() {
     observacoes: '',
     status: 'orcamento',
   })
-  const [itens, setItens] = useState([{ descricao: '', valor: '' }])
+  const [itens, setItens] = useState([{ descricao: '', quantidade: 1, valor: '' }])
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
 
@@ -72,7 +72,7 @@ export default function OrdemForm() {
 
     setSaving(true)
     const itensParaSalvar = usaItens
-      ? itens.filter(it => it.descricao.trim() !== '' || it.valor !== '')
+      ? itens.filter(it => it.descricao.trim() !== '' || it.valor !== '').map(it => ({ ...it, quantidade: qtdItem(it) }))
       : null
     const { error } = await supabase.from('ordens_servico').insert({
       tecnico_id: user.id,

@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento, resumoParcelas } from './format'
+import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento, resumoParcelas, subtotalItem, descricaoItem } from './format'
 import { extractPalette } from './palette'
 
 async function loadImageAsBase64(url) {
@@ -255,13 +255,13 @@ export async function gerarOrcamentoPDF({ cliente, ordem, tecnico }) {
     doc.setFontSize(13)
     ordem.itens.forEach((item, i) => {
       const numero = String(i + 1).padStart(2, '0')
-      const valorTexto = formatBRL(item.valor)
+      const valorTexto = formatBRL(subtotalItem(item))
 
       doc.setFont('helvetica', 'bold')
       const valorW = doc.getTextWidth(valorTexto)
 
       doc.setFont('helvetica', 'normal')
-      const linhas = doc.splitTextToSize(`${numero}. ${item.descricao}`, contentW - valorW - 10)
+      const linhas = doc.splitTextToSize(`${numero}. ${descricaoItem(item)}`, contentW - valorW - 10)
       const alturaItem = linhas.length * 7.5 + 3
 
       // Item não cabe no resto da página — quebra antes de desenhar, senão
@@ -531,13 +531,13 @@ export async function gerarReciboPDF({ cliente, ordem, tecnico, fotos = [] }) {
     doc.setFontSize(10)
     ordem.itens.forEach((item, i) => {
       const numero = String(i + 1).padStart(2, '0')
-      const valorTexto = formatBRL(item.valor)
+      const valorTexto = formatBRL(subtotalItem(item))
 
       doc.setFont('helvetica', 'bold')
       const valorW = doc.getTextWidth(valorTexto)
 
       doc.setFont('helvetica', 'normal')
-      const linhas = doc.splitTextToSize(`${numero}. ${item.descricao}`, contentW - valorW - 8)
+      const linhas = doc.splitTextToSize(`${numero}. ${descricaoItem(item)}`, contentW - valorW - 8)
       const alturaItem = linhas.length * 6.5 + 2
 
       // Mesmo cuidado do PDF de orçamento: sem isso o item que não coubesse

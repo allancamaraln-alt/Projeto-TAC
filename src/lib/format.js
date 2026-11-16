@@ -131,9 +131,29 @@ export function gerarParcelas(saldo, n, primeiroVencimento) {
   }))
 }
 
-/** Soma o valor de uma lista de itens de orçamento [{ descricao, valor }] */
+/** Quantidade de um item (itens antigos não têm o campo → 1) */
+export function qtdItem(it) {
+  const q = parseFloat(it?.quantidade)
+  return q > 0 ? q : 1
+}
+
+/** Subtotal de um item: valor unitário × quantidade */
+export function subtotalItem(it) {
+  return (parseFloat(it?.valor) || 0) * qtdItem(it)
+}
+
+/** Descrição do item pra exibir/imprimir — inclui "2 × R$ 320,00" quando a quantidade > 1 */
+export function descricaoItem(it) {
+  const qtd = qtdItem(it)
+  const desc = it?.descricao ?? ''
+  if (qtd === 1) return desc
+  const qtdTexto = Number.isInteger(qtd) ? String(qtd) : String(qtd).replace('.', ',')
+  return `${desc} (${qtdTexto} × ${formatBRL(parseFloat(it?.valor) || 0)})`
+}
+
+/** Soma uma lista de itens de orçamento [{ descricao, valor, quantidade? }] */
 export function somaItens(itens) {
-  return (itens ?? []).reduce((soma, it) => soma + (parseFloat(it?.valor) || 0), 0)
+  return (itens ?? []).reduce((soma, it) => soma + subtotalItem(it), 0)
 }
 
 /** true quando o usuário já preencheu algo nos itens (não é só a linha vazia inicial) */

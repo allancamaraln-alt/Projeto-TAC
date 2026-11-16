@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useAI } from '../hooks/useAI'
-import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento, resumoParcelas, gerarParcelas, somarMeses } from '../lib/format'
+import { formatOS, formatBRL, formatDate, formatTime, formatGarantia, resumoPagamento, resumoParcelas, gerarParcelas, somarMeses, subtotalItem, descricaoItem } from '../lib/format'
 import StatusBadge from '../components/StatusBadge'
 import ModalLembrete from '../components/ModalLembrete'
 import ConfirmModal from '../components/ConfirmModal'
@@ -811,8 +811,8 @@ export default function OrdemDetalhe() {
               <div className="space-y-1">
                 {os.itens.map((item, i) => (
                   <div key={i} className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-gray-700">{String(i + 1).padStart(2, '0')}. {item.descricao}</span>
-                    <span className="flex-shrink-0 font-medium text-gray-800">{formatBRL(item.valor)}</span>
+                    <span className="text-gray-700">{String(i + 1).padStart(2, '0')}. {descricaoItem(item)}</span>
+                    <span className="flex-shrink-0 font-medium text-gray-800">{formatBRL(subtotalItem(item))}</span>
                   </div>
                 ))}
               </div>
